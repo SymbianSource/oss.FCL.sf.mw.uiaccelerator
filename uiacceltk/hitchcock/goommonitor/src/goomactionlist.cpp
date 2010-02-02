@@ -1,0 +1,683 @@
+/*
+* Copyright (c) 2008 Nokia Corporation and/or its subsidiary(-ies).
+* All rights reserved.
+* This component and the accompanying materials are made available
+* under the terms of "Eclipse Public License v1.0"
+* which accompanies this distribution, and is available
+* at the URL "http://www.eclipse.org/legal/epl-v10.html".
+*
+* Initial Contributors:
+* Nokia Corporation - initial contribution.
+*
+* Contributors:
+*
+* Description:  Classes for executing OOM actions (e.g. closing applications and running plugins).
+*
+*/
+
+
+#include <hal.h>
+#include <apgwgnam.h>
+
+#include "goommonitorplugin.h"
+#include "goommonitorplugin.hrh"
+#include "goomactionlist.h"
+#include "goomwindowgrouplist.h"
+#include "goompanic.h"
+#include "goomtraces.h"
+#include "goomconstants.hrh"
+#include "goommemorymonitor.h"
+#include "goommemorymonitorserver.h"
+#include "goomrunplugin.h"
+#include "goomcloseapp.h"
+#include "goomconfig.h"
+#include "goomactionref.h"
+#include "goomapplicationconfig.h"
+#include "goomcloseappconfig.h"
+#include "goomrunpluginconfig.h"
+
+template <class T>
+CGOomPluginList<T>::CGOomPluginList()
+    {
+    FUNC_LOG;
+    }
+
+template <class T>
+CGOomPluginList<T>::~CGOomPluginList()
+    {
+    FUNC_LOG;
+
+    TInt count = iPlugins.Count();
+    for (TInt ii=0; ii<count; ii++)
+        {
+        TPlugin& plugin = iPlugins[ii];
+        if (plugin.iImpl)    // only if successfully added
+            REComSession::DestroyedImplementation(plugin.iDtorUid);
+        }
+    iPlugins.Close();
+    }
+
+template <class T>
+void CGOomPluginList<T>::ConstructL(TInt aInterfaceUid)
+    {
+    FUNC_LOG;
+
+    RImplInfoPtrArray implArray;
+    CleanupClosePushL(implArray);
+    REComSession::ListImplementationsL(TUid::Uid(aInterfaceUid), implArray);
+
+    TInt count = implArray.Count();
+    iPlugins.ReserveL(count);
+
+    for (TInt ii=0; ii<count; ii++)
+        {
+        iPlugins.AppendL(TPlugin());
+        TPlugin& plugin = iPlugins[ii];
+        TUid uid(implArray[ii]->ImplementationUid());
+        plugin.iImpl = static_cast<T*>(REComSession::CreateImplementationL(uid, plugin.iDtorUid, NULL));
+        plugin.iUid = uid.iUid;
+        }
+
+    CleanupStack::PopAndDestroy(&implArray);
+    }
+
+template <class T>
+CGOomPluginList<T>::TPlugin::TPlugin()
+: iImpl(0)
+    {
+    FUNC_LOG;
+   }
+
+template <class T>
+CGOomPluginList<T>* CGOomPluginList<T>::NewL(TInt aInterfaceUid)
+    {
+    FUNC_LOG;
+
+    CGOomPluginList* self = new (ELeave) CGOomPluginList();
+    CleanupStack::PushL(self);
+    self->ConstructL(aInterfaceUid);
+    CleanupStack::Pop(self);
+    return self;
+    }
+
+CGOomActionList* CGOomActionList::NewL(CMemoryMonitor& aMonitor, CMemoryMonitorServer& aServer, RWsSession& aWs, CGOomConfig& aConfig)
+    {
+    FUNC_LOG;
+
+    CGOomActionList* self = new (ELeave) CGOomActionList(aMonitor, aServer, aWs);
+    CleanupStack::PushL(self);
+    self->ConstructL(aConfig);
+    CleanupStack::Pop();
+    return self;
+    }
+
+CGOomActionList::~CGOomActionList()
+    {
+    FUNC_LOG;
+
+    iCloseAppActions.ResetAndDestroy();
+    iCloseAppActions.Close();
+    iRunPluginActions.ResetAndDestroy();
+    iRunPluginActions.Close();
+
+    iActionRefs.Close();
+
+    delete iPluginList;
+	
+    }
+
+// Creates a list of actions based on the contents of the config and the current window group list
+// Any old actions will be replaced.
+// This function may leave, however enough memory should be reserved for this process so that at least
+// some actions have been created for freeing memory, these can then be run by calling FreeMemory.
+// Note that this function will only leave in extreme circumstances, in normal usage we should have
+// enough reserved memory to build the complete action list.
+void CGOomActionList::BuildPluginActionListL(CGOomWindowGroupList& aWindowGroupList, CGOomConfig& aConfig)
+    {
+    FUNC_LOG;
+
+    if (iFreeingMemory)
+        {
+        TRACES("OOMWATCHER:CGOomActionList::BuildActionListL Memory is currently being freed, do not build action list");
+        TRACES2("OOMWATCHER:CGOomActionList::BuildActionListL iCurrentActionIndex = %d out of %d actions in progress", iCurrentActionIndex, iActionRefs.Count());
+        return;
+        }
+
+    iActionRefs.Reset();
+    iCurrentActionIndex = 0;
+
+    TInt actionsIndex = 0;
+    
+    iAppsProtectedByPlugins.Reset();
+    
+    iRunningKillAppActions = EFalse;
+    
+    //
+    // There is only one kind of plugin, the graphics plugin which is based on the oom plugin
+	// references to v2 plugin types removed as these are not yet used by GOOM
+    // we rely on the pluginlist not having changed since construction
+
+    // Go through each plugin in the plugin list, create a run-plugin action for each one
+    TInt pluginIndex = iPluginList->Count();
+    while (pluginIndex--)
+        {
+        // Get the config for this plugin
+        CGOomRunPluginConfig& pluginConfig = aConfig.GetPluginConfig(iPluginList->Uid(pluginIndex));
+        TInt priority = pluginConfig.CalculatePluginPriority(aWindowGroupList);
+
+        TGOomSyncMode syncMode = pluginConfig.iSyncMode;
+        TInt ramEstimate = pluginConfig.iRamEstimate;
+
+        TActionRef::TActionType actionType;
+
+        if (pluginConfig.PluginType() == EGOomAppPlugin)
+            {
+            actionType = TActionRef::EAppPlugin;
+            }
+        else
+            actionType = TActionRef::ESystemPlugin;
+
+        TActionRef ref = TActionRef(actionType, priority, syncMode, ramEstimate, *(iRunPluginActions[actionsIndex]), aWindowGroupList.GetIndexFromAppId(pluginConfig.TargetApp()));
+        iAppsProtectedByPlugins.Append(pluginConfig.TargetApp());
+        TRACES1("Creating Plugin Action Item TargetAppId %x", pluginConfig.TargetApp());
+        //It is valid to have plugins with equal priority
+        User::LeaveIfError(iActionRefs.InsertInOrderAllowRepeats(ref, ComparePriorities));
+
+        actionsIndex++;
+        }
+    
+    TRACES1("BuildActionListL: Action list built with %d Plugin items",iActionRefs.Count());
+    }
+
+void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroupList, CGOomConfig& aConfig)
+    {
+    FUNC_LOG;
+    
+    iActionRefs.Reset();
+    iCurrentActionIndex = 0;
+    
+    aWindowGroupList.RefreshL();
+    
+    iRunningKillAppActions = ETrue;
+    
+    if (aWindowGroupList.Count())
+            {
+            // Go through each item in the wglist, create an app close action for this application
+            TInt wgIndex = aWindowGroupList.Count() - 1;
+            
+            TRACES1("BuildActionListL: Windowgroup list count %d ",aWindowGroupList.Count());
+    
+            // Fix for when fast swap has focus, or pen input server has put itself into the foreground:
+            // the wg at index 1 should be considered as the foreground app.
+            // stopIndex is calculated to take this into account.
+            TUid foregroundUid = TUid::Uid(iMonitor.ForegroundAppUid());
+    
+            TRACES1("BuildActionListL: Foreground App %x ", foregroundUid);
+            
+            while (wgIndex >= 0)
+                {
+                CGOomCloseAppConfig* appCloseConfig = NULL;
+    
+                CApaWindowGroupName* wgName = aWindowGroupList.WgName();
+                __ASSERT_DEBUG(wgName, GOomMonitorPanic(KInvalidWgName));
+    
+                // Get the app ID for the wglist item
+                // This sets the window group name
+                TInt32 appId = aWindowGroupList.AppId(wgIndex, ETrue);
+     
+                if ( !appId  || foregroundUid.iUid ==appId || wgName->IsSystem() || wgName->Hidden() || (iAppsProtectedByPlugins.Find(appId) != KErrNotFound))
+                    {
+                    //If the UID is NULL at this point, we assume the process is not an application
+                    //and therefore is not a suitable candidate for closure.
+                    //We also do not close system or hidden apps.
+                    TRACES3("BuildActionListL: Not adding process to action list; UID = %x, wgIndex = %d, wgid = %d", appId, wgIndex, aWindowGroupList.WgId(wgIndex).iId);
+                    TRACES3("BuildActionListL: IsSystem = %d, Hidden = %d, Foregroundapp %x", wgName->IsSystem() ? 1 : 0, wgName->Hidden() ? 1 : 0, foregroundUid);
+                    }
+    
+                else if (aWindowGroupList.IsBusy(wgIndex) || wgName->IsBusy())
+                    // If the application has been flagged as busy then look up the configuration for busy apps in the config file
+                    {
+                    // Find the app close config for this app ID
+                    appCloseConfig = aConfig.GetApplicationConfig(KGOomBusyAppId).GetAppCloseConfig();
+                    }
+                else if (aWindowGroupList.IsDynamicHighPriority(wgIndex))
+                    // If the application has been flagged as busy then look up the configuration for busy apps in the config file
+                    {
+                    // Find the app close config for this app ID
+                    appCloseConfig = aConfig.GetApplicationConfig(KGOomHighPriorityAppId).GetAppCloseConfig();
+                    }
+                else
+                    // If the application hasn't been flagged as busy or high priority then look up the priority according to the config
+                    {
+                    // Find the app close config for this app ID
+                    appCloseConfig = aConfig.GetApplicationConfig(appId).GetAppCloseConfig();
+                    }
+    
+                // Create the app close action and add it to the action list
+                if (appCloseConfig)
+                    {
+                    TUint priority = appCloseConfig->CalculateCloseAppPriority(aWindowGroupList, wgIndex);
+                    TInt wgId = aWindowGroupList.WgId(wgIndex).iId;
+                    TGOomSyncMode syncMode = appCloseConfig->iSyncMode;
+                    TInt ramEstimate = appCloseConfig->iRamEstimate;
+                    TActionRef ref = TActionRef(TActionRef::EAppClose, priority, syncMode, ramEstimate, wgId, wgIndex);
+    
+                    //AppClose Actions should always have a unique prioirity determined by the application's z order.
+                    TInt err = iActionRefs.InsertInOrder(ref, ComparePriorities);
+                    if ((err != KErrNone) && (err != KErrAlreadyExists))
+                        {
+                        User::Leave(err);
+                        }
+                    TRACES3("BuildActionListL: Adding app to action list, Uid = %x, wgId = %d, wgIndex = %d", appId, wgId, wgIndex);
+                    }
+    
+                wgIndex--;
+                }
+            }
+            
+        TRACES1("BuildActionListL: Action list built with %d items",iActionRefs.Count());
+    }    
+
+
+// Execute the OOM actions according to their priority
+// Run batches of OOM actions according to their sync mode
+void CGOomActionList::FreeMemory(TInt aMaxPriority)
+    {
+    FUNC_LOG;
+
+    if (iFreeingMemory)
+            {
+            TRACES("OOMWATCHER:CGOomActionList::FreeMemory Memory is currently being freed, do not start any more actions");
+            return;
+            }
+    
+    iMaxPriority = aMaxPriority;
+
+    TBool memoryFreeingActionRun = EFalse;
+
+    // Get the configured maximum number of applications that can be closed at one time
+    const CGOomGlobalConfig& globalConfig = CMemoryMonitor::GlobalConfig();
+    TInt maxBatchSize = globalConfig.iMaxCloseAppBatch;
+    TInt numberOfRunningActions = 0;
+
+    TInt memoryEstimate = iMonitor.GetFreeMemory(); // The amount of free memory we expect to be free after the currently initiated operations
+
+    while (iCurrentActionIndex < iActionRefs.Count())
+        {
+        if(iActionRefs[iCurrentActionIndex].Priority() > aMaxPriority)
+            {
+            TRACES1("Busy App wgid %d, spared by GOOM", iActionRefs[iCurrentActionIndex].WgId());
+            iCurrentActionIndex++;
+            continue;
+            }
+        
+        TActionRef ref = iActionRefs[iCurrentActionIndex];
+        CGOomAction* action = NULL;
+        if (ref.Type() == TActionRef::EAppClose)
+            {
+            action = iCloseAppActions[numberOfRunningActions];
+            static_cast<CGOomCloseApp*>(action)->Reconfigure(ref);
+            
+            //Double checking again if this app is now in foreground, if yes then we dont kill
+            CApaWindowGroupName* wgName = CApaWindowGroupName::NewLC(iWs, iWs.GetFocusWindowGroup());
+            RDebug::Print(wgName->WindowGroupName());
+            TInt32 fgApp = wgName->AppUid().iUid;
+            TInt32 appId = iMonitor.GetWindowGroupList()->AppIdfromWgId(ref.WgId(), ETrue);
+            if(appId == fgApp)
+                {
+                TRACES1("Foreground App wgid %x, spared by GOOM", appId);
+                
+                iCurrentActionIndex++;
+                continue;
+                }
+            }
+        else
+            {
+            action = &(ref.RunPlugin());
+            }
+
+        iFreeingMemory = ETrue;
+        TRACES2("CGOomActionList::FreeMemory: Running action %d which has priority %d", iCurrentActionIndex,ref.Priority());
+        action->FreeMemory(iCurrentTarget - memoryEstimate);
+        memoryFreeingActionRun = ETrue;
+
+        // Actions with EContinueIgnoreMaxBatchSize don't add to the tally of running actions
+        if (ref.SyncMode() != EContinueIgnoreMaxBatchSize)
+            numberOfRunningActions++;
+
+        // Update our estimate of how much RAM we think we'll have after this operation
+        memoryEstimate += ref.RamEstimate();
+
+        // Do we estimate that we are freeing enough memory (only applies if the sync mode is "esimtate" for this action)
+        TBool estimatedEnoughMemoryFreed = EFalse;
+        if ((ref.SyncMode() == EEstimate)
+            && (memoryEstimate >= iCurrentTarget))
+            {
+            estimatedEnoughMemoryFreed = ETrue;
+            }
+
+        if ((ref.SyncMode() == ECheckRam)
+                || (numberOfRunningActions >= maxBatchSize)
+                || estimatedEnoughMemoryFreed
+                || globalConfig.ForceCheckAtPriority(iActionRefs[iCurrentActionIndex].Priority()))
+            // If this actions requires a RAM check then wait for it to complete
+            // Also force a check if we've reached the maximum number of concurrent operations
+            // Also check if we estimate that we have already freed enough memory (assuming that the sync mode is "estimate"
+            {
+            // Return from the loop - we will be called back (in CGOomActionList::StateChanged()) when the running actions complete
+            TRACES("CGOomActionList::FreeMemory: Exiting run action loop");
+            return;
+            }
+        // ... otherwise continue running actions, don't wait for any existing ones to complete
+        iCurrentActionIndex++;
+        }
+
+
+    if (!memoryFreeingActionRun)
+        {
+        // No usable memory freeing action has been found, so we give up
+        TRACES("CGOomActionList::FreeMemory: No usable memory freeing action has been found");
+        iMonitor.ResetTargets();
+        TInt freeMemory;
+        if (FreeMemoryAboveTarget(freeMemory) && !iMonitor.NeedToPostponeMemGood())
+            {
+            MemoryGood();
+            }
+        iServer.CloseAppsFinished(freeMemory, EFalse);
+        }
+    }
+
+// Should be called when the memory situation is good
+// It results in notifications of the good memory state to all plugins with an outstanding FreeMemory request
+void CGOomActionList::MemoryGood()
+    {
+    FUNC_LOG;
+
+    TInt actionRefIndex = iActionRefs.Count();
+
+    // Go through each of the action references, if it's a plugin action then call MemoryGood on it
+    // Note that this only results in a call to the plugin if FreeMemory has been called on this plugin since that last call to MemoryGood
+    while (actionRefIndex--)
+        {
+        if ((iActionRefs[actionRefIndex].Type() == TActionRef::EAppPlugin)
+                || (iActionRefs[actionRefIndex].Type() == TActionRef::ESystemPlugin))
+            {
+            iActionRefs[actionRefIndex].RunPlugin().MemoryGood();
+            }
+        }
+    }
+
+TBool CGOomActionList::FreeMemoryAboveTarget(TInt& aFreeMemory)
+    {
+    FUNC_LOG;
+
+    aFreeMemory = iMonitor.GetFreeMemory();
+
+    TRACES1("CGOomActionList::FreeMemoryAboveTarget: Free RAM now %d",aFreeMemory);
+
+    return (aFreeMemory >= iCurrentTarget);
+    }
+
+TInt CGOomActionList::ComparePriorities(const TActionRef& aPos1, const TActionRef& aPos2 )
+    {
+    FUNC_LOG;
+
+    if (aPos1.Priority()< aPos2.Priority())
+        {
+        return -1;
+        }
+    if (aPos1.Priority() > aPos2.Priority())
+        {
+        return 1;
+        }
+
+    // If priorities are equal then we use hardcoded rules to determine which one is run...
+
+    // All other actions are run in preference to application closures
+	if ((aPos1.Type() != TActionRef::EAppClose)
+			&& ((aPos2.Type() == TActionRef::EAppClose)))
+		{
+		return -1;
+		}
+	if ((aPos1.Type() == TActionRef::EAppClose)
+			&& ((aPos2.Type() != TActionRef::EAppClose)))
+		{
+		return 1;
+		}
+	// If both actions are application closures then the Z order is used to determine which one to run (furthest back application will be closed first)
+	if ((aPos1.Type() == TActionRef::EAppClose)
+			&& ((aPos2.Type() == TActionRef::EAppClose)))
+		{
+		if (aPos1.WgIndex() < aPos2.WgIndex())
+			{
+			return 1;
+			}
+		else
+			{
+			return -1;
+			}
+		//Two Apps should not have equal window group indexes, we panic below if this is the case.
+		}
+
+	// Application plugins will be run in preference to system plugins
+	if ((aPos1.Type() == TActionRef::EAppPlugin)
+			&& ((aPos2.Type() == TActionRef::ESystemPlugin)))
+		{
+		return -1;
+		}
+	if ((aPos1.Type() == TActionRef::ESystemPlugin)
+			&& ((aPos2.Type() == TActionRef::EAppPlugin)))
+		{
+		return 1;
+		}
+
+	// If both actions are application plugins then the Z order of the target app is used to determine which one to run (the one with the furthest back target app will be closed first)
+	// If the target app is not running then the plugin is run in preference to target apps where the target app is running
+	if ((aPos1.Type() == TActionRef::EAppPlugin)
+			&& ((aPos2.Type() == TActionRef::EAppPlugin)))
+		{
+		// When the target app is not running then the plugin will be run ahead of plugins where the target app is running
+		if ((aPos1.WgIndex() == KAppNotInWindowGroupList) && (aPos2.WgIndex() != KAppNotInWindowGroupList))
+			{
+			return -1;
+			}
+		if ((aPos1.WgIndex() != KAppNotInWindowGroupList) && (aPos2.WgIndex() == KAppNotInWindowGroupList))
+			{
+			return 1;
+			}
+		// If the target apps for both plugins are running then compare the Z order
+		if ((aPos1.WgIndex() != KAppNotInWindowGroupList) && (aPos2.WgIndex() != KAppNotInWindowGroupList))
+			{
+			if (aPos1.WgIndex() < aPos2.WgIndex())
+				{
+				return 1;
+				}
+			else
+				{
+				return -1;
+				}
+			}
+		// If the target app for neither plugin is running then they are of equal priority
+		}
+    //App Close Actions must have a unique priority.
+    __ASSERT_DEBUG((aPos1.Type() != TActionRef::EAppClose) && (aPos2.Type() != TActionRef::EAppClose), GOomMonitorPanic(KAppCloseActionEqualPriorities));
+    return 0;
+    }
+
+void CGOomActionList::AppNotExiting(TInt aWgId)
+    {
+    FUNC_LOG;
+
+    TInt index = iCloseAppActions.Count();
+    while (index--)
+        {
+        CGOomCloseApp* action = iCloseAppActions[index];
+        if ( (action->WgId() == aWgId) && (action->IsRunning()) )
+            {
+            TRACES1("CGOomCloseApp::AppNotExiting: App with window group id %d has not responded to the close event", aWgId);
+            action->CloseAppEvent();
+            }
+        }
+    }
+
+// From MGOomActionObserver
+// An action has changed state (possibly it has completed freeing memory)
+void CGOomActionList::StateChanged()
+    {
+    FUNC_LOG;
+
+    TBool allActionsComplete = ETrue;
+
+    // Note that the actions themselves are responsible for timing out if necessary.
+    TInt index = iCloseAppActions.Count();
+    while ((index--) && (allActionsComplete))
+        {
+        if (iCloseAppActions[index]->IsRunning())
+            {
+            TRACES1("CGOomActionList::StateChanged. CloseAppAction %d STILL RUNNING. PROBLEM !!! YOU SHOULD NEVER SEE THIS", index);
+            allActionsComplete = EFalse;
+            }
+        }
+
+    index = iRunPluginActions.Count();
+    while ((index--) && (allActionsComplete))
+        {
+        if (iRunPluginActions[index]->IsRunning())
+            {
+            TRACES1("CGOomActionList::StateChanged. PluginAction %d STILL RUNNING. PROBLEM !!! YOU SHOULD NEVER SEE THIS", index);
+            allActionsComplete = EFalse;
+            }
+        }
+
+    TRACES1("CGOomActionList::StateChanged. Current Target = %d", iCurrentTarget);
+    
+    if (allActionsComplete)
+        {
+        iFreeingMemory = EFalse;
+        // If all of the actions are complete then check memory and run more if necessary
+        TInt freeMemory;
+        TBool freeMemoryAboveTarget = FreeMemoryAboveTarget(freeMemory);
+        TRACES1("CGOomActionList::StateChanged. Free Memory = %d", freeMemory);
+        if (!freeMemoryAboveTarget)
+            // If we are still below the good-memory-threshold then continue running actions
+            {            
+            TRACES2("CGOomActionList::StateChanged: Finished Action %d out of %d",iCurrentActionIndex, iActionRefs.Count());
+            
+            iCurrentActionIndex++;
+            
+            if (iCurrentActionIndex >= iActionRefs.Count())
+                {
+                if(iRunningKillAppActions)
+                    {
+                    iRunningKillAppActions = EFalse;
+                    // There are no more actions to try, so we give up
+                    TRACES1("CGOomActionList::StateChanged: All current actions complete, below good threshold with no more actions available. freeMemory=%d", freeMemory);
+                    iMonitor.ResetTargets();
+                    /* Do not call memory good immidiately after freeing memory for some app
+                    if (freeMemory >= iCurrentTarget && !iMonitor.NeedToPostponeMemGood())
+                    {                    
+                    MemoryGood();
+                    }
+                     */
+                    iServer.CloseAppsFinished(freeMemory, EFalse);
+                    }
+                else
+                    {
+                    TRACES1("CGOomActionList::StateChanged: All current Plugin actions complete, below good threshold, Time to kill bad guys. freeMemory=%d", freeMemory);
+                    iRunningKillAppActions = ETrue;
+                    iMonitor.RunCloseAppActions(iMaxPriority);
+                    }
+                }
+            else
+                {
+                // There are still more actions to try, so we continue
+                TRACES1("CGOomActionList::StateChanged: All current actions complete, running more actions. freeMemory=%d", freeMemory);
+                FreeMemory(iMaxPriority);
+                }
+            }
+        else
+            {
+            TRACES1("CGOomActionList::StateChanged: All current actions complete, memory good. freeMemory=%d", freeMemory);
+            /* Do not call memory good immidiately after freeing memory for some app
+			if(freeMemory > iMonitor.GetGoodThreshold() && !iMonitor.NeedToPostponeMemGood())
+                {
+                MemoryGood();
+                }
+            */
+            iRunningKillAppActions = EFalse;
+            iMonitor.ResetTargets();
+            iServer.CloseAppsFinished(freeMemory, ETrue);
+            }
+        }
+
+    // If some actions are not yet in the idle state then we must continue to wait for them (they will notify us of a state change via a callback)
+    }
+
+CGOomActionList::CGOomActionList(CMemoryMonitor& aMonitor, CMemoryMonitorServer& aServer, RWsSession& aWs)
+    : iWs(aWs), iMonitor(aMonitor), iServer(aServer)
+    {
+    FUNC_LOG;
+    }
+
+void CGOomActionList::ConstructL(CGOomConfig& aConfig)
+    {
+    FUNC_LOG;
+
+    iCurrentActionIndex = 0;
+    iFreeingMemory = EFalse;
+
+    // Get the list of plugins available to the system
+
+    iPluginList = CGOomPluginList<CGOomMonitorPlugin>::NewL(KGOomPluginInterfaceUidValue);
+    // Go through each plugin in the plugin list, create a run-plugin action for each one
+    TInt pluginIndex = iPluginList->Count();
+    while (pluginIndex--)
+        {
+        // Get the config for this plugin
+        CGOomRunPluginConfig& pluginConfig = aConfig.GetPluginConfig(iPluginList->Uid(pluginIndex));
+
+        // Create an action acording to the config
+        CGOomRunPlugin* action = CGOomRunPlugin::NewL(iPluginList->Uid(pluginIndex), pluginConfig, *this, iPluginList->Implementation(pluginIndex));
+
+        iRunPluginActions.AppendL(action);
+        }
+
+	//references to v2 plugin types removed as these are not yet used by GOOM
+	
+    //allocate empty CGOomCloseApp objects
+    TInt appCloseIndex = aConfig.GlobalConfig().iMaxCloseAppBatch;
+    while (appCloseIndex--)
+        {
+        CGOomCloseApp* action = CGOomCloseApp::NewL(*this, iWs);
+        iCloseAppActions.AppendL(action);
+        }
+    }
+
+void CGOomActionList::SetPriority(TInt aWgIndex, TInt aPriority)
+    {
+    FUNC_LOG;
+
+    TInt idx = iActionRefs.Count()-1;
+    while(idx >= 0)
+        {
+        if(iActionRefs[idx].WgIndex() == aWgIndex)
+            {
+            break;
+            }
+        idx--;
+        }
+    
+    if(idx >= 0)
+        {
+        TRACES2("CGOomActionList::SetPriority Setting app wgindex %d, index %d as busy", aWgIndex, idx);
+        iActionRefs[idx].SetPriority(aPriority);
+        if (!iFreeingMemory)
+            {
+            iActionRefs.Sort(ComparePriorities);
+            }
+        }
+    else
+        {
+        TRACES1("CGOomActionList::SetPriority wgindex %d not in the hitlist", aWgIndex);
+        }
+    }
