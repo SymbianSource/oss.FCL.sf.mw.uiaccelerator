@@ -92,8 +92,8 @@ EXPORT_C void AlfServerStarter::StartL(TRequestStatus& aStatus, TBool aCreatePro
 	    	        KAlfServerThreadName,
 	    	        AlfThreadFucntion,
 	    	        16384, // magic
-	    	        20000, // uses own heap for now
-	    	        10000000,
+	    	        4*1024*1024, // uses own heap for now
+	    	        10*1024*1024,
 	    	        0,
 	    	        EOwnerThread));
 	    	    

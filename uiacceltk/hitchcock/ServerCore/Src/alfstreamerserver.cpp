@@ -610,6 +610,7 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
         case EAlfBridgerRequestDataBlock:
         case EAlfBridgerAsyncronousData:
         case EDsNotifyNativeWindowData:
+        case EAlfSynchronize:
             {
             server->WindowTree()->HandleMessageL( aMessage );
             return;

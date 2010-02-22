@@ -25,4 +25,5 @@ EXPORTS
 	_ZN19RGOomMonitorSession22UsesAbsoluteMemTargetsEi @ 24 NONAME
 	_ZN19RGOomMonitorSession15AppAboutToStartER14TRequestStatusRK4TUid @ 25 NONAME
 	_ZN19RGOomMonitorSession7ConnectER14TRequestStatus @ 26 NONAME
+	_ZN19RGOomMonitorSession25MemoryAllocationsCompleteEv @ 27 NONAME
 

@@ -56,7 +56,7 @@ EXPORT_C CHuiTexture& CHuiAnimatedTexture::Texture()
     
 EXPORT_C MHuiSegmentedTexture* CHuiAnimatedTexture::SegmentedTexture()
     {
-    return this;
+    return iTexture;
     }
     
     
@@ -68,7 +68,7 @@ EXPORT_C MHuiShadowedTexture* CHuiAnimatedTexture::ShadowedTexture()
 
 EXPORT_C const MHuiSegmentedTexture* CHuiAnimatedTexture::SegmentedTexture() const
     {
-    return this;
+    return iTexture;
     }
     
     

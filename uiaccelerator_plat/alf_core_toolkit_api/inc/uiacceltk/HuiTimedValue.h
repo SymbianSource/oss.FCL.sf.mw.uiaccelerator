@@ -451,6 +451,7 @@ private:
 private:
     TInt iTimeRemainingWhenSuspended;
     TInt iSpare2;
+    friend class CHuiVisual;
     };
 
 

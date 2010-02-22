@@ -57,12 +57,12 @@ public:
 
 
 	/* Methods from MAknsSkinChangeObserver */
-	  void SkinContentChanged();
+	IMPORT_C void SkinContentChanged();
 
-	  void SkinConfigurationChanged(
+	IMPORT_C void SkinConfigurationChanged(
 	          const TAknsSkinStatusConfigurationChangeReason aReason );
 	  
-	  void SkinPackageChanged(
+	IMPORT_C void SkinPackageChanged(
 	         const TAknsSkinStatusPackageChangeReason aReason );
 public:
 
@@ -127,6 +127,9 @@ public:
 	}
     void UpdateBackgroundsL(const RArray<THuiDisplayBackgroundItem>& aItems);
     IMPORT_C CHuiTexture* BackgroundTexture(const TAknsItemID& aID);
+    
+    TRect SkinRect(const TAknsItemID& aID);
+    
 protected: // from CHuiSkin
     IMPORT_C void SkinExtension(const TUid& aExtensionUid, TAny** aExtensionParameters);
     void FreeBackgrounds();
@@ -143,6 +146,7 @@ protected:
      */
     void UpdateBackgroundL();
 
+
 private:
 
     /** Control context for the skin. */
@@ -150,6 +154,8 @@ private:
 
     /** Background texture from S60. */
     CHuiTexture* iBackgroundTexture;
+    CFbsBitmap* iBackgroundBitmap;
+    TRect iBackgroundRect;
 
     /** To get CallBack from SkinServer when skin is changed */
     RAknsSrvSession iSkinSrvSession;
@@ -158,8 +164,29 @@ private:
     /** Background should be reloaded the next time it is needed. */
     TBool iReloadBackground;
     TBool iSkinChanged;
-    CFbsBitmap* iBackgroundBitmap;
+
+    class CSkinItem : public CBase
+        {
+        public :
+        
+        ~CSkinItem()
+            {
+            delete iBitmap;
+            };
+        TAknsItemID iId;
+        TRect iSkinRect;
+        CFbsBitmap* iBitmap;
+        };
+    RPointerArray<CSkinItem> iCachedSkinItems;
+    
     TAny* iSpare;    
-    };
+
+private: // helpers
+    
+    TInt SearchCachedSkinItemIndex(const TAknsItemID& aId);
+    TRect SearchCachedSkinItemRect(const TAknsItemID& aId);
+    CFbsBitmap* SearchCachedSkinItemBitmap(const TAknsItemID& aId);
+	};
+
 
 #endif  // __HUIS60SKIN_H__

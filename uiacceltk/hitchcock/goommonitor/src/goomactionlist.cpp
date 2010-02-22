@@ -177,9 +177,30 @@ void CGOomActionList::BuildPluginActionListL(CGOomWindowGroupList& aWindowGroupL
         else
             actionType = TActionRef::ESystemPlugin;
 
+
+        //get skip plugin config for foreground app
+        TUint foregroundUid = iMonitor.ForegroundAppUid();
+        if(aConfig.GetApplicationConfig(foregroundUid).iSkipPluginId == iPluginList->Uid(pluginIndex))
+            {
+            TRACES2("Skiping plugin %x, configured for app %x", iPluginList->Uid(pluginIndex), foregroundUid);
+            actionsIndex++;
+            continue ; //skip this and continue with next plugin
+            }
+        
+        TUint activeClientId = iMonitor.ActiveClientId();
+        if(activeClientId!=0 && activeClientId!=foregroundUid)
+            {
+            if(aConfig.GetApplicationConfig(activeClientId).iSkipPluginId == iPluginList->Uid(pluginIndex))
+                        {
+                        TRACES2("Skiping plugin %x, configured for app %x", iPluginList->Uid(pluginIndex), foregroundUid);
+                        actionsIndex++;
+                        continue ; //skip this and continue with next plugin
+                        }
+            }
+        
         TActionRef ref = TActionRef(actionType, priority, syncMode, ramEstimate, *(iRunPluginActions[actionsIndex]), aWindowGroupList.GetIndexFromAppId(pluginConfig.TargetApp()));
         iAppsProtectedByPlugins.Append(pluginConfig.TargetApp());
-        TRACES1("Creating Plugin Action Item TargetAppId %x", pluginConfig.TargetApp());
+        TRACES2("Creating Plugin Action Item %x , TargetAppId %x", iPluginList->Uid(pluginIndex), pluginConfig.TargetApp());
         //It is valid to have plugins with equal priority
         User::LeaveIfError(iActionRefs.InsertInOrderAllowRepeats(ref, ComparePriorities));
 
@@ -193,8 +214,8 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     {
     FUNC_LOG;
     
-    iActionRefs.Reset();
-    iCurrentActionIndex = 0;
+//    iActionRefs.Reset();
+//    iCurrentActionIndex = 0;
     
     aWindowGroupList.RefreshL();
     
@@ -218,20 +239,23 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                 {
                 CGOomCloseAppConfig* appCloseConfig = NULL;
     
-                CApaWindowGroupName* wgName = aWindowGroupList.WgName();
-                __ASSERT_DEBUG(wgName, GOomMonitorPanic(KInvalidWgName));
-    
                 // Get the app ID for the wglist item
                 // This sets the window group name
                 TInt32 appId = aWindowGroupList.AppId(wgIndex, ETrue);
-     
-                if ( !appId  || foregroundUid.iUid ==appId || wgName->IsSystem() || wgName->Hidden() || (iAppsProtectedByPlugins.Find(appId) != KErrNotFound))
+                
+                CApaWindowGroupName* wgName = aWindowGroupList.WgName();
+                __ASSERT_DEBUG(wgName, GOomMonitorPanic(KInvalidWgName));
+
+                    
+                TBool skipped = EFalse;
+                if ( !appId  || foregroundUid.iUid ==appId || (iAppsProtectedByPlugins.Find(appId) != KErrNotFound))
                     {
                     //If the UID is NULL at this point, we assume the process is not an application
                     //and therefore is not a suitable candidate for closure.
                     //We also do not close system or hidden apps.
                     TRACES3("BuildActionListL: Not adding process to action list; UID = %x, wgIndex = %d, wgid = %d", appId, wgIndex, aWindowGroupList.WgId(wgIndex).iId);
-                    TRACES3("BuildActionListL: IsSystem = %d, Hidden = %d, Foregroundapp %x", wgName->IsSystem() ? 1 : 0, wgName->Hidden() ? 1 : 0, foregroundUid);
+                    TRACES1("BuildActionListL: Foregroundapp %x", foregroundUid);
+                    skipped = ETrue;
                     }
     
                 else if (aWindowGroupList.IsBusy(wgIndex) || wgName->IsBusy())
@@ -252,6 +276,11 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                     // Find the app close config for this app ID
                     appCloseConfig = aConfig.GetApplicationConfig(appId).GetAppCloseConfig();
                     }
+                
+                if(!appCloseConfig && !skipped)
+                    {
+                    appCloseConfig = aConfig.GetApplicationConfig(KGOomDefaultAppId).GetAppCloseConfig();
+                    }
     
                 // Create the app close action and add it to the action list
                 if (appCloseConfig)
@@ -260,7 +289,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                     TInt wgId = aWindowGroupList.WgId(wgIndex).iId;
                     TGOomSyncMode syncMode = appCloseConfig->iSyncMode;
                     TInt ramEstimate = appCloseConfig->iRamEstimate;
-                    TActionRef ref = TActionRef(TActionRef::EAppClose, priority, syncMode, ramEstimate, wgId, wgIndex);
+                    TActionRef ref = TActionRef(TActionRef::EAppClose, priority, syncMode, ramEstimate, wgId, wgIndex, appCloseConfig->iCloseTimeout, appCloseConfig->iWaitAfterClose);
     
                     //AppClose Actions should always have a unique prioirity determined by the application's z order.
                     TInt err = iActionRefs.InsertInOrder(ref, ComparePriorities);
@@ -320,7 +349,7 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
             
             //Double checking again if this app is now in foreground, if yes then we dont kill
             CApaWindowGroupName* wgName = CApaWindowGroupName::NewLC(iWs, iWs.GetFocusWindowGroup());
-            RDebug::Print(wgName->WindowGroupName());
+            
             TInt32 fgApp = wgName->AppUid().iUid;
             TInt32 appId = iMonitor.GetWindowGroupList()->AppIdfromWgId(ref.WgId(), ETrue);
             if(appId == fgApp)
@@ -334,11 +363,13 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
         else
             {
             action = &(ref.RunPlugin());
+            iCurrentPluginRun = ref.RunPlugin().Id();
             }
 
         iFreeingMemory = ETrue;
         TRACES2("CGOomActionList::FreeMemory: Running action %d which has priority %d", iCurrentActionIndex,ref.Priority());
         action->FreeMemory(iCurrentTarget - memoryEstimate);
+        iCurrentPluginRun = 0;
         memoryFreeingActionRun = ETrue;
 
         // Actions with EContinueIgnoreMaxBatchSize don't add to the tally of running actions
@@ -379,10 +410,7 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
         TRACES("CGOomActionList::FreeMemory: No usable memory freeing action has been found");
         iMonitor.ResetTargets();
         TInt freeMemory;
-        if (FreeMemoryAboveTarget(freeMemory) && !iMonitor.NeedToPostponeMemGood())
-            {
-            MemoryGood();
-            }
+        FreeMemoryAboveTarget(freeMemory);
         iServer.CloseAppsFinished(freeMemory, EFalse);
         }
     }
@@ -587,6 +615,7 @@ void CGOomActionList::StateChanged()
                     iRunningKillAppActions = ETrue;
                     iMonitor.RunCloseAppActions(iMaxPriority);
                     }
+                iMonitor.WaitAndSynchroniseMemoryState();
                 }
             else
                 {
@@ -607,6 +636,7 @@ void CGOomActionList::StateChanged()
             iRunningKillAppActions = EFalse;
             iMonitor.ResetTargets();
             iServer.CloseAppsFinished(freeMemory, ETrue);
+            iMonitor.WaitAndSynchroniseMemoryState();
             }
         }
 
@@ -653,14 +683,15 @@ void CGOomActionList::ConstructL(CGOomConfig& aConfig)
         }
     }
 
-void CGOomActionList::SetPriority(TInt aWgIndex, TInt aPriority)
+
+void CGOomActionList::SetPriority(TInt aWgId, TInt aPriority)
     {
     FUNC_LOG;
 
     TInt idx = iActionRefs.Count()-1;
     while(idx >= 0)
         {
-        if(iActionRefs[idx].WgIndex() == aWgIndex)
+        if(iActionRefs[idx].WgId() == aWgId)
             {
             break;
             }
@@ -669,15 +700,22 @@ void CGOomActionList::SetPriority(TInt aWgIndex, TInt aPriority)
     
     if(idx >= 0)
         {
-        TRACES2("CGOomActionList::SetPriority Setting app wgindex %d, index %d as busy", aWgIndex, idx);
+        TRACES2("CGOomActionList::SetPriority Setting app wgid %d, index %d as busy", aWgId, idx);
         iActionRefs[idx].SetPriority(aPriority);
-        if (!iFreeingMemory)
-            {
-            iActionRefs.Sort(ComparePriorities);
-            }
         }
     else
         {
-        TRACES1("CGOomActionList::SetPriority wgindex %d not in the hitlist", aWgIndex);
+        TRACES1("CGOomActionList::SetPriority wgd %d not in the hitlist", aWgId);
         }
+    }
+
+
+TUint CGOomActionList::CurrentPluginRun()
+    {
+    return iCurrentPluginRun;
+    }
+
+TBool CGOomActionList::IsRunningKillAppActions()
+    {
+    return iRunningKillAppActions;
     }

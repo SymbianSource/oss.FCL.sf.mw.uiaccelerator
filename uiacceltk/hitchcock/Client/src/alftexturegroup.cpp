@@ -109,23 +109,24 @@ EXPORT_C CAlfTextureGroup::CAlfTextureGroup()
 // ---------------------------------------------------------------------------
 //
 EXPORT_C CAlfTextureGroup::~CAlfTextureGroup()
-	{
-    while (Count())
+    {
+    if ( iData )
         {
-        RemoveTexture(Texture(Count()-1));
-        }
-
-	if ( iData )
-	    {
-	    iData->iLoadObserverQueue.Close();	
-	    iData->iTextures.Close();		    
+        while (Count())
+            {
+            RemoveTexture(Texture(Count()-1));
+            }
+    
+        iData->iLoadObserverQueue.Close();	
+	iData->iTextures.Close();		    
 	    
-	    delete iData->iTextureLoadObserver;
-	    iData->iTextureLoadObserver = NULL;
-	    }	
+	delete iData->iTextureLoadObserver;
+	iData->iTextureLoadObserver = NULL;
+	}	
 
-	delete iData;
-	}
+    delete iData;
+    }
+
 // ---------------------------------------------------------------------------
 // NewL
 // ---------------------------------------------------------------------------

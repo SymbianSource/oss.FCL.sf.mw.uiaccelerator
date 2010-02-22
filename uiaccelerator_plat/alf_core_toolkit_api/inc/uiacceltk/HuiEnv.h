@@ -51,6 +51,7 @@ class CHuiTextStyleManager;
 class CHuiThemeManager;
 class CHuiCanvasTextureCache;
 class CHuiFxEngine;
+class MHuiSynchronizationObserver;
 
 class CHighResTimer;
 const TInt KHuiEnvReleasedActionId = 0x200100F8;
@@ -759,6 +760,20 @@ public:
 
     CHuiCanvasTextureCache& CanvasTextureCache() const;
 
+    /**
+	 * Performs drawing synchronization.
+	 * @internal
+	 * @param aId identifier.
+	 * @param aObserver observer to be informed of completion.
+	 */
+    IMPORT_C void Synchronize(TInt aId, MHuiSynchronizationObserver* aObserver);
+
+     /**
+     	 * Removes the controlgroup
+	 * @param aId identifier.
+
+     */	   	
+     void RemoveTheControlGroup(TInt aId); 		
 public:
 
     /* Implementaton of MHuiTextureLoadingCompletedObserver: */
@@ -988,6 +1003,10 @@ public:
     IMPORT_C void NotifyMemoryLevel(THuiMemoryLevel aMemoryLevel);
     IMPORT_C THuiMemoryLevel MemoryLevel();
     
+    void DoSynchronize();
+private:
+    MHuiSynchronizationObserver* iSynchObserver;
+    TInt iSynchId;
     };
 
 #endif  // __HUIENV_H__

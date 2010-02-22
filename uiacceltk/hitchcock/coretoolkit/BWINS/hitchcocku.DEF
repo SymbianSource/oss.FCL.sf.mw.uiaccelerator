@@ -1581,4 +1581,8 @@ EXPORTS
 	?SetForegroundBitmapL@CHuiDisplay@@QAEXPAVCFbsBitmap@@@Z @ 1580 NONAME ; void CHuiDisplay::SetForegroundBitmapL(class CFbsBitmap *)
 	?ForegroundBitmap@CHuiDisplay@@QBEPAVCFbsBitmap@@XZ @ 1581 NONAME ; class CFbsBitmap * CHuiDisplay::ForegroundBitmap(void) const
 	?HasCommandBuffers@CHuiCanvasVisual@@QBEHH@Z @ 1582 NONAME ; int CHuiCanvasVisual::HasCommandBuffers(int) const
+	?SkinContentChanged@CHuiS60Skin@@UAEXXZ @ 1583 NONAME ; void CHuiS60Skin::SkinContentChanged(void)
+	?SkinPackageChanged@CHuiS60Skin@@UAEXW4TAknsSkinStatusPackageChangeReason@@@Z @ 1584 NONAME ; void CHuiS60Skin::SkinPackageChanged(enum TAknsSkinStatusPackageChangeReason)
+	?SkinConfigurationChanged@CHuiS60Skin@@UAEXW4TAknsSkinStatusConfigurationChangeReason@@@Z @ 1585 NONAME ; void CHuiS60Skin::SkinConfigurationChanged(enum TAknsSkinStatusConfigurationChangeReason)
+	?Synchronize@CHuiEnv@@QAEXHPAVMHuiSynchronizationObserver@@@Z @ 1586 NONAME ; void CHuiEnv::Synchronize(int, class MHuiSynchronizationObserver *)
 

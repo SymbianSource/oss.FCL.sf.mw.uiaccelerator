@@ -155,6 +155,10 @@ protected:
     TInt             iBuffersInUse;
     
 private:
+    
+    TBool FxmlUsesInput1(CHuiFxEffect& aEffect);
+    
+private:
     // Render buffer management --- native implementations
     virtual CHuiFxRenderbuffer* AcquireNativeRenderbuffer(const TSize& aDesiredSize) = 0;
     virtual void ReleaseNativeRenderbuffer(CHuiFxRenderbuffer* aBuffer) = 0;

@@ -72,6 +72,7 @@ public:
     TUint iGoodRamThreshold;
     TUint iLowRamThreshold; 
     TUint iTargetFree;
+    TUint iSkipPluginId;
     
 private:
     

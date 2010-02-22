@@ -953,6 +953,11 @@ EXPORT_C TInt CAlfEnv::DisplayCount() const
 //   
 EXPORT_C void CAlfEnv::SetRefreshMode( TAlfRefreshMode aMode )
     {
+    if(aMode == EAlfRefreshModeAutomatic)
+        {
+        // syncronoushly rasterize all the changed text visuals
+        iData->iTextStyleManager->RefreshAllVisuals();
+        }
     Client().EnvSetRefreshMode( aMode );
     iData->iRefreshMode = TAlfRefreshMode(aMode);
     }

@@ -56,6 +56,7 @@ KGOomErrBadOrMissingPriorityInAppCloseConfig,
 KGOomErrBadLowThresholdValueForAppConfig,
 KGOomErrBadGoodThresholdValueForAppConfig,
 KGOomErrBadTargetFreeValueForAppConfig,
+KGOomErrBadSkipPluginValueForAppConfig,
 KGOomErrSystemPluginSettingsMustComeAfterAppCloseSettings,
 KGOomErrAppPluginSettingsMustComeAfterSystemPluginSettings,
 KGOomErrAppPluginIdleTimeRulesMustComeAfterAppPluginSettings,
@@ -109,6 +110,9 @@ _LIT8(KGOomConfigApp, "app");
 _LIT8(KGOomConfigAppCloseSettings, "app_close_settings");
 _LIT8(KGOomConfigCloseApp, "close_app");
 
+_LIT8(KGOomAttributeAppCloseTimeout, "close_timeout");
+_LIT8(KGOomAttributeAppWaitAfterClose, "wait_after_close");
+
 // App close idle time
 _LIT8(KGOomConfigAppCloseIdlePriority, "app_close_idle_priority");
 
@@ -122,6 +126,7 @@ _LIT8(KGOomAttributeDefaultWaitAfterPlugin, "default_wait_after_plugin");
 
 //App specific
 _LIT8(KGOomAttributeTargetFreeOnStartup, "target_free_on_startup");
+_LIT8(KGOomAttributeSkipPlugin, "skip_plugin");
 
 // System plugins 
 
@@ -478,6 +483,24 @@ void CGOomConfigParser::SetAppConfigL(const RAttributeArray& aAttributes)
             if (err != KErrNone)
                 ConfigError(KGOomErrBadTargetFreeValueForAppConfig);
             }
+        
+    // Get the app specific SkipPlugin
+        if (err == KErrNone)
+            {
+            TUint skipPlugin;
+            err = GetValueFromHexAttributeList(aAttributes, KGOomAttributeSkipPlugin, skipPlugin);
+            if (err == KErrNone)
+                {
+                TRACES2("SKIP PLUGIN %x configured for App %x", skipPlugin, uid); 
+                appConfig->iSkipPluginId = skipPlugin;
+                }
+            else if (err == KErrNotFound)
+                err = KErrNone;
+            
+            if (err != KErrNone)
+                ConfigError(KGOomErrBadSkipPluginValueForAppConfig);
+            }
+                
     
     // Add the applciation config to the main config
     if ((err == KErrNone) && (appConfig))
@@ -568,10 +591,46 @@ void CGOomConfigParser::SetCloseAppConfigL(const RAttributeArray& aAttributes)
             ConfigError(KGOomErrMissingEstimateFromAppCloseConfig);
         else
             closeAppConfig->iRamEstimate = ramEstimate * 1024;
-           }
+        }
+    
+    if (err == KErrNone)
+        {
+        TInt closeTimeout;
+        err = GetValueFromDecimalAttributeList(aAttributes, KGOomAttributeAppCloseTimeout, closeTimeout);
+        if (err == KErrNone)
+            {
+            closeAppConfig->iCloseTimeout = closeTimeout;
+            }
+        else if (err == KErrNotFound)
+            {
+            closeAppConfig->iCloseTimeout=0;
+            err = KErrNone;
+            }
+        }
+     
+    if (err == KErrNone)
+        {
+        TInt waitAfterClose;
+        err = GetValueFromDecimalAttributeList(aAttributes, KGOomAttributeAppWaitAfterClose, waitAfterClose);
+        if (err == KErrNone)
+            {
+            closeAppConfig->iWaitAfterClose = waitAfterClose;
+            }
+        else if (err == KErrNotFound)
+            {
+            err = KErrNone;
+            closeAppConfig->iWaitAfterClose = 0;
+            }
+        }
 
     if (err == KErrNone)
-        iConfig.SetAppCloseConfigL(closeAppConfig);
+        {
+         iConfig.SetAppCloseConfigL(closeAppConfig);
+        }
+    else
+        {
+        TRACES2("ERROR Creating Appcloseconfig file for %x, err %d", uid,err);
+        }
     
     CleanupStack::Pop(closeAppConfig);
     }

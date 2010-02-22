@@ -1193,7 +1193,19 @@ EXPORT_C CHuiCanvasGc::TClipRectVisibility CHuiCanvasGc::EnableDelayedClippingIf
                 // Could copy only needed rects to avoid excessive clipping
                 iDelayedClipRegion.Copy(iClippingRegion);
                 break;
-                }                                
+                }
+
+		    // both points lie outside - but the line may still intersect the region, 
+            // so represent the line as a rect and try an intersection test...
+            TRect lineBoundingRect(start, end);
+            lineBoundingRect.Normalize();
+            lineBoundingRect.iBr += TPoint(1, 1);
+            if (IsClipped(lineBoundingRect, iClippingRegion) != EFullyOutside)
+                {
+                iDelayedClipRegion.Copy(iClippingRegion);
+                vis1 = EPartialOverlap;
+                break;
+                }                    
             }                    
         }        
     if (vis1 == EFullyOutside && vis2 == EFullyOutside)

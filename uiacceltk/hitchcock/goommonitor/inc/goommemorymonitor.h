@@ -25,6 +25,7 @@
 #include <EGL/egl.h>
 #include "goomglobalconfig.h"
 #include "goomwindowgrouplist.h"
+#include "goomtraces.h"
 
 // ---------------------------------------------------------
 // CMemoryMonitor
@@ -40,16 +41,25 @@ class CGoomThresholdCrossed;
 
 typedef EGLBoolean (*NOK_resource_profiling)(EGLDisplay, EGLint, EGLint*, EGLint, EGLint*);
 
+class CGOomSynchTimer;
+
 NONSHARABLE_CLASS(CMemoryMonitor) : public CBase
     {
 public:
     static CMemoryMonitor* NewL();
     ~CMemoryMonitor();
+    
+    enum TGOomTrigger   //How free memory operation was triggered
+            {
+            EGOomFocusChanged = 0,
+            EGOomRequestMemory,
+            EGOomThresholdCrossed
+            };
 
 public: // event handlers
     void FreeMemThresholdCrossedL(TInt aAction = 0, TInt aThreshold = 0);
     void AppNotExiting(TInt aWgId);
-    void StartFreeSomeRamL(TInt aTargetFree);
+    void StartFreeSomeRamL(TInt aTargetFree, TGOomTrigger aTrigger);
     void FreeOptionalRamL(TInt aTargetFree, TInt aPluginId, TBool aUseAbsolute = EFalse); // The ID of the plugin that will clear up the allocation, used to determine the priority of the allocation
     void RequestFreeMemoryL(TInt aTargetFree, TBool aUseAbsolute = EFalse);
     void HandleFocusedWgChangeL(TInt aForegroundAppUid = KErrNotFound);
@@ -61,6 +71,7 @@ public: // event handlers
     TInt GetFreeMemory();
     void RunCloseAppActions(TInt aMaxPriority);
     CGOomWindowGroupList * GetWindowGroupList() const;
+    TBool IsSafeToProcessNewRequest(TUint aClientId);
         
     
     void SetActiveClient(TInt aClientId)
@@ -77,22 +88,34 @@ public: // event handlers
         {
         return iForegroundAppUid;
         } 
-    void SessionInCriticalAllocation(TBool aPostponeMemGood)
+    void SessionInCriticalAllocation(TBool aPostponeMemGood, TUint aClientId)
         {
+        FUNC_LOG;
         if (aPostponeMemGood)
             {
             iPostponeMemGood++;
+            if(iClientsRequestingMemory.Find(aClientId) == KErrNotFound)
+                iClientsRequestingMemory.Append(aClientId);
+            
+            TRACES2("SessionInCriticalAllocation : STARTING Critical Allocations for Client %x, ClientsRequestingMemory Count %d", aClientId, iClientsRequestingMemory.Count());
             }
         else
             {
             iPostponeMemGood--;
-            if(iPostponeMemGood<0)
+            TInt idx = iClientsRequestingMemory.Find(aClientId);
+            if(idx != KErrNotFound)
+                {
+                iClientsRequestingMemory.Remove(idx);
+                TRACES2("SessionInCriticalAllocation : ENDING Critical Allocations for Client %x, ClientsRequestingMemory Count %d", aClientId, iClientsRequestingMemory.Count());
+                }
+            
+             if(iPostponeMemGood<0)
                 {
                 iPostponeMemGood = 0;
                 }
             }
-                        
-        if (iPostponeMemGood == 0)
+        TRACES1("SessionInCriticalAllocation : ClientsRequestingMemory Count %d", iClientsRequestingMemory.Count());    
+        if (iClientsRequestingMemory.Count() == 0)
             {
             DoPostponedMemoryGood();
             }
@@ -103,8 +126,12 @@ public: // event handlers
     
     TBool NeedToPostponeMemGood()
         {
-        return (iPostponeMemGood != 0);
+        //return (iPostponeMemGood != 0);
+        return (iClientsRequestingMemory.Count() != 0);
         } 
+    
+    void WaitAndSynchroniseMemoryState();
+    void SynchroniseMemoryState();
     
 private:
     CMemoryMonitor();
@@ -112,8 +139,9 @@ private:
     TBool FreeGraphicsMemoryAboveThresholdL(TInt& aCurrentFreeMemory);
     void CloseNextApp();
     void RefreshThresholds(TInt aForegroundAppUid = KErrNotFound);
-    void StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority);
+    void StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOomTrigger aTrigger);
     void AppClosePriorityChanged(TInt aWgId, TInt aPriority);
+    
     
 public:
     // All members are owned
@@ -174,6 +202,26 @@ private: //data
     
     TInt iForegroundAppUid;
     TInt iPostponeMemGood;
+    
+    RArray<TUint> iClientsRequestingMemory;
+    
+    TGOomTrigger iTrigger;
+    
+    CGOomSynchTimer* iSynchTimer;
     };
+
+
+
+NONSHARABLE_CLASS(CGOomSynchTimer) : public CTimer
+    {
+    public:
+        static CGOomSynchTimer* NewL(CMemoryMonitor& aMonitor);
+        
+    private:
+        CMemoryMonitor& iMonitor;
+        CGOomSynchTimer(CMemoryMonitor& aMonitor);
+        void RunL();
+    };
+
 
 #endif /*GOOMMEMORYMONITOR_H*/

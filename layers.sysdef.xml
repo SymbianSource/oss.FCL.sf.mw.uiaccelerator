@@ -7,7 +7,13 @@
   <systemModel>
     <layer name="mw_layer">
       <module name="uiaccelerator">
-        <unit unitID="abs.uiaccelerator" mrp="" bldFile="&layer_real_source_path;/group" name="uiaccelerator" />
+        <unit unitID="nga.uiaccelerator" mrp="" bldFile="&layer_real_source_path;/group" name="uiaccelerator" />
+      </module>
+    </layer>
+    
+   <layer name="unit_test_layer">
+      <module name="uiaccelerator_test">
+        <unit unitID="nga.uiaccererator.unittest" mrp="" bldFile="&layer_real_source_path;/tsrc/group" name="uiaccelerator_test" />
       </module>
     </layer>
   </systemModel>

@@ -116,6 +116,11 @@ NONSHARABLE_CLASS(CAlfTextStyleHolder):public CActive
 
     void DoRefreshMesh()
         {
+        if( IsActive() )
+            {
+            Cancel();
+            }
+        
         for (TInt p = iVisuals.Count()-1; p >= 0; p--)
             {
             iVisuals[p]->PrepareForUpdateMesh();
@@ -337,7 +342,7 @@ void CAlfTextStyleManager::RefreshAllVisuals()
 #ifdef ALF_RASTER_TEXT
     for(TInt i = 0 ; i < iData->iTextStyles.Count() ; i++ )
         {
-        iData->iTextStyles[i]->RefreshMesh();
+        iData->iTextStyles[i]->DoRefreshMesh();
         }
 #else
     return;

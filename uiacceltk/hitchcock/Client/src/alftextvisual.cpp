@@ -416,10 +416,12 @@ EXPORT_C void CAlfTextVisual::ConstructL(CAlfControl& aOwner)
 
 void CAlfTextVisual::PrepareForUpdateMesh()
     {
+#ifdef ALF_RASTER_TEXT
     if(!iTextVisualData->iMeshUptoDate)
         {
         iTextVisualData->iMesh->PrepareForRasterize();
         }
+#endif // ALF_RASTER_TEXT    
     }
 
 void CAlfTextVisual::UpdateMesh(TBool aSynch)
@@ -458,6 +460,7 @@ void CAlfTextVisual::ReleaseMesh()
     {
 #ifdef ALF_RASTER_TEXT
     iTextVisualData->iMesh->ResetLines(ETrue);
+    iTextVisualData->iMeshUptoDate = EFalse;
 #endif
     }
 	

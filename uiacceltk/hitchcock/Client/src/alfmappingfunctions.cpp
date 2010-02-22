@@ -663,7 +663,7 @@ TReal32 CAlfTableMappingFunction::MapValue(TReal32 aValue, TInt /*aComponent*/) 
     if (!inverted)
         {
         // Find closest pre-calculated value...
-        for (i=0; i<KAlfTableMappingNumberOfMappedValues;i++)
+        for (i=0; i<KAlfTableMappingNumberOfMappedValues-1;i++)
             {
             if ((!inverted && aValue < iData->iParams.iValues[i]) ||
                 inverted && (aValue > iData->iParams.iValues[i]))

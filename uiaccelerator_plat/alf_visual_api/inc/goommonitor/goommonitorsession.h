@@ -169,6 +169,11 @@ public:
     * @param aAppUid application UID being started.
     */
     IMPORT_C void AppAboutToStart(TRequestStatus& aStatus, const TUid& aAppUid);
+    
+    /**
+    * Notify the GOOM monitor that this application has finished allocating memory.  
+    */
+    IMPORT_C void MemoryAllocationsComplete();
 
 private://data 
     TInt iFlags;

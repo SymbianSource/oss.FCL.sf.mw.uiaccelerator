@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Nokia Corporation and/or its subsidiary(-ies). 
+* Copyright (c) 2006-2008 Nokia Corporation and/or its subsidiary(-ies). 
 * All rights reserved.
 * This component and the accompanying materials are made available
 * under the terms of "Eclipse Public License v1.0"
@@ -859,6 +859,19 @@ void CAlfRsSendBuffer::WritePointArrayL( const TUint8& aCommand, const TArray<TP
         {
         WriteInt8L( EAlfCommandEndMarker );
 		}
+    }
+
+// ---------------------------------------------------------------------------
+// Synchronize
+// ---------------------------------------------------------------------------
+//
+void CAlfRsSendBuffer::Synchronize(TInt aId)
+    {
+    if ( iAlfBridgerClient )
+        {
+        TIpcArgs args(aId);
+        iAlfBridgerClient->SendSynch(EAlfSynchronize, args); // error ignored
+        }
     }
 
 // ---------------------------------------------------------------------------

@@ -2067,7 +2067,8 @@ void CHuiCanvasWsHwGc::EnableUpdateRegion(const TRegion& aUpdateRegion, TBool aC
             TRgb oldColor = gc->PenColor();            
             gc->SetPenAlpha(0);
             gc->SetPenColor(KRgbBlue);
-            gc->Clear(); 
+            TRect rect = aUpdateRegion.BoundingRect();
+            gc->Clear(rect); 
             gc->SetPenAlpha(oldAlpha);
             gc->SetPenColor(oldColor);
             }
@@ -2106,6 +2107,7 @@ void CHuiCanvasWsHwGc::BindRenderBuffer(CHuiCanvasRenderBuffer* aRenderbuffer, c
     // Set new clipping region which does not clip anything. 
     // We want always draw aUpdateRegion fully to the aRenderbuffer. 
     TRect displayArea = iCanvasGc->Gc()->DisplayArea(); 
+    
     iCanvasGc->Gc()->SetClip(displayArea); // this call does not transform region anymore
     
     // We use translation to get screen coordinates to match render buffer coordinates

@@ -201,6 +201,10 @@ public:
         }
     
     void SetPriority(TInt aWgId, TInt aPriority);
+    
+    TBool IsRunningKillAppActions();
+    
+    TUint CurrentPluginRun();
             
 private:
     
@@ -244,6 +248,8 @@ private: //data
     RArray<TUint> iAppsProtectedByPlugins;
     
     TBool iRunningKillAppActions;
+    
+    TUint iCurrentPluginRun;
     };
 
 #include "goomactionlist.inl"

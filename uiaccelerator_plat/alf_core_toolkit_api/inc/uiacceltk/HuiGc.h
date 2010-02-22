@@ -421,6 +421,11 @@ public:
     IMPORT_C virtual void SetDimmingFog(const TRgb& aColor, TReal32 aAmount) __SOFTFP = 0;
 
     /**
+     * Clear rect using the current pen color
+     */
+    IMPORT_C virtual void Clear(const TRect& aRect) = 0;
+    
+    /**
      * Clear using the current pen color.
      */
     IMPORT_C virtual void Clear() = 0;
@@ -938,12 +943,12 @@ protected:
     IMPORT_C CHuiGc();
 
     /* Methods. */
-
+    
     /**
      * Determines the projection viewport.
      */
     IMPORT_C TRect ProjectionViewport() const;
-
+    
     /**
      * Determines the display area not affected by orientation.
      */

@@ -278,7 +278,7 @@ void CHuiFxEffectParser::ParseNodeL( CMDXMLNode* aNode, CHuiFxLayer* aLayer)
 #ifdef _HUI_FX_PARSER_LOGGING
             __ALFFXLOGSTRING("CHuiFxEffectParser::ParseNodeL - ENodeTypeUnknown");
 #endif
-            FAIL(KErrGeneral, _L("Unknown node type"));
+            __ALFFXLOGSTRING1("CHuiFxEffectParser::ParseNodeL : WARNING - Node tag <%S> is not supported.", &(aNode->NodeName()));
             break;
             }
             

@@ -34,6 +34,7 @@ _LIT(KGraphicsMemoryMonitorServerName, "GOomMonitorServer");
 enum TGOomMonitorCmd
     {
     EGOomMonitorRequestFreeMemory,
+    EGOomMonitorMemoryAllocationsComplete,
     EGOomMonitorCancelRequestFreeMemory,
     EGOomMonitorThisAppIsNotExiting,
     EGOomMonitorRequestOptionalRam,

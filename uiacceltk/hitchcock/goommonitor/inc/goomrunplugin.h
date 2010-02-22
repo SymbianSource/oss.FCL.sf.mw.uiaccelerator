@@ -55,6 +55,8 @@ public:
     // To be called by the CGOomPluginWaiter
     inline void WaitCompleted();
     
+    TUint Id();
+    
 protected:
     
     void ConstructL(CGOomRunPluginConfig& aPluginConfig);    

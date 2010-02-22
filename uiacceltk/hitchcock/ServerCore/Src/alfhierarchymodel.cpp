@@ -233,6 +233,13 @@ void CAlfHierarchyModel::HandleMessageL( const RMessage2& aMessage )
 			aMessage.Complete( EAlfBridgerSendChunk );
             return;
             }
+        case EAlfSynchronize:
+            {
+            iServer.Bridge()->AddData( EAlfDSSynchronize, aMessage.Int0() );
+            aMessage.Complete( KErrNone );
+            }
+            break;
+            
         default:
             {
             doComplete= ETrue;
@@ -978,11 +985,16 @@ void CAlfHierarchyModel::DoNodeLayerExtentChangedL()
     TUint32 nodeId = (TUint32)iStream->ReadUint32L();
     TRect extent = TRect(0,0,0,0);
     ReadRectL(extent, iStream); 
+    TBool isDSA = (TUint32)iStream->ReadUint32L();
     CAlfNodeVisual* node = (CAlfNodeVisual*)FindNode( nodeId );
     if ( node && node->Window() )
         {
         // SetSurfaceExtent is not supported for image visual
         node->Window()->SetSurfaceExtent( extent );
+        if (isDSA)
+            {
+            node->Window()->SetLayerUsesAplhaFlag(KWindowIsDSAHost);
+            }
         }
     else if( node ) // this would mean that node has being orphaneded but not yet deleted
         {

@@ -48,6 +48,8 @@
 #include "goomthresholdcrossedao.inl"
 #endif
 
+const TInt KGoomWaitTimeToSynch = 1000000;
+
 // ======================================================================
 // class CMemoryMonitor
 // ======================================================================
@@ -81,6 +83,8 @@ CMemoryMonitor::CMemoryMonitor()
 CMemoryMonitor::~CMemoryMonitor()
     {
     FUNC_LOG;
+    
+    delete iSynchTimer;
 
     delete iServer;
     delete iWservEventReceiver;
@@ -184,6 +188,8 @@ void CMemoryMonitor::ConstructL()
     
     iWservEventReceiver = new(ELeave) CWservEventReceiver(*this, iWs);
     iWservEventReceiver->ConstructL();
+    
+    iSynchTimer = CGOomSynchTimer::NewL(*this);
     }
 
 const CGOomGlobalConfig& CMemoryMonitor::GlobalConfig()
@@ -202,30 +208,37 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
     FUNC_LOG;
     // keep only one notification active at a moment
 #ifdef USE_ASYNCYH_NOTIFICATIONS 
-    if (aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_GT_NOK)
-        {
-        TRACES("FreeMemThresholdCrossedL : EGL_PROF_TOTAL_MEMORY_USAGE_GT_NOK");
-        iMemAllocationsGrowing->Stop();
-        iMemAllocationsGoingDown->Continue();
-        }
-    else
-        {
-        TRACES("FreeMemThresholdCrossedL : EGL_PROF_TOTAL_MEMORY_USAGE_LT_NOK");
-        iMemAllocationsGrowing->Continue();
-        iMemAllocationsGoingDown->Stop();            
-        }    
-#endif
-
-    StartFreeSomeRamL(iGoodThreshold);
+   
     if (aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_LT_NOK)
         {
         TInt current = GetFreeMemory();
         if(current >= iGoodThreshold  && (!NeedToPostponeMemGood()))
             {
-            TRACES("FreeMemThresholdCrossedL : calling MemoryGOOD");
+            TRACES2("FreeMemThresholdCrossedL : crossed good threshold Free %d, GThresh %d, Calling MemoryGood",current, iGoodThreshold);
             iGOomActionList->MemoryGood();
+            iMemAllocationsGrowing->Continue();
+            iMemAllocationsGoingDown->Stop();
+            return;
+            }
+        else
+            {
+            TRACES3("FreeMemThresholdCrossedL : Not Calling MemoryGOOD. Free %d, GThresh %d, Handshakepending = %d",current, iGoodThreshold, NeedToPostponeMemGood()?1:0);
+            //if we remain in low mem mode, we have to wait for the same trigger i.e. free mem crossing good threshold
+            
+            if(NeedToPostponeMemGood()) //if handshake pending
+                iMemAllocationsGoingDown->Stop();   //Stop till handhsake is complete. It will be made to continue from DoPostponedMemoryGood
+            else
+                iMemAllocationsGoingDown->Continue();
             }
         }
+    else//if aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_GT_NOK
+        {
+        TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
+        iMemAllocationsGrowing->Stop();
+        iMemAllocationsGoingDown->Continue();
+        StartFreeSomeRamL(iGoodThreshold, EGOomThresholdCrossed);
+        }
+#endif
     }
 
 void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
@@ -244,20 +257,10 @@ void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
     RefreshThresholds(aForegroundAppUid);
     // Not very elegant, now we poll on each window group change
     // Should have better trigger e.g. from window server 
-#ifndef USE_ASYNCYH_NOTIFICATIONS  
-    TInt current = GetFreeMemory();
-    if (current < iLowThreshold)
-        {
-        StartFreeSomeRamL(iGoodThreshold);
-        }  
-    else if(current >= iGoodThreshold)
-        {
-        iGOomActionList->MemoryGood();
-        }
-#endif
+	StartFreeSomeRamL(iCurrentTarget, EGOomFocusChanged);
      }
 
-void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority) // The maximum priority of action to run
+void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOomTrigger aTrigger) // The maximum priority of action to run
     {
     FUNC_LOG;
 
@@ -299,8 +302,10 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority) // T
     //iGOomActionList->SetCurrentTarget(aTargetFree);
     iGOomActionList->SetCurrentTarget(iCurrentTarget);
 
+    iTrigger = aTrigger;
     // Run the memory freeing actions
     iGOomActionList->FreeMemory(aMaxPriority);
+    
     }
 
 void CMemoryMonitor::RunCloseAppActions(TInt aMaxPriority)
@@ -317,18 +322,18 @@ void CMemoryMonitor::RunCloseAppActions(TInt aMaxPriority)
 // of applications, and each will be given a timeout of KAPPEXITTIMEOUT.
 // ---------------------------------------------------------
 //
-void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree)
+void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TGOomTrigger aTrigger)
     {
     FUNC_LOG;
 
-    StartFreeSomeRamL(aTargetFree, KGOomPriorityInfinate - 1);
+    StartFreeSomeRamL(aTargetFree, KGOomPriorityInfinate - 1, aTrigger);
     }
 
 void CMemoryMonitor::RequestFreeMemoryL(TInt aTargetFree, TBool aUseAbsolute)
     {
     FUNC_LOG;
 
-    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iLowThreshold), KGOomPriorityInfinate - 1);
+    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iLowThreshold), KGOomPriorityInfinate - 1, EGOomRequestMemory);
     }
 
 void CMemoryMonitor::FreeOptionalRamL(TInt aTargetFree, TInt aPluginId, TBool aUseAbsolute) // The ID of the plugin that will clear up the allocation, used to determine the priority of the allocation
@@ -337,7 +342,7 @@ void CMemoryMonitor::FreeOptionalRamL(TInt aTargetFree, TInt aPluginId, TBool aU
 
     // Calculate the priority of the allocation (the priority of the plugin that will clear it up - 1)
     TInt priorityOfAllocation = iConfig->GetPluginConfig(aPluginId).CalculatePluginPriority(*iGOomWindowGroupList) - 1;
-    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iGoodThreshold), priorityOfAllocation);
+    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iGoodThreshold), priorityOfAllocation, EGOomRequestMemory);
     }
 
 // Does the EGL extension return the amount of memory in bits?
@@ -469,26 +474,52 @@ void CMemoryMonitor::ResetTargets(TInt aTarget)
 void CMemoryMonitor::SetPriorityBusy(TInt aWgId)
     {
     FUNC_LOG;
-    
     TRACES2("Received SetPriorityBusy for appid = %x, wgid = %d", iGOomWindowGroupList->AppIdfromWgId(aWgId, ETrue), aWgId);
-    iGOomWindowGroupList->SetPriorityBusy(aWgId);
-    AppClosePriorityChanged(aWgId, RGOomMonitorSession::EGOomPriorityBusy);
+    
+    RArray<TInt> WgIdList;
+    iGOomWindowGroupList->GetAllWgIdsMatchingAppId(aWgId, WgIdList);
+        
+    TInt i = WgIdList.Count();
+    while(i--)
+        {
+        iGOomWindowGroupList->SetPriorityBusy(WgIdList[i]);
+        if(iGOomActionList->IsRunningKillAppActions())  //this may be too late as killing of apps has already begun, but we might still be able to save the app 
+            AppClosePriorityChanged(WgIdList[i], RGOomMonitorSession::EGOomPriorityBusy);
+        }
     }
 
 void CMemoryMonitor::SetPriorityNormal(TInt aWgId)
     {
     FUNC_LOG;
-
-    iGOomWindowGroupList->SetPriorityNormal(aWgId);
-    AppClosePriorityChanged(aWgId, RGOomMonitorSession::EGOomPriorityNormal);
+    TRACES2("Received SetPriorityBusy for appid = %x, wgid = %d", iGOomWindowGroupList->AppIdfromWgId(aWgId, ETrue), aWgId);
+    
+    RArray<TInt> WgIdList;
+    iGOomWindowGroupList->GetAllWgIdsMatchingAppId(aWgId, WgIdList);
+        
+    TInt i = WgIdList.Count();
+    while(i--)
+        {
+        iGOomWindowGroupList->SetPriorityNormal(WgIdList[i]);
+        if(iGOomActionList->IsRunningKillAppActions())
+            AppClosePriorityChanged(WgIdList[i], RGOomMonitorSession::EGOomPriorityNormal);
+        }
     }
 
 void CMemoryMonitor::SetPriorityHigh(TInt aWgId)
     {
     FUNC_LOG;
+    TRACES2("Received SetPriorityBusy for appid = %x, wgid = %d", iGOomWindowGroupList->AppIdfromWgId(aWgId, ETrue), aWgId);
     
-    iGOomWindowGroupList->SetPriorityHigh(aWgId);
-    AppClosePriorityChanged(aWgId, RGOomMonitorSession::EGOomPriorityHigh);
+    RArray<TInt> WgIdList;
+    iGOomWindowGroupList->GetAllWgIdsMatchingAppId(aWgId, WgIdList);
+        
+    TInt i = WgIdList.Count();
+    while(i--)
+        {    
+        iGOomWindowGroupList->SetPriorityHigh(WgIdList[i]);
+        if(iGOomActionList->IsRunningKillAppActions())
+            AppClosePriorityChanged(WgIdList[i], RGOomMonitorSession::EGOomPriorityHigh);
+        }
     }
 
 TInt CMemoryMonitor::GetFreeMemory()
@@ -586,13 +617,23 @@ void CMemoryMonitor::DoPostponedMemoryGood()
     {
     FUNC_LOG;
     TInt current = GetFreeMemory();
-    if(current >= iGoodThreshold  && (!NeedToPostponeMemGood()))
+    if(current >= iGoodThreshold)
         {
-        TRACES("DoPostponedMemoryGood calling MemoryGOOD");
-        iGOomActionList->MemoryGood();
+        if(!NeedToPostponeMemGood())
+            {
+            TRACES("DoPostponedMemoryGood calling MemoryGOOD");
+            iGOomActionList->MemoryGood();
+            }
+        else
+            {
+            iMemAllocationsGoingDown->Continue();
+            }
         }
+    else
+        {
+        iMemAllocationsGoingDown->Continue();
+        }   
     }    
-
 
 void CMemoryMonitor::AppClosePriorityChanged(TInt aWgId, TInt aPriority)
     {
@@ -615,19 +656,21 @@ void CMemoryMonitor::AppClosePriorityChanged(TInt aWgId, TInt aPriority)
         appCloseConfig = iConfig->GetApplicationConfig(aWgId).GetAppCloseConfig();
         TRACES("CMemoryMonitor::AppClosePriorityChanged NORMAL");
     }
-        
+    
+    if(!appCloseConfig)
+        {
+        appCloseConfig = iConfig->GetApplicationConfig(KGOomDefaultAppId).GetAppCloseConfig();
+        }
+    
     if (appCloseConfig)
         {  
-        TInt32 appId = iGOomWindowGroupList->AppIdfromWgId(aWgId, ETrue);
-        TInt wgIndex=iGOomWindowGroupList->GetIndexFromAppId(appId);
-        
-        TRACES2("CMemoryMonitor::AppClosePriorityChanged wgindex %d, appid %x", wgIndex, appId);
+        TInt wgIndex=iGOomWindowGroupList->GetIndexFromWgId(aWgId);
         
         if(wgIndex>=0)
             {
-            TRACES2("CMemoryMonitor::AppClosePriorityChanged Setting Priority for app %x, wgid %d", appId, aWgId);
+            TRACES2("CMemoryMonitor::AppClosePriorityChanged Setting Priority for app %x, wgid %d", iGOomWindowGroupList->AppIdfromWgId(aWgId, ETrue), aWgId);
             TUint priority = appCloseConfig->CalculateCloseAppPriority(*iGOomWindowGroupList, wgIndex);
-            iGOomActionList->SetPriority(wgIndex, priority);
+            iGOomActionList->SetPriority(aWgId, priority);
             }
         else
             {
@@ -644,3 +687,105 @@ CGOomWindowGroupList * CMemoryMonitor::GetWindowGroupList() const
 {
     return iGOomWindowGroupList; 
 }
+
+TBool CMemoryMonitor::IsSafeToProcessNewRequest(TUint aClientId)
+    {
+    FUNC_LOG;
+    if(iActiveClientId == aClientId)
+        {
+        TRACES1("Repeated Request from %x", aClientId);
+        return EFalse;
+        }
+    
+    TUint currrentPluginRun = iGOomActionList->CurrentPluginRun();
+    if(currrentPluginRun)
+        {
+        if(iConfig->GetApplicationConfig(aClientId).iSkipPluginId == currrentPluginRun)
+            {
+            TRACES2("Request from %x cannot be served now as plugin %x is running", aClientId, currrentPluginRun);
+            return EFalse;
+            }
+        }
+    
+    TRACES1("Going to process new request %d",iPostponeMemGood);
+    return ETrue;
+    }
+
+void CMemoryMonitor::WaitAndSynchroniseMemoryState() //this will be called after freeing memory
+    {
+    FUNC_LOG;
+    
+    switch (iTrigger)
+        {
+        case EGOomThresholdCrossed:
+            {
+            //Call memory good if we are good.
+            DoPostponedMemoryGood();
+            break;
+            }
+        case EGOomFocusChanged:
+        case EGOomRequestMemory:
+            {
+            //start timer
+            //cancel timer if end critical allocations request
+            //end critical allocations when timer expires
+            if ( iSynchTimer && //exists
+                 !iSynchTimer->IsActive() ) // keep it simple
+                {                
+	        iSynchTimer->After(KGoomWaitTimeToSynch);
+                }
+            break;
+            }
+        }
+    }
+
+void CMemoryMonitor::SynchroniseMemoryState()
+    {
+    FUNC_LOG;
+    TInt current = GetFreeMemory();
+    if(current >= iGoodThreshold)
+        {
+        if(!NeedToPostponeMemGood())
+            {
+            TRACES("SynchroniseMemoryState calling MemoryGOOD");
+            iGOomActionList->MemoryGood();
+            }
+        else
+            {
+            iMemAllocationsGoingDown->Continue();
+            }
+        }
+    else if(current < iLowThreshold)
+        {
+        iMemAllocationsGrowing->Stop();
+        iMemAllocationsGoingDown->Continue();
+        }
+    else
+        {
+        iMemAllocationsGrowing->Continue();
+        iMemAllocationsGoingDown->Continue();
+        }
+    }
+    
+    
+CGOomSynchTimer* CGOomSynchTimer::NewL(CMemoryMonitor& aMonitor)
+    {
+    CGOomSynchTimer* self = new (ELeave) CGOomSynchTimer(aMonitor);
+    CleanupStack::PushL(self);
+    self->ConstructL();
+    CleanupStack::Pop(self);
+    return self;
+    }
+
+CGOomSynchTimer::CGOomSynchTimer(CMemoryMonitor& aMonitor) : CTimer(EPriorityStandard), iMonitor(aMonitor)
+    {
+    CActiveScheduler::Add(this);
+    }
+    
+void CGOomSynchTimer::RunL()
+    {
+    FUNC_LOG;
+    iMonitor.SynchroniseMemoryState();
+    }
+
+

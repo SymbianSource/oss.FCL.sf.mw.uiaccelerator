@@ -48,22 +48,29 @@ void CHuiControlGroup::ConstructFromResourceL(TResourceReader& /*aReader*/)
 
 	
 CHuiControlGroup::~CHuiControlGroup()
-    {    
-    iUnhandledEventObservers.Close();
+    {   
     
-    // The group owns the controls, so it must destroy them.
-    // Destroy in reverse order so that references will be removed in 
-    // natural order (children of a pane will be removed before the pane).
-    for(TInt i = iControls.Count() - 1; i >= 0; --i)
-        {
-        CHuiControl* c = iControls[i];
-        iControls.Remove(i);
-        delete c;
-        }
-    iControls.Reset();
+       
+        iEnv.RemoveTheControlGroup(iResourceId);
     
-    delete iTransform;
-    HUI_PROBE_REPORT_DESTRUCTED
+        iUnhandledEventObservers.Close();
+            
+            // The group owns the controls, so it must destroy them.
+            // Destroy in reverse order so that references will be removed in 
+            // natural order (children of a pane will be removed before the pane).
+            for(TInt i = iControls.Count() - 1; i >= 0; --i)
+                {
+                CHuiControl* c = iControls[i];
+                iControls.Remove(i);
+                delete c;
+                }
+            iControls.Reset();
+            
+            delete iTransform;
+            iTransform = NULL;
+            HUI_PROBE_REPORT_DESTRUCTED
+      
+    
     }
     
     

@@ -713,7 +713,9 @@ EXPORT_C TInt CHuiAnchorLayout::Attach(
             Mem::FillZ(anchor, sizeof(*anchor));
             }
         }
-        
+    
+    ASSERT(anchor);
+    
     TEdgeAnchor* edge(NULL);
     TAxis& axis = anchor->Axis(axisId);
     error = axis.AddEdge(edgeProximity, edge);

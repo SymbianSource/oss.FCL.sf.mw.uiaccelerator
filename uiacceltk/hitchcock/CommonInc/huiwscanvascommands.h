@@ -170,4 +170,7 @@ enum TAlfSendBufferFrameFlags
         EAlfTransparentContentFlush = 0x02
         };
 
+// drawing commands for the window should be ignored 
+#define KWindowIsDSAHost 2
+
 #endif /* HUIWSCANVASCOMMANDS_H_ */
