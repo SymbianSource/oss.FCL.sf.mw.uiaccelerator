@@ -26,7 +26,7 @@
 
 typedef void* (*plugingetinterfacefunc)(int);
 
-const TInt KRefreshTarget = 15;
+const TInt KRefreshTarget = 99;
 _LIT(KExeCaption,"BG anim host");
 
 static const TUint KMaxGPUMemUsage = 1024*1024*4;
@@ -369,7 +369,6 @@ void CBgAnimHost::CreateWindowSurfaceL()
         }
 	
 	eglMakeCurrent( iEGLDisplay, iEGLSurface, iEGLSurface, iEGLContext );        
-
 
     free(configList);
     free(preferredConfig);

@@ -1508,7 +1508,7 @@ EXPORTS
 	?SetEngine@CHuiFxEffect@@QAEXPAVCHuiFxEngine@@@Z @ 1507 NONAME ; void CHuiFxEffect::SetEngine(class CHuiFxEngine *)
 	?SetExtRect@CHuiFxVisualLayer@@UAEXPAVTRect@@@Z @ 1508 NONAME ; void CHuiFxVisualLayer::SetExtRect(class TRect *)
 	?SetExtRect@CHuiFxGroupLayer@@UAEXPAVTRect@@@Z @ 1509 NONAME ; void CHuiFxGroupLayer::SetExtRect(class TRect *)
-	??0CHuiFxEffectCacheEffectNode@@QAE@ABVTDesC16@@AAPAVCHuiFxEffect@@PAVMHuiEffectable@@PAVTRect@@PAVCHuiFxEngine@@@Z @ 1510 NONAME ; CHuiFxEffectCacheEffectNode::CHuiFxEffectCacheEffectNode(class TDesC16 const &, class CHuiFxEffect * &, class CHuiVisual *, class TRect *, class CHuiFxEngine *)
+	??0CHuiFxEffectCacheEffectNode@@QAE@ABVTDesC16@@AAPAVCHuiFxEffect@@PAVMHuiEffectable@@PAVTRect@@PAVCHuiFxEngine@@@Z @ 1510 NONAME ABSENT; CHuiFxEffectCacheEffectNode::CHuiFxEffectCacheEffectNode(class TDesC16 const &, class CHuiFxEffect * &, class CHuiVisual *, class TRect *, class CHuiFxEngine *)
 	?SetExtRect@CHuiFxEffect@@QAEXPAVTRect@@@Z @ 1511 NONAME ; void CHuiFxEffect::SetExtRect(class TRect *)
 	?CopyParameterL@CHuiFxFilter@@IAEXABVTDesC16@@PAMPBV1@@Z @ 1512 NONAME ; void CHuiFxFilter::CopyParameterL(class TDesC16 const &, float *, class CHuiFxFilter const *)
 	?CopyParameterL@CHuiFxFilter@@IAEXABVTDesC16@@PAVTRgb@@PBV1@@Z @ 1513 NONAME ; void CHuiFxFilter::CopyParameterL(class TDesC16 const &, class TRgb *, class CHuiFxFilter const *)

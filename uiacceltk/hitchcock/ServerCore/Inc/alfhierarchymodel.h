@@ -23,6 +23,10 @@
 #include <e32base.h>
 #include <e32hashtab.h>
 #include <gdi.h>
+
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h" 
+
 #include <alfwindowstructs.h>
 #include "alfstreamerbridge.h"
 #include <uiacceltk/HuiUtil.h>  // USER_INVARIANT

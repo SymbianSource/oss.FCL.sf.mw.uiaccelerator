@@ -1825,6 +1825,5 @@ void CHuiEnv::RemoveTheControlGroup(TInt aId)
             
             }
         }
-
-   
     }
+

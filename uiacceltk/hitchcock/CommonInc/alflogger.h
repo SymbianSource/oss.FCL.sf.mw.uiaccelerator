@@ -56,18 +56,21 @@ _LIT( KLogFileName,              "alf.log");
     #define __ALFLOGSTRING1(C, X)
     #define __ALFLOGSTRING2(C, X, Y)
     #define __ALFLOGSTRING3(C, X, Y, Z)
+    #define __ALFLOGSTRING4(C, X, Y, Z, W)
 #endif
 #if (ALF_LOGGING_METHOD==1)
     #define __ALFLOGSTRING(C)            RDebug::Print(_L(C));
     #define __ALFLOGSTRING1(C, X)        RDebug::Print(_L(C),X);
     #define __ALFLOGSTRING2(C, X, Y)     RDebug::Print(_L(C),X, Y);
     #define __ALFLOGSTRING3(C, X, Y, Z)  RDebug::Print(_L(C),X, Y, Z);
+    #define __ALFLOGSTRING4(C,X,Y,Z,W)   RDebug::Print(_L(C),X, Y, Z, W);
 #endif
 #if (ALF_LOGGING_METHOD==2)
     #define __ALFLOGSTRING(C)            {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, tempLogDes());}
     #define __ALFLOGSTRING1(C, X)        {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X);}
     #define __ALFLOGSTRING2(C, X, Y)     {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y);}
     #define __ALFLOGSTRING3(C, X, Y, Z)  {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y,Z);}
+    #define __ALFLOGSTRING4(C,X,Y,Z,W)   {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y,Z,W);}
 #endif
 
 // Logging for effects components
@@ -86,18 +89,22 @@ _LIT( KLogFileName,              "alf.log");
     #define __ALFFXLOGSTRING1(C, X)
     #define __ALFFXLOGSTRING2(C, X, Y)
     #define __ALFFXLOGSTRING3(C, X, Y, Z)
+    #define __ALFFXLOGSTRING4(C, X, Y, W)
+
 #endif
 #if (ALF_FXLOGGING_METHOD==1)
     #define __ALFFXLOGSTRING(C)            RDebug::Print(_L(C));
     #define __ALFFXLOGSTRING1(C, X)        RDebug::Print(_L(C),X);
     #define __ALFFXLOGSTRING2(C, X, Y)     RDebug::Print(_L(C),X, Y);
     #define __ALFFXLOGSTRING3(C, X, Y, Z)  RDebug::Print(_L(C),X, Y, Z);
+    #define __ALFFXLOGSTRING4(C,X,Y,Z,W)   RDebug::Print(_L(C),X, Y, Z, W);
 #endif
 #if (ALF_FXLOGGING_METHOD==2)
     #define __ALFFXLOGSTRING(C)            {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, tempLogDes());}
     #define __ALFFXLOGSTRING1(C, X)        {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X);}
     #define __ALFFXLOGSTRING2(C, X, Y)     {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y);}
     #define __ALFFXLOGSTRING3(C, X, Y, Z)  {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y,Z);}
+    #define __ALFFXLOGSTRING4(C,X,Y,Z,W)   {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y,Z,W);}
 #endif
 
 #endif // ALFLOGGER_H

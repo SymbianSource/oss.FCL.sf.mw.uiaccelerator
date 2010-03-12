@@ -247,7 +247,8 @@ public:
      *              elements. 
      */
     THuiTimedValue iOpacity;
-
+    TBool iAlfApp;
+  
 	};
 
 #endif  // __HUICONTROLGROUP_H__

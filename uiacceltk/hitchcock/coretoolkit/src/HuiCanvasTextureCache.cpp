@@ -1101,8 +1101,6 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
     TBool volatileBitmapOrMask = ETrue;
 #endif
 
-    TBool originalMaskUsed = ETrue;
-
 
     TInt bitmapHandle = aImage.iBitmapHandle;
     TInt maskHandle = aImage.iMaskHandle;
@@ -1201,7 +1199,6 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
                 
                 mask = invertedMask;
                 CleanupStack::PushL(mask);    
-                originalMaskUsed = EFalse;
                 }
             
             // Upload expects mask to begin always at TPoint(0,0), so if mask
@@ -1220,7 +1217,6 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
                     }
                 mask = movedMask;
                 CleanupStack::PushL(mask);                            
-                originalMaskUsed = EFalse;
                 }
 #ifdef __NVG
             }

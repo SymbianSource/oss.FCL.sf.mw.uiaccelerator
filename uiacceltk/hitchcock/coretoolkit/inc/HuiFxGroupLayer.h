@@ -52,6 +52,8 @@ public:
     CHuiFxLayer& Layer(TInt aIndex) const;
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
     virtual void EnableMarginApplyChildren(TBool aEnable);
+    virtual void SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels);
+
 protected:
     IMPORT_C CHuiFxGroupLayer();
     IMPORT_C void ConstructL(TBool aIsRoot);

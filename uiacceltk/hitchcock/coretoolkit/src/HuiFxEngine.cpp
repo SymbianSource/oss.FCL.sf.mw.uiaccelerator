@@ -332,14 +332,6 @@ EXPORT_C void CHuiFxEngine::AddEffectL(CHuiFxEffect* aEffect)
 #endif // #ifdef HUIFX_TRACE    
 
     iActiveEffects.AppendL(aEffect);
-
-    // Performance improvement, but this would be better to be a special hint param in the fxml
-    if (aEffect && FxmlUsesInput1(*aEffect))
-        {
-        TInt flags = aEffect->EffectFlags();
-        flags |= KHuiFxOpaqueHint;
-        aEffect->SetEffectFlags(flags);        
-        }
     }
 
 EXPORT_C void CHuiFxEngine::RemoveEffect(CHuiFxEffect* aEffect)
@@ -372,6 +364,12 @@ EXPORT_C TReal32 CHuiFxEngine::GetReferenceValue(THuiFxReferencePoint aPoint)
             {
             CHuiDisplay* display = &CHuiStatic::Env().PrimaryDisplay(); 
             return display->VisibleArea().Size().iHeight; // was DefaultRenderbuffer()->Size().iHeight
+            }
+        case EReferencePointDisplayHeightMinusVisualTop:
+            {
+            CHuiDisplay* display = &CHuiStatic::Env().PrimaryDisplay(); 
+            TReal32 height = display->VisibleArea().Size().iHeight; // was DefaultRenderbuffer()->Size().iHeight
+            return height;
             }
         default:
             break;
@@ -592,6 +590,11 @@ TInt CHuiFxEngine::LowMemoryState()
 
 TBool CHuiFxEngine::HasActiveEffects() const
     {
+	// Don't report active effects if in SW-rendering mode
+    if(iLowGraphicsMemoryMode) // != Normal
+        {
+        return EFalse;
+        }
     return iActiveEffects.Count() > 0;
     }
 

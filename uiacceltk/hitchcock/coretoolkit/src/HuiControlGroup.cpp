@@ -29,7 +29,7 @@
 #include "uiacceltk/HuiEnv.h"
 
 CHuiControlGroup::CHuiControlGroup(TInt aResourceId, CHuiEnv& aEnv)
-        : iResourceId(aResourceId), iEnv(aEnv), iAcceptInput(ETrue), iOpacity( 1.f )
+        : iResourceId(aResourceId), iEnv(aEnv), iAcceptInput(ETrue), iOpacity( 1.f ),iAlfApp(EFalse)
     {
     HUI_PROBE_ASSOCIATE_WITH_CURRENT_SESSION
     HUI_PROBE_REPORT_CONSTRUCTED

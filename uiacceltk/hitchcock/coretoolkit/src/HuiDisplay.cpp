@@ -48,6 +48,7 @@
 #include <uiacceltk/huidisplaybackgrounditem.h>
 #include "huiskinbackroundlayout.h"
 #include "HuiFxEngine.h"
+#include "huiextension.h"
 
 const TUid KHuiInternalFbsBitmapBufferGcUid = {0x2000e5a3}; 
 
@@ -932,6 +933,7 @@ TBool CHuiDisplay::Refresh()
 		
 		if (iForegroundTexture)
 		    {
+		    UpdateForegroundTexture(dirtyRect);
 		    DrawForegroundTexture();
 		    }
 		
@@ -1620,6 +1622,30 @@ EXPORT_C CHuiTexture* CHuiDisplay::ForegroundTexture() const
     return iForegroundTexture;
     }
 
+void CHuiDisplay::UpdateForegroundTexture(const TRect& aRect)
+    {
+    if (iForegroundTexture && iForegroundBitmap && !aRect.IsEmpty())
+        {
+        TRAP_IGNORE(DoUpdateForegroundTextureL(aRect));
+        }
+    }
+
+void CHuiDisplay::DoUpdateForegroundTextureL(const TRect& aRect)
+    {
+    // First try to upload with faster mechanism
+    THuiTexturePartialBitmapUploadParams params;
+    params.iErrorCode = KErrNotSupported;
+    params.iRect = aRect;
+    params.iBitmap = iForegroundBitmap;
+    TAny* ptr = &params;
+    
+    MHuiTexture* texture = iForegroundTexture;
+    texture->TextureExtension(KHuiTexturePartialBitmapUploadUid, &ptr);
+    if ( params.iErrorCode != KErrNone )
+        {    
+        iForegroundTexture->UploadL(*iForegroundBitmap, NULL);
+        }
+    }
 
 void CHuiDisplay::DrawForegroundTexture()
     {

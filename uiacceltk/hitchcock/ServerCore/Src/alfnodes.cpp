@@ -61,20 +61,14 @@ void CAlfNode::SetTracking( TBool aValue )
         }
     }
 // ---------------------------------------------------------------------------
-// OrphonMe
+// OrphanMe
 // ---------------------------------------------------------------------------
 //
-CAlfNode* CAlfNode::OrphonMe()
-    {
-    __ALFLOGSTRING1("CAlfNode::OrphonMe %d", iId);
-	// this window will not be used anymore by wserv and cannot be drawn into. Thus destroying the
-	// visual representing this node is safe.
-    if ( iWindow && iModel )
-        {
-        iModel->Server().WindowMgr()->DestroyWindow( *iWindow );
-        iWindow = NULL;
-        }
+CAlfNode* CAlfNode::OrphanMe()
 
+    {
+    __ALFLOGSTRING1("CAlfNode::OrphanMe %d", iId);
+    // Parent node has been deleted. Orphan the node: remove the parent/sibling relationship.
     CAlfNode* sibling = iSibling;
     iSibling = NULL;
     iParent = NULL;
@@ -1174,6 +1168,11 @@ TAny* CAlfNode::CreateWindowAttributes(TInt& aIndex, TInt aSize )
 CAlfNode::~CAlfNode()
     {
     __ALFLOGSTRING1("CAlfNode::~CAlfNode %d", iId);
+	if ( iWindow && iModel ) // just in case: the window should be deleted already
+        {
+        iModel->Server().WindowMgr()->DestroyWindow( *iWindow );
+        iWindow = NULL;
+        }
     }
 
 // ---------------------------------------------------------------------------
@@ -1233,11 +1232,11 @@ void CAlfNode::RemoveDependencies( CAlfNode* aFirstChildOfMyType )
         __ALFLOGSTRING1("My parent says, that I'm not his child :..( or no parent %d ", iParent );
         }
     
-    // Orphon all the children
+    // Orphan all the children
     CAlfNode* child = iChild; 
     while( child )
         {
-        child = child->OrphonMe();
+        child = child->OrphanMe();
         }
     iChild = NULL;
     if ( iModel )
@@ -1680,6 +1679,7 @@ CAlfNodeVisual::~CAlfNodeVisual()
     if ( iWindow && iModel )
         {
         iModel->Server().WindowMgr()->DestroyWindow( *iWindow );
+		iWindow = NULL; // make sure there is no double deletion
         }
     }
 
@@ -1944,7 +1944,8 @@ CAlfNodeGroup::~CAlfNodeGroup()
         iModel->Server().Bridge()->AddData( EAlfDSDestroyWindow, 
                 iGroupId, 
                 iId, 
-                (TAny*)offset );                
+                (TAny*)offset );
+        iWindow = 0; // just in case
         }
     RemoveDependencies( iParent->iChild );
     };

@@ -190,6 +190,14 @@ EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxR
             {
             return;
             }
+
+        // Make sure background is enabled if needed.
+        if (AlwaysReadSurfacePixels())
+            {
+            backBuffer->EnableBackground(ETrue);
+            backBuffer->PrepareForReuse(backBuffer->Size());
+            }
+        
         sourceBuffer = backBuffer;
         
         // Translate the graphics context so that the content appears in the correct place
@@ -445,5 +453,14 @@ void CHuiFxGroupLayer::FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray)
     for( TInt i=0 ; i < iLayers.Count() ; i++ )
         {
         iLayers[i]->FxmlVisualInputs(aArray);
+        }
+    }
+
+void CHuiFxGroupLayer::SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels)
+    {
+    CHuiFxLayer::SetAlwaysReadSurfacePixels(aAlwaysReadSurfacePixels);
+    for( TInt i=0 ; i < iLayers.Count() ; i++ )
+        {
+        iLayers[i]->SetAlwaysReadSurfacePixels(aAlwaysReadSurfacePixels);
         }
     }

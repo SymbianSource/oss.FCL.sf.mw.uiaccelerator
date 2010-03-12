@@ -667,6 +667,7 @@ EXPORT_C CAlfAppUi::~CAlfAppUi()
     {
     #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
     delete AMT_CONTROL();
+    Dll::FreeTls();
     #endif
     
     delete iData;
@@ -769,15 +770,11 @@ EXPORT_C void CAlfAppUi::ConstructL()
     __ALFLOGSTRING( "CAlfAppUi::ConstructL start" )
     
     #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
-    __ALFLOGSTRING( "CAlfAppUi::ConstructL. Open and initialize ALF module test chunk. " )
-    // Initiliaze global data in TLS. 
+    // Initiliaze global data in TLS and open global module testing chunk and mutex
     User::LeaveIfError(Dll::SetTls(new(ELeave) CAlfModuleTestDataControl()));
-    // Open global module testing chunk and mutex
     User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects());
-    __ALFLOGSTRING( "CAlfAppUi::ConstructL. ALF module test chunk ready. " )
     #endif
-     
-  
+      
     TInt flags = EStandardApp|ENoScreenFurniture|ENonStandardResourceFile|EAknEnableSkin;
     CCoeEnv* coe = CCoeEnv::Static();
     iData =  new (ELeave) CAlfAppUiData();
@@ -1461,4 +1458,8 @@ TInt CAlfAppUi::ForceSwRendering( TBool aEnabled )
     return iData->iBridgeObj->ForceSwRendering( aEnabled );
     }
     
+void CAlfAppUi::SetAlfAppWindowGroup( TInt aID )
+    {
+    iData->iBridgeObj->SetWindowGroupAsAlfApp( aID );
+    }
 // end of file

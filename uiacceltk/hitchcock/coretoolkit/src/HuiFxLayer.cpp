@@ -188,3 +188,13 @@ TBool CHuiFxLayer::IsSemitransparent() const
     {
     return EFalse;
     }
+
+TBool CHuiFxLayer::AlwaysReadSurfacePixels() const
+    {
+    return iAlwaysReadSurfacePixels;
+    }    
+
+void CHuiFxLayer::SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels)
+    {
+    iAlwaysReadSurfacePixels = aAlwaysReadSurfacePixels;
+    }

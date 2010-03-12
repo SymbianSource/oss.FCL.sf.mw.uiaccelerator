@@ -90,7 +90,7 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
 
                 Server().Monitor().SessionInCriticalAllocation(1, clientId);
                 
-                TRAPD(err, Monitor().RequestFreeMemoryL(aMessage.Int0(), iUseAbsoluteTargets));
+                TRAPD(err, Monitor().RequestFreeMemoryL(aMessage.Int0()));
                 if (err)
                     {
                     // completes the message if that was left to pending
@@ -135,7 +135,7 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
             // message will be completed when CloseAppsFinished() is called.
             iRequestFreeRam = aMessage;
             iMinimumMemoryRequested = aMessage.Int1();
-            Monitor().FreeOptionalRamL(aMessage.Int0(), aMessage.Int2(), iUseAbsoluteTargets);
+            Monitor().FreeOptionalRamL(aMessage.Int0(), aMessage.Int2());
             break;
             
         case EGOomMonitorSetPriorityBusy:

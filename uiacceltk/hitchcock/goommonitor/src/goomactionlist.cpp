@@ -408,10 +408,10 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
         {
         // No usable memory freeing action has been found, so we give up
         TRACES("CGOomActionList::FreeMemory: No usable memory freeing action has been found");
-        iMonitor.ResetTargets();
         TInt freeMemory;
         FreeMemoryAboveTarget(freeMemory);
         iServer.CloseAppsFinished(freeMemory, EFalse);
+        iMonitor.WaitAndSynchroniseMemoryState();
         }
     }
 
@@ -441,7 +441,7 @@ TBool CGOomActionList::FreeMemoryAboveTarget(TInt& aFreeMemory)
 
     aFreeMemory = iMonitor.GetFreeMemory();
 
-    TRACES1("CGOomActionList::FreeMemoryAboveTarget: Free RAM now %d",aFreeMemory);
+    TRACES2("CGOomActionList::FreeMemoryAboveTarget: Free RAM now %d, currentTarget %d",aFreeMemory, iCurrentTarget);
 
     return (aFreeMemory >= iCurrentTarget);
     }
@@ -600,7 +600,7 @@ void CGOomActionList::StateChanged()
                     iRunningKillAppActions = EFalse;
                     // There are no more actions to try, so we give up
                     TRACES1("CGOomActionList::StateChanged: All current actions complete, below good threshold with no more actions available. freeMemory=%d", freeMemory);
-                    iMonitor.ResetTargets();
+                    
                     /* Do not call memory good immidiately after freeing memory for some app
                     if (freeMemory >= iCurrentTarget && !iMonitor.NeedToPostponeMemGood())
                     {                    
@@ -608,6 +608,7 @@ void CGOomActionList::StateChanged()
                     }
                      */
                     iServer.CloseAppsFinished(freeMemory, EFalse);
+                    iMonitor.WaitAndSynchroniseMemoryState();
                     }
                 else
                     {
@@ -615,7 +616,7 @@ void CGOomActionList::StateChanged()
                     iRunningKillAppActions = ETrue;
                     iMonitor.RunCloseAppActions(iMaxPriority);
                     }
-                iMonitor.WaitAndSynchroniseMemoryState();
+                
                 }
             else
                 {
@@ -634,7 +635,6 @@ void CGOomActionList::StateChanged()
                 }
             */
             iRunningKillAppActions = EFalse;
-            iMonitor.ResetTargets();
             iServer.CloseAppsFinished(freeMemory, ETrue);
             iMonitor.WaitAndSynchroniseMemoryState();
             }

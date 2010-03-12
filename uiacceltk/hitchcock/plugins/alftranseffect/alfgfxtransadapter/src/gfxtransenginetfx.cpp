@@ -680,7 +680,7 @@ void CGfxTransAdapterTfx::SubConAbort( const CCoeControl* /*aControl*/ )
 // calls to GfxTransEffect::NotifyExternalState comes through here.
 // ---------------------------------------------------------------------------
 //
-void CGfxTransAdapterTfx::NotifyExternalState( TInt aState, const TDesC8* /*aArg*/ )
+void CGfxTransAdapterTfx::NotifyExternalState( TInt aState, const TDesC8* aArg )
 	{
 	switch(aState)
 		{
@@ -710,7 +710,14 @@ void CGfxTransAdapterTfx::NotifyExternalState( TInt aState, const TDesC8* /*aArg
 	    case ELastPopupInSequence:
 	    case EEndPopupSequence:
 		case EInternalHandleSequence:
+		    break;
 		case EGetRegistrationType:
+		    {
+		    // Not supported
+	        TUid* t = (TUid*)(aArg);
+	        *t = KNullUid;
+	        break;
+		    }
         case EAddIgnoreWOChildComponent:
         case ERemoveIgnoreWOChildComponent:
         default:

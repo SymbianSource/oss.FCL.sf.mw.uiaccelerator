@@ -51,23 +51,23 @@ public:
     
     enum TGOomTrigger   //How free memory operation was triggered
             {
-            EGOomFocusChanged = 0,
-            EGOomRequestMemory,
-            EGOomThresholdCrossed
+            EGOomTriggerNone = 0,
+            EGOomTriggerFocusChanged,
+            EGOomTriggerRequestMemory,
+            EGOomTriggerThresholdCrossed
             };
 
 public: // event handlers
     void FreeMemThresholdCrossedL(TInt aAction = 0, TInt aThreshold = 0);
     void AppNotExiting(TInt aWgId);
     void StartFreeSomeRamL(TInt aTargetFree, TGOomTrigger aTrigger);
-    void FreeOptionalRamL(TInt aTargetFree, TInt aPluginId, TBool aUseAbsolute = EFalse); // The ID of the plugin that will clear up the allocation, used to determine the priority of the allocation
-    void RequestFreeMemoryL(TInt aTargetFree, TBool aUseAbsolute = EFalse);
+    void FreeOptionalRamL(TInt aTargetFree, TInt aPluginId, TBool aUseAbsolute = ETrue); // The ID of the plugin that will clear up the allocation, used to determine the priority of the allocation
+    void RequestFreeMemoryL(TInt aTargetFree, TBool aUseAbsolute = ETrue);
     void HandleFocusedWgChangeL(TInt aForegroundAppUid = KErrNotFound);
     static const CGOomGlobalConfig& GlobalConfig();
     void SetPriorityBusy(TInt aWgId);
     void SetPriorityNormal(TInt aWgId);
     void SetPriorityHigh(TInt aWgId);
-    void ResetTargets(TInt aTarget = 0);
     TInt GetFreeMemory();
     void RunCloseAppActions(TInt aMaxPriority);
     CGOomWindowGroupList * GetWindowGroupList() const;
@@ -141,7 +141,7 @@ private:
     void RefreshThresholds(TInt aForegroundAppUid = KErrNotFound);
     void StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOomTrigger aTrigger);
     void AppClosePriorityChanged(TInt aWgId, TInt aPriority);
-    
+    void ResetTargets(TInt aTarget = 0);
     
 public:
     // All members are owned

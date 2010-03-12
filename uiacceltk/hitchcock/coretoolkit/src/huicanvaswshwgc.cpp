@@ -657,16 +657,30 @@ void CHuiCanvasWsHwGc::WsDrawPolygonL(CArrayFix<TPoint>* aPointerArray, TInt aFi
            }
         UseWsState();
         
-        if ( aFillRule == MWsGraphicsContext::EAlternate )
+        if (iWsBrushStyle == MWsGraphicsContext::ENullBrush)
             {
-            iCanvasGc->SetPolygonDrawMode( EHuiFillEvenOdd );
+            // nullbrush, but pen style set
+            // -> draw non filled polygon and 
+            // use pencolor
+            iCanvasGc->SetPolygonDrawMode( EHuiNoFill );
+            iCanvasGc->SetPenColor(iWsPenColor);            
+            iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));       
+
             }
-        if ( aFillRule == MWsGraphicsContext::EWinding )
-            {        
-            iCanvasGc->SetPolygonDrawMode( EHuiFillNonZero );
+        else
+            {
+            if ( aFillRule == MWsGraphicsContext::EAlternate )
+                {
+                iCanvasGc->SetPolygonDrawMode( EHuiFillEvenOdd );
+                }
+            if ( aFillRule == MWsGraphicsContext::EWinding )
+                {        
+                iCanvasGc->SetPolygonDrawMode( EHuiFillNonZero );
+                }
+            iCanvasGc->SetPenColor(iWsBrushColor);            
+            iCanvasGc->SetOpacity(TReal32(iWsBrushColor.Alpha() / 255.f));       
             }
-        iCanvasGc->SetPenColor(iWsPenColor);            
-        iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));       
+            
         iCanvasGc->SetDrawMode(SelectCanvasDrawMode(iWsDrawMode));        
             
         iCanvasGc->DrawPolygon( points );

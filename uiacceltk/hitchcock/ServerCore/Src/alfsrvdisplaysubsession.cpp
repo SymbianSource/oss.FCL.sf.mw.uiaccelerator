@@ -62,7 +62,8 @@ CAlfSrvDisplaySubSession::CAlfSrvDisplaySubSession(
         // according to the last display. Also the new area is left there even if  ConstructL() 
         // fails(!).
         static_cast<CAlfAppSrvSession&>(Session()).SetClientDrawingArea( aRect );
-        aSession.SetClientWindowGroupId( aWindowGroupId );            
+        aSession.SetClientWindowGroupId( aWindowGroupId );           
+        Session().AlfAppUi()->SetAlfAppWindowGroup(aWindowGroupId);
         }    
     }
 

@@ -805,8 +805,19 @@ public:
      */
     IMPORT_C CFbsBitmap* ForegroundBitmap() const;
     
+    
 private:
 
+    /**
+     * Uploads foreground bitmap to texture.
+     */
+    void UpdateForegroundTexture(const TRect& aRect);
+    
+    /**
+     * Actual upload foreground bitmap to texture.
+     */
+    void DoUpdateForegroundTextureL(const TRect& aRect);
+    
     /**
      * Draws foreground texture.
      */     

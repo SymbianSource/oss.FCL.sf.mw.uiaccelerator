@@ -23,7 +23,6 @@
 #include <uiacceltk/HuiEnv.h>
 #include <aknenv.h>
 #include <AknsConstants.h>
-#include <s32mem.h>
 #include <uiacceltk/HuiSkin.h>
 #include <uiacceltk/HuiDisplay.h>
 #include <uiacceltk/HuiControl.h>
@@ -69,7 +68,7 @@
 #include "HuiRenderPlugin.h"
 #include "huicanvasgc.h"
 #include "huicanvasrenderbuffer.h"
-
+#include "alfeffectutils.h"
 #include "alfrenderstageutils.h" // for KAlfPSUidSynchronizer & KAlfPSKeySynchronizer
 
 #ifdef HUI_DEBUG_TRACK_DRAWING
@@ -91,465 +90,12 @@ const TReal32 KAlfVisualDefaultOpacity = 1.0f;
 
 _LIT8(KAlfWindowGroupContainerControlTag, "WGROUP");
 
-// This debug option prints window group order with __ALFLOGSTRING
-//#define ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
-
+// #define USE_APPLICATION_ENDFULLSCREEN_TIMEOUT
 // This debug option shows window groups in a grid
 //#define ALF_DEBUG_VISUALIZE_WINDOWGROUP_ORDER
 
 
 const TInt KFadeAction = 6000;
-
-const TInt KRosterFreezeEndTimeoutInMs = 400;
-
-// Timer to send finish full screen effect
-// ---------------------------------------------------------
-// CAlfFinishTimer
-// ---------------------------------------------------------
-//
-NONSHARABLE_CLASS( CAlfRosterFreezeEndTimer ):public CTimer
-    {
-    public:  // Constructors and destructor
-        static CAlfRosterFreezeEndTimer* NewL( CAlfBridge& aBridge );
-        virtual ~CAlfRosterFreezeEndTimer();
-
-    public: // New functions
-        void Start( TTimeIntervalMicroSeconds32 aPeriod );
-        
-    protected:  // Functions from base classes
-        void DoCancel();
-
-    private:
-        CAlfRosterFreezeEndTimer( CAlfBridge& aBridge );
-        void ConstructL();
-        void RunL();
-      
-    private:    // Data
-        CAlfBridge& iBridge;
-                
-    };
-
-
-// ---------------------------------------------------------
-// CAlfRosterFreezeEndTimer
-// ---------------------------------------------------------
-//
-CAlfRosterFreezeEndTimer::CAlfRosterFreezeEndTimer( CAlfBridge& aBridge )
-    :CTimer ( EPriorityStandard ),
-    iBridge( aBridge )
-    {   
-    }
-
-void CAlfRosterFreezeEndTimer::ConstructL()
-    {
-    CTimer::ConstructL();
-    CActiveScheduler::Add( this );
-    }
-
-CAlfRosterFreezeEndTimer* CAlfRosterFreezeEndTimer::NewL( CAlfBridge& aBridge )
-    {
-    CAlfRosterFreezeEndTimer* self = new ( ELeave ) CAlfRosterFreezeEndTimer( aBridge );
-    CleanupStack::PushL( self );
-    self->ConstructL();
-    CleanupStack::Pop( self );
-    return self;
-    }
-
-CAlfRosterFreezeEndTimer::~CAlfRosterFreezeEndTimer()
-    {
-    Cancel();        
-    }
-
-void CAlfRosterFreezeEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod )
-    {
-    if (!IsActive())
-        {
-        After( aPeriod );
-        }
-    }
-
-void CAlfRosterFreezeEndTimer::RunL()
-    {
-    iBridge.iHuiEnv->Display(0).SetDirty();
-    TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(EFalse));
-    iBridge.SetVisualTreeVisibilityChanged(ETrue);    
-    }
-
-void CAlfRosterFreezeEndTimer::DoCancel()
-    {
-    CTimer::DoCancel();
-    }
-
-// ---------------------------------------------------------
-// CAlfLayoutSwitchEffectcoordinator
-// ---------------------------------------------------------
-//
-NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MAlfGfxEffectObserver
-    {
-    public:  // Constructors and destructor
-        CAlfLayoutSwitchEffectCoordinator( CAlfBridge& aBridge );
-        virtual ~CAlfLayoutSwitchEffectCoordinator();
-    
-    public: // MAlfGfxEffectObserver           
-        void AlfGfxEffectEndCallBack( TInt aHandle );
-    
-    public:
-        void BeginLayoutSwitch();
-        void Cancel();
-        
-    private:
-        AknTransEffect::TContext NextLayoutSwitchContext();
-        void SetLayoutSwitchEffect(AknTransEffect::TContext aContext);
-        TBool LayoutSwitchEffectsExist();
-        
-    private: // Data
-        
-        CAlfBridge& iBridge;
-        AknTransEffect::TContext iLayoutSwitchEffectContext;
-        TThreadPriority iOriginalPriority;
-        CAlfRosterFreezeEndTimer* iRosterFreezeEndTimer;
-    };
-
-CAlfLayoutSwitchEffectCoordinator::CAlfLayoutSwitchEffectCoordinator( CAlfBridge& aBridge ) :
-    iBridge( aBridge ),
-    iLayoutSwitchEffectContext(AknTransEffect::ENone)    
-    {
-    RThread me = RThread();
-    iOriginalPriority = me.Priority();    
-    me.Close();
-    }
-
-CAlfLayoutSwitchEffectCoordinator::~CAlfLayoutSwitchEffectCoordinator()
-    {   
-    }
-
-// ---------------------------------------------------------
-// CAlfLayoutSwitchEffectCoordinator::AlfGfxEffectEndCallBack
-//
-// This method is callback which gets called when layout 
-// switch effect has ended.
-// ---------------------------------------------------------
-//
-void CAlfLayoutSwitchEffectCoordinator::AlfGfxEffectEndCallBack( TInt aHandle )
-    {
-    //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::AlfGfxEffectEndCallBack"));
-    if (iLayoutSwitchEffectContext == aHandle)
-        {
-        AknTransEffect::TContext nextContext = NextLayoutSwitchContext();
-
-        // Unfreeze visible content. This reveals real roster content (in new orientation).
-        if (nextContext == AknTransEffect::ELayoutSwitchExit)
-            {
-            #ifdef HUI_DEBUG_TRACK_DRAWING
-            RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::AlfGfxEffectEndCallBack unfreezing roster content"));
-            #endif
-            iBridge.iHuiEnv->Display(0).SetDirty();
-            TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(EFalse));
-            iBridge.SetVisualTreeVisibilityChanged(ETrue);
-            }
-        
-        // Set next effect
-        SetLayoutSwitchEffect(nextContext);
-        
-        if (nextContext == AknTransEffect::ENone)
-            {
-            // Restore normal priority
-            RThread me = RThread();
-            me.SetPriority(iOriginalPriority);    
-            me.Close();
-
-            // Just in case refresh everything
-            iBridge.iHuiEnv->Display(0).SetDirty();
-            }        
-        }
-    else
-        {
-        //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::AlfGfxEffectEndCallBack - got different handle (normal, dont worry...) - %i"), aHandle);        
-        }
-    }
-
-// ---------------------------------------------------------
-// CAlfLayoutSwitchEffectCoordinator::Cancel
-// ---------------------------------------------------------
-//
-void CAlfLayoutSwitchEffectCoordinator::Cancel()
-    {
-    // Disable effect
-    SetLayoutSwitchEffect( AknTransEffect::ENone );
-
-    // Unfreeze visible content
-    if ( iRosterFreezeEndTimer )
-        {
-		iRosterFreezeEndTimer->Cancel();
-    	}
-
-    iBridge.iHuiEnv->Display(0).SetDirty();
-    TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(EFalse));
-    iBridge.SetVisualTreeVisibilityChanged(ETrue);
-    
-    // Restore normal priority
-    RThread me = RThread();
-    me.SetPriority(iOriginalPriority);    
-    me.Close();
-	}
-
-// ---------------------------------------------------------
-// CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch
-//
-// This method starts the layout switch effect procedure.
-// ---------------------------------------------------------
-//
-void CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch()
-    {
-    // Hm. what to do if earlier is already in progress ?
-    //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch"));
-    if ( iBridge.iHuiEnv->MemoryLevel() <= EHuiMemoryLevelLowest )
-        {
-        // No effects in low memory mode
-        return;
-        }
-    
-    if (!iLayoutSwitchEffectContext)
-        {
-        TBool tfxOn = CAknTransitionUtils::TransitionsEnabled(AknTransEffect::ELayoutswitchTransitionsOff );
-        TBool tfxExists = LayoutSwitchEffectsExist();
-        if (tfxOn && tfxExists)
-            {
-            // Boost priority so that we are able to draw more frames for the effect
-            RThread me = RThread();
-            me.SetPriority(EPriorityAbsoluteHigh);    
-            me.Close();
-            
-            // Freeze visual content
-            //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch freezing roster content"));
-            iBridge.iHuiEnv->Display(0).SetDirty();
-            TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(ETrue));
-            
-            // Remove all other effects
-            iBridge.HandleGfxStopEvent( EFalse );
-            iBridge.RemoveAllTemporaryPresenterVisuals();
-            
-            // Set first layout switch effect 
-            SetLayoutSwitchEffect(AknTransEffect::ELayoutSwitchStart);
-            }
-        else
-            {
-            if (!iRosterFreezeEndTimer)
-                {
-                TRAP_IGNORE(iRosterFreezeEndTimer = CAlfRosterFreezeEndTimer::NewL(iBridge));
-                }
-            
-            if (iRosterFreezeEndTimer)
-                {
-                iBridge.iHuiEnv->Display(0).SetDirty();
-                TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(ETrue));
-                
-                // Remove all other effects
-                iBridge.HandleGfxStopEvent( EFalse );
-                iBridge.RemoveAllTemporaryPresenterVisuals();
-
-                // Set remove freeze timer
-                iRosterFreezeEndTimer->Start(KRosterFreezeEndTimeoutInMs*1000); 
-                }            
-            //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch - tfx are set OFF -> I am not starting effect."));                        
-            }
-        }
-    else
-        {
-        //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch - old effect exists - %i"), iLayoutSwitchEffectContext);
-        }
-    }
-
-// ---------------------------------------------------------
-// CAlfLayoutSwitchEffectCoordinator::NextLayoutSwitchContext
-//
-// This method automatically selects the next context in the 
-// layout switch procedure.
-//
-// Contextes change in the following order during layout switch:
-//
-// 1. AknTransEffect::ENone
-// 2. AknTransEffect::ELayoutSwitchStart
-// 3. AknTransEffect::ELayoutSwitchExit
-// 4. AknTransEffect::ENone
-//
-// After new context is selected, appropriate effect is set 
-// (and/or removed) from the roster.
-//
-// ---------------------------------------------------------
-//
-AknTransEffect::TContext CAlfLayoutSwitchEffectCoordinator::NextLayoutSwitchContext()
-    {
-    // Resolve next context based on current context
-    AknTransEffect::TContext newContext = AknTransEffect::ENone;    
-    switch (iLayoutSwitchEffectContext)
-        {
-        case AknTransEffect::ENone:
-            {
-            newContext = AknTransEffect::ELayoutSwitchStart;            
-            break;
-            }
-        case AknTransEffect::ELayoutSwitchStart:
-            {
-            newContext = AknTransEffect::ELayoutSwitchExit;                    
-            break;
-            }
-        case AknTransEffect::ELayoutSwitchExit: // fallthrough
-        default:
-            {
-            newContext = AknTransEffect::ENone;            
-            break;
-            }              
-        }
-
-    //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::NextLayoutSwitchEffectL old ctx = %i, new ctx = %i"), iLayoutSwitchEffectContext, newContext);
-    return newContext;
-    }
-
-// ---------------------------------------------------------
-// CAlfLayoutSwitchEffectCoordinator::SetLayoutSwitchEffectL
-//
-// This method sets correct effect based on the given 
-// layout switch context.
-//
-// ---------------------------------------------------------
-//
-void CAlfLayoutSwitchEffectCoordinator::SetLayoutSwitchEffect(AknTransEffect::TContext aContext)
-    {
-    MHuiEffectable* effectable = iBridge.iHuiEnv->Display(0).Roster().Effectable();
-    CHuiFxEffect* effect = NULL;
-    CHuiFxEngine* engine = iBridge.iHuiEnv->EffectsEngine();
-    
-    if (!effectable || !engine)
-        {
-        return;
-        }    
-            
-    // Update current context
-    iLayoutSwitchEffectContext = aContext;           
-    
-    if (aContext == AknTransEffect::ENone)
-        {
-        // Just remove effect
-        //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::NextLayoutSwitchEffectL - removing effect"));
-        effectable->EffectSetEffect(NULL); // This calls AlfGfxEffectEndCallBack         
-        }
-    else
-        {    
-        // Load correct effect
-        for ( TInt i = 0; i<iBridge.iAlfRegisteredEffects.Count(); i++ )
-            {             
-            if ( iBridge.iAlfRegisteredEffects[i].iAction == aContext)
-                {
-                //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::SetLayoutSwitchEffectL - loading effect"));
-                TRAP_IGNORE(engine->LoadEffectL(*iBridge.iAlfRegisteredEffects[i].iEffectFile, effect, effectable, NULL, this, iLayoutSwitchEffectContext, 0 ) );                    
-                break;
-                }
-            }
-        }    
-    }
-
-TBool CAlfLayoutSwitchEffectCoordinator::LayoutSwitchEffectsExist()
-    {
-    TBool appearExists = EFalse;
-    TBool disAppearExists = EFalse;
-    
-    for ( TInt i = 0; i<iBridge.iAlfRegisteredEffects.Count(); i++ )
-        {             
-        if ( iBridge.iAlfRegisteredEffects[i].iAction == AknTransEffect::ELayoutSwitchStart)
-            {
-            disAppearExists = ETrue;
-            break;
-            }
-        else if ( iBridge.iAlfRegisteredEffects[i].iAction == AknTransEffect::ELayoutSwitchExit)
-            {
-            appearExists = ETrue;
-            break;
-            }
-        }
-    
-    return (appearExists || disAppearExists);    
-    }
-
-// Timer to send finish full screen effect
-// ---------------------------------------------------------
-// CAlfFinishTimer
-// ---------------------------------------------------------
-//
-NONSHARABLE_CLASS( CAlfEffectEndTimer ):public CTimer
-    {
-    public:  // Constructors and destructor
-        static CAlfEffectEndTimer* NewL( CAlfBridge& aBridge );
-        virtual ~CAlfEffectEndTimer();
-
-    public: // New functions
-        void Start( TTimeIntervalMicroSeconds32 aPeriod, TInt aHandle );
-        
-    protected:  // Functions from base classes
-        void DoCancel();
-
-    private:
-        CAlfEffectEndTimer( CAlfBridge& aBridge );
-        void ConstructL();
-        void RunL();
-      
-    private:    // Data
-        CAlfBridge& iBridge;
-        TInt iHandle;
-                
-    };
-
-
-// ---------------------------------------------------------
-// CAlfFinishTimer
-// ---------------------------------------------------------
-//
-CAlfEffectEndTimer::CAlfEffectEndTimer( CAlfBridge& aBridge )
-    :CTimer(EPriorityHigh), 
-	iBridge(aBridge)
-    {   
-    }
-
-void CAlfEffectEndTimer::ConstructL()
-    {
-    CTimer::ConstructL();
-    CActiveScheduler::Add( this );
-    }
-
-CAlfEffectEndTimer* CAlfEffectEndTimer::NewL( CAlfBridge& aBridge )
-    {
-    CAlfEffectEndTimer* self = new ( ELeave ) CAlfEffectEndTimer( aBridge );
-    CleanupStack::PushL( self );
-    self->ConstructL();
-    CleanupStack::Pop( self );
-    return self;
-    }
-
-CAlfEffectEndTimer::~CAlfEffectEndTimer()
-    {
-    Cancel();        
-    }
-
-void CAlfEffectEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod, TInt aHandle )
-    {
-    iHandle = aHandle;
-    After( aPeriod );
-    }
-
-void CAlfEffectEndTimer::RunL()
-    {
-    //
-    // timer completes and control is returned to caller
-    //
-    iBridge.TransitionFinishedHandlerL( iHandle );
-    // We don't become active unless we are explicitly restarted
-    }
-
-void CAlfEffectEndTimer::DoCancel()
-    {
-    CTimer::DoCancel();
-    }
-
 
 // ======== MEMBER FUNCTIONS ========
 
@@ -592,6 +138,7 @@ CAlfBridge::CAlfBridge(CAlfStreamerBridge** aHost)
 // 
 CAlfBridge::~CAlfBridge()
 	{
+	delete iOrphanStorage;
 	delete iFadeEffectFile;
 	iWindowHashArray.Close();
 	for( TInt i = 0; i< iAlfRegisteredEffects.Count(); i++ )
@@ -655,6 +202,11 @@ void CAlfBridge::ConstructL(CHuiEnv* aEnv)
     
     iLayoutSwitchEffectCoordinator = new (ELeave) CAlfLayoutSwitchEffectCoordinator(*this);
     iAlfSecureId = RThread().SecureId();
+	
+	// Create control for the orphaned windows, which control group id deleted before them
+    iOrphanStorage = new (ELeave) CHuiControl(*iHuiEnv);
+    iOrphanStorage->ConstructL();
+	
     RegisterFadeEffectL();
     }
 
@@ -792,6 +344,8 @@ void CAlfBridge::AddVisual(
     iWindowHashArray.Insert( aWindowNodeId, visualStruct );
     iPreviouslySearchedVisualId = aWindowNodeId;
     iPreviouslySearchedVisual = aVisual;
+
+    AMT_INC_COUNTER( iTotalVisualCount );
     }
 
 // ---------------------------------------------------------------------------
@@ -803,6 +357,8 @@ void CAlfBridge::RemoveVisual( TInt aWindowNodeId )
     __ALFFXLOGSTRING1("CAlfBridge::RemoveVisual 0x%x", aWindowNodeId);
     iWindowHashArray.Remove( aWindowNodeId );
     iPreviouslySearchedVisualId = 0;
+    
+    AMT_DEC_COUNTER( iTotalVisualCount );    
     }
     
 // ---------------------------------------------------------------------------
@@ -950,6 +506,48 @@ void CAlfBridge::ListFamilyTreeL( RPointerArray<CHuiLayout>& aArray, const CHuiL
     }
 
 // ---------------------------------------------------------------------------
+// ResolveAfterEffectAppearingApplicationL
+// ---------------------------------------------------------------------------
+// 
+void CAlfBridge::ResolveAfterEffectAppearingApplicationL(CHuiControlGroup* aGroup)
+    {
+#ifdef USE_APPLICATION_ENDFULLSCREEN_TIMEOUT
+    if (iFullScreenEffectData && iFullScreenEffectData->iEffectType == CFullScreenEffectState::EExitEffect)
+        {
+        CHuiControlGroup *exitingGroupInEffect = FindControlGroupByAppId(iFullScreenEffectData->iToAppId);
+        if (exitingGroupInEffect == aGroup)
+            {
+            CHuiRoster& roster = iAlfScreens[0]->iDisplay->Roster();
+            CHuiControlGroup* nextToBecomeVisible = NULL;
+            // resolve who is under this application in roster
+            for (TInt i = 0 ; i < roster.Count() ; i++)
+                {
+                if (&roster.ControlGroup(i) == exitingGroupInEffect && i > 1)
+                    {
+                    __ALFFXLOGSTRING("CAlfBridge::ResolveAfterEffectAppearingApplicationL - Found underneath control group");
+                    nextToBecomeVisible = &roster.ControlGroup(i-1);
+                    break;
+                    }
+                }
+                // resolve, to which application this maps to
+            if (nextToBecomeVisible)
+                {
+                for(TInt j = 0 ; j < iAlfScreens[0]->iControlGroups.Count() - 1 ; j++)
+                    {
+                    if (iAlfScreens[0]->iControlGroups[j].iControlGroup == nextToBecomeVisible)
+                        {
+                        iFullScreenEffectData->iFromAppId = iAlfScreens[0]->iControlGroups[j].iSecureId;
+                        __ALFFXLOGSTRING1("CAlfBridge::ResolveAfterEffectAppearingApplicationL - Found underneath application uid: 0x%x. Start track drawing for exit effect.", iFullScreenEffectData->iFromAppId );
+                        break;
+                        }
+                    }
+                }
+            }
+        }
+#endif    
+    }
+
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // 
 void CAlfBridge::DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber )
@@ -960,8 +558,10 @@ void CAlfBridge::DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber
             {
             if (iAlfScreens[aScreenNumber]->iDisplay)
                 {
-                CHuiControl& control = iAlfScreens[aScreenNumber]->iControlGroups[i].iControlGroup->Control(0);
+                CHuiControlGroup* controlGroup = iAlfScreens[aScreenNumber]->iControlGroups[i].iControlGroup;
+                CHuiControl& control = controlGroup->Control(0);
                 CHuiLayout* layout = (CHuiLayout*)&control.Visual(0);
+                ResolveAfterEffectAppearingApplicationL(controlGroup);
                 // wserv has notifed that this control group and its layout should be destroyed. However, we might be
                 // have effect on the layout itself or layout is being drawn as external content. This indicates that
                 // we should not delete the control group at this point, but add it to iDeadControlGroup list, which 
@@ -1011,7 +611,21 @@ void CAlfBridge::DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber
                     // in this case, the child window effects WILL BE REMOVED.
                      for(TInt familyIndex = 0; familyIndex < familyTree.Count();familyIndex++)
                          {
-                         RemoveTemporaryPresenterVisual(familyTree[familyIndex]);
+                         CHuiLayout* removedVisual = familyTree[familyIndex];
+                         RemoveTemporaryPresenterVisual(removedVisual);
+          
+                         if ( removedVisual != layout ) // let control group delete the layout
+					         {
+					         control.Remove(removedVisual); // remove ownership from the original control (group)
+					         if ( removedVisual->Layout() == layout ) 
+					             {
+					             iOrphanStorage->AppendL( removedVisual );
+					             } 
+					         else 
+					             {
+                                 removedVisual->SetOwner(*iOrphanStorage);
+					             }
+                             }
                          }
                     }
                 familyTree.Close();
@@ -1021,6 +635,9 @@ void CAlfBridge::DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber
                 iHuiEnv->DeleteControlGroup(aWindowGroupNodeId);
                 __ALFFXLOGSTRING("CAlfBridge::DeleteControlGroupL - Deleting group done");
                 }
+            
+            AMT_DEC_COUNTER( iTotalControlGroupCount );            
+            
             break;
             }
         }        
@@ -1097,6 +714,8 @@ CHuiControlGroup& CAlfBridge::CreateControlGroupL(
 
         if (iAlfScreens[aScreenNumber]->iDisplay)
             ShowControlGroupL(iAlfScreens[aScreenNumber]->iDisplay->Roster(), *group, KHuiRosterShowAtTop, aScreenNumber); 
+        
+        AMT_INC_COUNTER( iTotalControlGroupCount );
         }
     
 
@@ -1268,8 +887,20 @@ void CAlfBridge::ShowWindowGroupControlGroupL(CHuiRoster& aRoster, CHuiControlGr
             {
             if (index == aWhere)
                 {
-                aRoster.ShowL(aGroup, i);        
+                TBool lSyncAlfAppAndAlfEventGroup = EFalse;
+                if ( i>0 &&  aRoster.ControlGroup(i).iAlfApp && aRoster.ControlGroup(i-1).ResourceId() == iAlfWindowGroupNodeId  && &aRoster.ControlGroup(i) != &aGroup)
+                    {
+                    lSyncAlfAppAndAlfEventGroup = ETrue;
+                    }
+                aRoster.ShowL(aGroup, i);
                 added = ETrue;
+                if (lSyncAlfAppAndAlfEventGroup && i< (aRoster.Count()-1) )
+                {
+                CHuiControlGroup &lGroup = aRoster.ControlGroup(i+1);
+                TInt clientWindowGroupId = FindClientWindowGroupId( aScreenNumber, lGroup );
+                iAppUi->AdjustWindowGroupPositionL(clientWindowGroupId,CAlfAppServer::EBehindOfParent);
+                }
+                
                 break;
                 }
 
@@ -1650,8 +1281,8 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
     for (TInt j=screen->iDisplay->Roster().Count() - screen->FixedControlGroupCount(); j>=0; j--)
         {                
 #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
-        TInt activevisualcount = 0;
-        TInt passivevisualcount = 0;
+        activevisualcount = 0;
+        passivevisualcount = 0;
 #endif
 
         CHuiControlGroup& controlgroup = iAlfScreens[aScreenNumber]->iDisplay->Roster().ControlGroup(j);
@@ -1785,9 +1416,19 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
                 if (firstFadedWindowGroupFound)
                     {
                     TInt flags = layout->Effect()->EffectFlags();
-                    flags |= KHuiFxAlwaysBlend;
+                    flags |= KHuiFxAlwaysBlend; // Workaround for opaque layout canvasvisual.
                     layout->Effect()->SetEffectFlags(flags);
                     }
+                
+                if ((controlgroup.ResourceId() == iAlfWindowGroupNodeId))
+                    {
+                    // Special handling for ALF fading...fading happens via empty alf originated event window group
+                    TInt flags = layout->Effect()->EffectFlags();
+                    flags |= KHuiFxEnableBackgroundInAllLayers; // This forces effect to happen to background pixels that are read from surface. 
+                    flags |= KHuiFxFrozenBackground; // To get optimal UI performance, we ignore changes in ALF scene when it is faded.
+                    layout->Effect()->SetEffectFlags(flags);                            
+                    }
+                
                 firstFadedWindowGroupFound = ETrue;
                 }
             }
@@ -1927,9 +1568,9 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
             iTempTotalPassiveVisualCount++;
             #endif
             
-    #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
-            passivevisualcount++;
-    #endif
+            #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
+                    passivevisualcount++;
+            #endif
             }
         else
             {
@@ -1978,9 +1619,13 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
                 {
                 canvasVisual->SetChanged();
                 }
-    #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
+            #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+            iTempTotalActiveVisualCount++;
+            #endif
+
+            #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
             activevisualcount++;
-    #endif
+            #endif
             }
             
         // Finally check the area that this visual covers and add it to covered region
@@ -2607,7 +2252,6 @@ void CAlfBridge::DestroyWindow(CHuiVisual* aVisual, TBool aUseForce)
             if (aVisual == effectItem.iEffectedVisual)
                 {
                 iEffectCleanupStack.Remove(i);
-                AMT_DEC_COUNTER(iAlfBridgeEffectCleanupStackCount);
                 break;
                 }
             }
@@ -2654,9 +2298,12 @@ void CAlfBridge::HandleDestroyWindowL( TAlfBridgerData& aData )
 		     // Sprite is in its own group, and can be deleted normally.
 			if ( !controlGroup  && windowAttributes->iWindowNodeType != EAlfWinTreeNodeSprite )
 			    {
-			    __ALFLOGSTRING("CAlfBridge::HandleDestroyWindowL: group containing this visual has been destroyed.!");
-			    // the group containing this visual has been destroyed. Thus the visual itself has been destroyed by 
-			    // the group. Ignore this.
+			    __ALFLOGSTRING("CAlfBridge::HandleDestroyWindowL: group containing this visual has been destroyed.");
+			    // the group containing this visual has been destroyed. 
+                if ( viz ) 
+				    {
+				    DestroyWindow(viz);
+					}
 			    }
 			else
 			    {
@@ -2717,6 +2364,9 @@ void CAlfBridge::HandleSetWindowPosL( TAlfBridgerData& aData )
 		{
 		__ALFLOGSTRING("CAlfBridge::HandleSetWindowPosL, EAlfDSSetWindowPos: Visual not found!");    
 		}   
+
+    AMT_INC_COUNTER_IF( viz, iVisualPositionChangedCount );
+    AMT_SET_VALUE_IF( viz, iLatestVisualExtentRect, TRect( windowAttributes->iPosition, windowAttributes->iSize ) );
 	}
 
 // ---------------------------------------------------------------------------
@@ -2745,6 +2395,9 @@ void CAlfBridge::HandleSetWindowSizeL( TAlfBridgerData& aData )
 		__ALFLOGSTRING("CAlfBridge::HandleSetWindowSizeL, EAlfDSSetWindowSize: Visual not found!");    
 		}   
     iAlfScreens[screenNumber]->SetVisualTreeVisibilityChanged(ETrue);
+    
+    AMT_INC_COUNTER_IF(viz, iVisualSizeChangedCount );
+    AMT_SET_VALUE_IF(viz, iLatestVisualExtentRect, TRect( windowAttributes->iPosition, windowAttributes->iSize ) );        
 	}
 
 // ---------------------------------------------------------------------------
@@ -2834,11 +2487,11 @@ void CAlfBridge::HandleReorderWindowL( TAlfBridgerData& aData )
 
 			CHuiControlGroup* controlGroup = FindControlGroup(windowGroupNodeId,screenNumber);
 			
-                        if (!controlGroup)
-                            {
-                            User::Leave(KErrNotFound);
-                            }
-
+            if (!controlGroup)
+                {
+                User::Leave(KErrNotFound);
+                }
+            ResolveAfterEffectAppearingApplicationL(controlGroup); // does nothing, if effect is not active on this control group
 			// Window server nodes are in inverted Z-order, we switch it here.
 			iAlfScreens[screenNumber]->iDisplay->Roster().Hide(*controlGroup);                            
 			TInt wsWindowGroupCount = 0;
@@ -3009,7 +2662,85 @@ void CAlfBridge::HandlePostCanvasBufferL( TAlfBridgerData& aData )
 		{
 		__ALFLOGSTRING3("CAlfBridge::HandlePostCanvasBufferL, EAlfDSPostCanvasBuffer: Visual not found! Screen: %d, Id: %d, GroupId: %d ", screenNumber, windowNodeId, windowGroupNodeId );                                 
 		}    
+#ifdef	USE_APPLICATION_ENDFULLSCREEN_TIMEOUT	
+	    if (iFullScreenEffectData 
+	            && iFullScreenEffectData->iEffectType != CFullScreenEffectState::ENotDefinedEffect 
+	            && !iFullScreenEffectData->iEndFullScreen)
+	        {
+            TInt toAppUid; 
+            if (iFullScreenEffectData->iEffectType == CFullScreenEffectState::EExitEffect)
+                {
+                toAppUid = iFullScreenEffectData->iFromAppId;
+                }
+            else
+                {
+                toAppUid = iFullScreenEffectData->iToAppId;
+                }
+            
+            CHuiControlGroup *to_group = FindControlGroupByAppId(toAppUid);
+	    
+	        // 1. if we get drawing commands after BeginFullScreen, we need to generate EndFullScreen call.
+	        // 2. only the first drawing commands will trigger EndFullScreen
+	        // (this mechanism is here because we want to remove delay from fullscreen effects - and EndFullScreens are coming from application too late)
+	        
+	        if (viz->Owner().ControlGroup() == to_group)
+	            {
+                iFullScreenEffectData->ResetTimerL(this);
+                iFullScreenEffectData->iDisplaySize = iAlfScreens[0]->Size(); 
+                THuiCanvasPaintedArea p = viz->PaintedArea(0);
+	            iFullScreenEffectData->iPaintedRegion.AddRect( p.iPaintedRect.Round() );
+	            TRect b = iFullScreenEffectData->iPaintedRegion.BoundingRect();
+	            __ALFFXLOGSTRING3(
+	                    "CAlfBridge::HandlePostCanvasBufferL : Effect to visual 0x%x, Covered rect: iTl.iX: %d , iTl.iY: %d",
+	                    viz, 
+	                    b.iTl.iX, 
+	                    b.iTl.iY);
+	            __ALFFXLOGSTRING2("CAlfBridge::HandlePostCanvasBufferL : iBr.iX: %d, iBr.iY: %d", b.iBr.iX, b.iBr.iY);
+	                        }
+	        }
+	        // END TP HACK
+#endif
 	}
+
+// ---------------------------------------------------------------------------
+// HandleGfxEndFullScreenTimeout
+// ---------------------------------------------------------------------------
+// 
+void CAlfBridge::HandleGfxEndFullScreenTimeout(CFullScreenEffectState* aFullScreenEffectData)
+    {
+    if (aFullScreenEffectData->iEndFullScreen)
+        {
+        return;
+        }
+    CHuiControlGroup *to_group = FindControlGroupByAppId(aFullScreenEffectData->iToAppId);
+    CHuiControlGroup *from_group = FindControlGroupByAppId( aFullScreenEffectData->iFromAppId );
+    CHuiLayout *to_layout = NULL;
+    CHuiLayout *from_layout = NULL;
+    if (!to_group) // group has been destroyed and moved to effectControlGroup for waiting the application exit effect EndFullScreen trigger 
+         {
+        to_layout = FindLayoutByEffectHandle(aFullScreenEffectData->iHandle);
+         }
+     else
+         {
+         CHuiControl& control = to_group->Control(0);
+         to_layout = (CHuiLayout*)&control.Visual(0);
+         }
+        
+    if (from_group)
+        {
+        CHuiControl& control = from_group->Control(0);
+        from_layout = (CHuiLayout*)&control.Visual(0);
+        }
+    aFullScreenEffectData->iOperation = MAlfGfxEffectPlugin::EEndFullscreen;
+    if (to_layout)
+        {
+        // from layout may be undefined
+        __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEndFullScreenTimeout : Enough app drawing. Trigger EndFullScreen for layout 0x%x", to_layout);    
+        HandleGfxEventL( *aFullScreenEffectData, to_layout, from_layout );
+        }
+
+    aFullScreenEffectData->iEndFullScreen = ETrue;
+    }
 
 // ---------------------------------------------------------------------------
 // SetWindowActiveL
@@ -3672,6 +3403,8 @@ TBool CAlfBridge::HasActivePaintedAreas( CHuiCanvasVisual& aVisual, TBool aInclu
 TBool CAlfBridge::HasActiveFadedChildren( CHuiCanvasVisual& aVisual )
     {
     TBool has = EFalse;
+    has |= IsAlfOriginatedWindow(aVisual);
+    
     TInt count = aVisual.Count();        
     for (TInt i=0; i<count; i++)
         {
@@ -3679,7 +3412,7 @@ TBool CAlfBridge::HasActiveFadedChildren( CHuiCanvasVisual& aVisual )
         TBool active = !(child->Flags() & EHuiVisualFlagInactive);            
         TBool faded = child->CanvasFlags() & EHuiCanvasFlagExternalFade; 
         
-        if (active && faded && child->PaintedAreaCount())
+        if (active && faded && (child->PaintedAreaCount() || IsAlfOriginatedWindow(*child)))
             {
             has = ETrue;
             break;
@@ -3719,7 +3452,7 @@ TBool CAlfBridge::SetupFadeEffectL( CHuiCanvasVisual& aVisual )
         TBool otherEffectActive = aVisual.Effect() && !(aVisual.Effect()->EffectFlags() & KHuiFadeEffectFlag);
 
         // Check if we really need to fade. Note the order of if-conditions, fastest checks first to optimize performance.
-        if (visualIsActive && !alreadyFaded && !otherEffectActive && !IsFadedByParent(aVisual) && HasActivePaintedAreas(aVisual, fadesChildren))
+        if (visualIsActive && !alreadyFaded && !otherEffectActive && !IsFadedByParent(aVisual) && (HasActivePaintedAreas(aVisual, fadesChildren) || IsAlfOriginatedWindow(aVisual)))
         	{        
         	CHuiFxEffect* effect = NULL;
         	CHuiFxEngine* engine = iHuiEnv->EffectsEngine();
@@ -3892,6 +3625,8 @@ void CAlfBridge::HandleSetCursorDataL( TAlfBridgerData& aData )
         {
         __ALFLOGSTRING1("CAlfBridge::HandleSetCursorDataL - WARNING! Cursor node 0x%x not found!", windowNodeId);
         }
+    
+    AMT_INC_COUNTER_IF(viz, iTotalVisualAttributeChangedCount);   
     }
 
 // ---------------------------------------------------------------------------
@@ -3975,9 +3710,11 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                 {
                 aToLayout->SetStoredRenderBufferModificationsEnabled(ETrue);
                 TBool needStoredBuffers = NeedsStoredBuffers(engine, *aEvent.iEffectName);
+                __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEventL - EBeginFullScreen: %d, Take screenhot: %d", aEvent.iHandle, needStoredBuffers);
                 if (needStoredBuffers)
                     {
                     TRAP(err,StoreRenderBufferStartL(aToLayout));
+                    __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - EBeginFullScreen: Screenshot result: KErrNone == %d", err);
                     if (err == KErrNone)
                         {
                         aToLayout->SetFreezeState(ETrue);
@@ -3995,6 +3732,7 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                         {
                         aToLayout->iOpacity.Set(0.0f);    // these are meant for applications that yet dont have anything to show
                         FreezeLayoutUntilEffectDestroyedL(aFromLayout, aEvent.iHandle);
+                        aEvent.iEffectType = CFullScreenEffectState::EStartEffect;
                         break;
                         }
                     case AknTransEffect::EApplicationStartSwitch:
@@ -4002,11 +3740,13 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                         {
                         aToLayout->iOpacity.Set(0.0f);    // this is meant for applications that are in the background.
                         FreezeLayoutUntilEffectDestroyedL(aFromLayout, aEvent.iHandle);
+                        aEvent.iEffectType = CFullScreenEffectState::EStartEffect;
                         break;
                         }
 
                     case AknTransEffect::EApplicationExit:
                         {
+                        aEvent.iEffectType = CFullScreenEffectState::EExitEffect;
                         // The effect should start when the new view is ready,
                         // but we have no signal telling us that, so we just have to do our best
 
@@ -4022,16 +3762,18 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                             __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEventL - Found effect on layout 0x%x. Removing effect 0x%x", aToLayout, aToLayout->Effect());
                             aToLayout->SetEffect(NULL);
                             }
-                        if (!(aToLayout->Flags() & EHuiVisualFlagInactive))
+                        if ( aEvent.iAction == AknTransEffect::EApplicationExit && !(aToLayout->Flags() & EHuiVisualFlagInactive)) 
                             {
                             // this will tag the visual, that they cannot be hidden by HandleVisualVisibility
                             // Initialize layout for the exit effect  
                             iLayoutInitializedForExitEffect = SetupEffectLayoutContainerL(aEvent.iHandle, aToLayout, ETrue);
+                            __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - EBeginFullscreen - iLayoutInitializedForExitEffect: %d", iLayoutInitializedForExitEffect);
                             aEvent.iSetupDone = iLayoutInitializedForExitEffect; 
                             }
                         else
                             {
                             iLayoutInitializedForExitEffect = EFalse;
+                            aEvent.iSetupDone = EFalse;
                             }
                          return failed;
                          }
@@ -4053,11 +3795,12 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                     if (aToLayout)
                         {
                         aToLayout->iOpacity.Set(1.0f);
-                        __ALFFXLOGSTRING1("HandleGfxEventL - loading effect, handle %d", aEvent.iHandle );
+                        __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - loading effect, handle %d", aEvent.iHandle );
                         if (aEvent.iAction == AknTransEffect::EApplicationExit)
                             {
-                        	// Exit effect was initialized earlier with EBeginFullscreen event
-						    layoutEffectable = iLayoutInitializedForExitEffect;
+                            // Exit effect was initialized earlier with EBeginFullscreen event
+						    layoutEffectable = aEvent.iSetupDone;
+						    __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - EEndFullScreen: %d", layoutEffectable);
                             }
                         else
                         	{
@@ -4069,14 +3812,21 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                             }
 
                         if (layoutEffectable)
-                            {
+                            {                        
+                            TInt effectFlags = KHuiFxDelayRunUntilFirstFrameHasBeenDrawn;
+                            if (NeedsStoredBuffers(iHuiEnv->EffectsEngine(), *aEvent.iEffectName))
+                                {
+                                // Performance improvement, but this would be better to be a special hint param in the fxml
+                                effectFlags |= KHuiFxOpaqueHint;
+                                }
+                            
                             if (aEvent.iRect != TRect())
                                 {
-                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), engine->ActiveGroupEffect(), &aEvent.iRect, this, aEvent.iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn ));
+                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), engine->ActiveGroupEffect(), &aEvent.iRect, this, aEvent.iHandle, effectFlags ));
                                 }
                             else
                                 {
-                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), engine->ActiveGroupEffect(), NULL, this, aEvent.iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn ) );
+                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), engine->ActiveGroupEffect(), NULL, this, aEvent.iHandle, effectFlags ) );
                                 }
                             effect = NULL;
                             // only use the effect if the effect file was correctly parsed
@@ -4113,6 +3863,7 @@ void CAlfBridge::FreezeLayoutUntilEffectDestroyedL(CHuiLayout* aLayout, TInt aHa
     if (aLayout)
         {
 		TRAPD(err, StoreRenderBufferStartL(aLayout));
+		__ALFFXLOGSTRING2("CAlfBridge::FreezeLayoutUntilEffectDestroyed - StoreRenderBufferStartL call returned: %d for layout 0x%x", err, aLayout);
 		if (err == KErrNone)
 			{
             // Freeze only, if buffer was reserved succesfully 
@@ -4186,78 +3937,6 @@ void CAlfBridge::RemoveEffectFromApp(TInt aAppUid)
             }
         layout->iOpacity.Set(1.0f); 
         }
-    }
-
-CAlfBridge::CEffectState::CEffectState()
-    {
-    // CBase clears all variables
-    }
-
-CAlfBridge::CEffectState::~CEffectState()
-    {
-    delete iEffectName;
-    }
-
-void CAlfBridge::CEffectState::ResolveFileNameL(RMemReadStream& aStream)
-    {
-    HBufC* effectDirectory = HBufC::NewLC(aStream, 256);
-    HBufC* effectFile = HBufC::NewLC(aStream, 256);
-
-    // Add one extra because we want to be able to append a number to the filename
-    HBufC* effectFullName = HBufC::NewL(effectDirectory->Des().Length()
-            + effectFile->Des().Length() + 1);
-    CleanupStack::PushL(effectFullName);
-
-    effectFullName->Des().Copy(*(effectDirectory));
-    effectFullName->Des().Append(*(effectFile));
-    delete iEffectName;
-    iEffectName = effectFullName; // ownership transferred
-    CleanupStack::Pop(effectFullName);
-    CleanupStack::PopAndDestroy(2, effectDirectory);
-    }
-
-void CAlfBridge::CFullScreenEffectState::ConstructL(
-        TInt aAction,
-        RMemReadStream& aStream)
-    {
-    iAction = aAction;
-
-    iHandle = aStream.ReadInt32L();
-
-    iType = aStream.ReadInt32L();
-    iWg1 = aStream.ReadInt32L();
-    iWg2 = aStream.ReadInt32L();
-    iToAppId = aStream.ReadInt32L();
-    iFromAppId = aStream.ReadInt32L();
-
-    if (iType == AknTransEffect::EParameterType)
-        {
-        /*screen1 =*/aStream.ReadInt32L();
-        /*screen2 =*/aStream.ReadInt32L();
-        }
-    /*TInt flags =*/
-    aStream.ReadInt32L();
-    iRect.iTl.iX = aStream.ReadInt32L();
-    iRect.iTl.iY = aStream.ReadInt32L();
-    iRect.iBr.iX = aStream.ReadInt32L();
-    iRect.iBr.iY = aStream.ReadInt32L();
-
-    ResolveFileNameL(aStream);
-
-    iCompletionHandle = iHandle;
-    }
-
-void CAlfBridge::CControlEffectState::ConstructL(TInt aAction,
-        RMemReadStream& aStream)
-    {
-    iAction = aAction;
-    TInt operation = aStream.ReadInt32L();
-    iHandle = aStream.ReadInt32L();
-    iClientHandle = aStream.ReadInt32L();
-    iClientGroupHandle = aStream.ReadInt32L();
-    TInt screenNumber = aStream.ReadInt32L(); // this has always value 0 
-    // Are Symbian full filename+directory combinations still max 256 characters long?
-    ResolveFileNameL(aStream);
     }
 
 // ---------------------------------------------------------------------------
@@ -4354,6 +4033,13 @@ void CAlfBridge::HandleGfxEffectsL( TAlfBridgerData data )
 
         __ALFFXLOGSTRING("HandleGfxEffectsL - process end");
         iFullScreenEffectData->iEndFullScreen = ETrue;
+
+#ifdef USE_APPLICATION_ENDFULLSCREEN_TIMEOUT		
+        if (iFullScreenEffectData->iDrawingCompleteTimer)
+            {
+            iFullScreenEffectData->iDrawingCompleteTimer->Cancel();
+            }
+#endif			
         }
 
     CFullScreenEffectState* fxData = iFullScreenEffectData;
@@ -4648,6 +4334,8 @@ void CAlfBridge::AddToEffectLayoutContainerL(
 
 TBool CAlfBridge::SetupEffectLayoutContainerL(TInt aHandle,CHuiLayout* aSourceLayout, TBool aIsExitEffect)
     {
+    __ALFFXLOGSTRING3("CAlfBridge::SetupEffectLayoutContainerL - aHandle: %d, aSourceLayout: 0x%x, aIsExitEffect: % d >>", aHandle, aSourceLayout, aIsExitEffect );
+    
     if (aSourceLayout->Flags() & EHuiVisualFlagDrawOnlyAsExternalContent)
         {
         // the requested visual is already having an effect. 
@@ -5205,6 +4893,8 @@ void CAlfBridge::DebugPrintControlGroupOrder(CAlfScreen& aScreen, CHuiRoster& aR
                 {
 #ifdef  HUI_DEBUG_TRACK_DRAWING
                 __ALFLOGSTRING2(">> %d WINDOW GROUP (ALF), %d", i, clientWindowGroupId);                                    
+#else
+                __ALFLOGSTRING1(">> %d WINDOW GROUP (ALF)", i);                                                    
 #endif         
                 }
             else
@@ -5220,6 +4910,8 @@ void CAlfBridge::DebugPrintControlGroupOrder(CAlfScreen& aScreen, CHuiRoster& aR
             {
 #ifdef  HUI_DEBUG_TRACK_DRAWING
             __ALFLOGSTRING2(">> %d ALF GROUP, %d", i, clientWindowGroupId);                        
+#else
+            __ALFLOGSTRING1(">> %d ALF GROUP", i);                                    
 #endif
             }
         else if (indexedGroup.Control(0).Role() == EAlfWindowFloatingSpriteContainer)
@@ -5250,6 +4942,8 @@ void CAlfBridge::DebugPrintControlGroupOrder(CAlfScreen& aScreen, CHuiRoster& aR
             {
 #ifdef  HUI_DEBUG_TRACK_DRAWING
             __ALFLOGSTRING3(">> %d UNKNOWN GROUP ?!!? %S, %d", i, &processName, clientWindowGroupId );
+#else
+            __ALFLOGSTRING1(">> %d UNKNOWN GROUP ?!!?", i);                                                                            
 #endif
             }                                                
 
@@ -5486,32 +5180,15 @@ void CAlfBridge::EnableSwRenderingL(TBool aEnable)
             iAlfScreens[i]->iDisplay->SetForegroundBitmapL( iAlfScreens[i]->iSwRenderingTarget );
             CleanupStack::Pop(texture);
             iAlfScreens[i]->iDisplay->SetForegroundTexture(texture);
-            iAlfScreens[i]->iDisplay->iRosterObservers.AppendL(*this);
             }
         else
             {
             iAlfScreens[i]->iDisplay->SetForegroundBitmapL(NULL);            
             iAlfScreens[i]->iDisplay->SetForegroundTexture(NULL);
-            iAlfScreens[i]->iDisplay->iRosterObservers.Remove(*this);            
             }
             
         // SetCapturingBufferL is called from HandleVisualVisibility.
         iAlfScreens[i]->SetVisualTreeVisibilityChanged(ETrue);
-        }
-    }
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// 
-void CAlfBridge::UploadSwRenderingTargetL(CAlfScreen* aScreen)
-    {
-    if (iSwRenderingEnabled)
-        {
-        CHuiTexture* texture = aScreen->iDisplay->ForegroundTexture();                        
-        if (texture && aScreen->iSwRenderingTarget)
-            {
-            texture->UploadL(*aScreen->iSwRenderingTarget, NULL);                
-            }           
         }
     }
 
@@ -5638,27 +5315,39 @@ void CAlfBridge::LowMemoryCancelAllEffects()
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // 
-void CAlfBridge::NotifyRosterDrawStart(CHuiDisplay& /*aDisplay*/)
-    {
-    // Do nothing
-    }
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// 
-void CAlfBridge::NotifyRosterDrawEnd(CHuiDisplay& aDisplay)
-    {
-    TInt screenNumber = ResolveScreenNumber(aDisplay);    
-    TRAP_IGNORE(UploadSwRenderingTargetL(iAlfScreens[screenNumber]));
-    }
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// 
 void CAlfBridge::Synchronized(TInt aId)
     {
     // Use P&S for now.
     RProperty::Set( KAlfPSUidSynchronizer, KAlfPSKeySynchronizer, aId );
+    }
+
+void CAlfBridge::SetWindowGroupAsAlfApp(TInt aId)
+    {
+   TBool lBreak = EFalse;
+    
+    for ( TInt j = 0; j < iAlfScreens.Count(); j++ )
+            {
+            for ( TInt i = 0; i < iAlfScreens[j]->iControlGroups.Count(); i++ )
+                {
+                if ( iAlfScreens[j]->iControlGroups[i].iClientWindowGroupId == aId )
+                    {
+                    iAlfScreens[j]->iControlGroups[i].iControlGroup->iAlfApp = ETrue;
+                    lBreak = ETrue;
+                    break;
+                    }
+                }   
+            if ( lBreak )
+               break;
+            }
+            
+    }
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 
+TBool CAlfBridge::IsAlfOriginatedWindow(CHuiCanvasVisual& aVisual)
+    {
+    return (aVisual.Owner().ControlGroup()->ResourceId() == iAlfWindowGroupNodeId);
     }
 
 // end of file

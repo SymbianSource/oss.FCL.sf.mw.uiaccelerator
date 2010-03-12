@@ -1075,6 +1075,10 @@ THuiFxReferencePoint CHuiFxEffectParser::GetReferencePointL( CMDXMLNode* aNode, 
         {
         ref = EReferencePointDisplayHeight;
         }
+    else if ( paramRef.Compare( KLitDisplayHeightMinusVisualTop ) == 0 )
+        {
+        ref = EReferencePointDisplayHeightMinusVisualTop;
+        }
     else if ( paramRef.Compare( KLitDisplayTop ) == 0 )
         {
         ref = EReferencePointDisplayTop;

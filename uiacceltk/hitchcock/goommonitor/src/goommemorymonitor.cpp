@@ -236,7 +236,8 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
         iMemAllocationsGrowing->Stop();
         iMemAllocationsGoingDown->Continue();
-        StartFreeSomeRamL(iGoodThreshold, EGOomThresholdCrossed);
+        if(iTrigger == EGOomTriggerNone)
+            StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
         }
 #endif
     }
@@ -257,7 +258,7 @@ void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
     RefreshThresholds(aForegroundAppUid);
     // Not very elegant, now we poll on each window group change
     // Should have better trigger e.g. from window server 
-	StartFreeSomeRamL(iCurrentTarget, EGOomFocusChanged);
+	StartFreeSomeRamL(iCurrentTarget, EGOomTriggerFocusChanged);
      }
 
 void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOomTrigger aTrigger) // The maximum priority of action to run
@@ -333,7 +334,7 @@ void CMemoryMonitor::RequestFreeMemoryL(TInt aTargetFree, TBool aUseAbsolute)
     {
     FUNC_LOG;
 
-    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iLowThreshold), KGOomPriorityInfinate - 1, EGOomRequestMemory);
+    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iLowThreshold), KGOomPriorityInfinate - 1, EGOomTriggerRequestMemory);
     }
 
 void CMemoryMonitor::FreeOptionalRamL(TInt aTargetFree, TInt aPluginId, TBool aUseAbsolute) // The ID of the plugin that will clear up the allocation, used to determine the priority of the allocation
@@ -342,7 +343,7 @@ void CMemoryMonitor::FreeOptionalRamL(TInt aTargetFree, TInt aPluginId, TBool aU
 
     // Calculate the priority of the allocation (the priority of the plugin that will clear it up - 1)
     TInt priorityOfAllocation = iConfig->GetPluginConfig(aPluginId).CalculatePluginPriority(*iGOomWindowGroupList) - 1;
-    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iGoodThreshold), priorityOfAllocation, EGOomRequestMemory);
+    StartFreeSomeRamL(aUseAbsolute?aTargetFree:(aTargetFree + iGoodThreshold), priorityOfAllocation, EGOomTriggerRequestMemory);
     }
 
 // Does the EGL extension return the amount of memory in bits?
@@ -383,7 +384,8 @@ void CMemoryMonitor::RefreshThresholds(TInt aForegroundAppUid)
     // Calculate the desired good threshold, this could be the globally configured value...
     iGoodThreshold = CMemoryMonitor::GlobalConfig().iGoodRamThreshold;
     iLowThreshold = CMemoryMonitor::GlobalConfig().iLowRamThreshold;
-    iCurrentTarget = iGoodThreshold;
+    if(iCurrentTarget < iLowThreshold)
+        iCurrentTarget = iLowThreshold;
         
     TRACES2("CMemoryMonitor::RefreshThresholds: Global Good Threshold = %d, Global Low Threshold = %d", iGoodThreshold, iLowThreshold);
 
@@ -469,6 +471,8 @@ void CMemoryMonitor::ResetTargets(TInt aTarget)
     //where the operation was initiated with a target larger than the current good threshold
     iCurrentTarget = aTarget;
     iGOomActionList->SetCurrentTarget(iCurrentTarget);
+    if(!aTarget)
+        iTrigger = EGOomTriggerNone;    //reset the trigger condition
     }
 
 void CMemoryMonitor::SetPriorityBusy(TInt aWgId)
@@ -621,7 +625,7 @@ void CMemoryMonitor::DoPostponedMemoryGood()
         {
         if(!NeedToPostponeMemGood())
             {
-            TRACES("DoPostponedMemoryGood calling MemoryGOOD");
+            TRACES2("DoPostponedMemoryGood calling MemoryGOOD current %d, iGoodThreshold %d",current, iGoodThreshold);
             iGOomActionList->MemoryGood();
             }
         else
@@ -717,26 +721,28 @@ void CMemoryMonitor::WaitAndSynchroniseMemoryState() //this will be called after
     
     switch (iTrigger)
         {
-        case EGOomThresholdCrossed:
+        case EGOomTriggerThresholdCrossed:
             {
             //Call memory good if we are good.
             DoPostponedMemoryGood();
             break;
             }
-        case EGOomFocusChanged:
-        case EGOomRequestMemory:
+        case EGOomTriggerFocusChanged:
+        case EGOomTriggerRequestMemory:
             {
             //start timer
-            //cancel timer if end critical allocations request
-            //end critical allocations when timer expires
+            //cancel timer if end critical allocations request -TODO
+            //end critical allocations when timer expires -TODO
             if ( iSynchTimer && //exists
                  !iSynchTimer->IsActive() ) // keep it simple
-                {                
-	        iSynchTimer->After(KGoomWaitTimeToSynch);
+                {        
+                iSynchTimer->Cancel();
+                iSynchTimer->After(KGoomWaitTimeToSynch);
                 }
             break;
             }
         }
+    ResetTargets();
     }
 
 void CMemoryMonitor::SynchroniseMemoryState()

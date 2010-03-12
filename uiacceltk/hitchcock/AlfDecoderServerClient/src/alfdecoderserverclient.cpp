@@ -44,7 +44,9 @@ TInt AlfThreadFucntion(TAny*)
         {
         return err;
         }
-        
+    
+    User::SetCritical(User::ESystemCritical); // reset the device if we die
+
     // create CCleanup
     CTrapCleanup * cleanup = CTrapCleanup::New();
     if (cleanup)

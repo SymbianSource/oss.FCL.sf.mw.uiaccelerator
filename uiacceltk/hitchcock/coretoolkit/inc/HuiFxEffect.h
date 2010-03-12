@@ -29,15 +29,37 @@ class CHuiFxGroupLayer;
 class MHuiEffectable;
 // Hui Effect Flags
 // The flags must be 1 bit flags to allow several to be set simultaneously (if needed)
-const TInt KHuiFlagsNone = 0x00000000;
-const TInt KHuiFadeEffectFlag = 0x00000001;
+const TInt KHuiFlagsNone = 0x0;
+
+/** Effect is system fade effect */
+const TInt KHuiFadeEffectFlag = 0x1;
+
+/** Effect does not use margins. It is clipped inside its area. */
 const TInt KHuiFxEffectDisableMarginsFlag = 0x2;
+
+/** Effect is not applied to children visuals. */
 const TInt KHuiFxEffectExcludeChildrenFlag = 0x4;
+
+/** Effect is grouped and syncronized with other effect(s)*/
 const TInt KHuiFxWaitGroupSyncronization = 0x8;
+
+/** Effect duration is started after it has first time been drawn. */
 const TInt KHuiFxDelayRunUntilFirstFrameHasBeenDrawn = 0x10;
+
+/** Background pixels are not read even if effect would be applied to background. */
 const TInt KHuiFxDisableBackground = 0x20;
+
+/** Effect content is composited using blending even if normally it would require other mode */ 
 const TInt KHuiFxAlwaysBlend = 0x40;
+
+/** Effect content is marked to produce opaque content on the screen. This can be used to avoid drawing unnecessarely under the effect area. */
 const TInt KHuiFxOpaqueHint = 0x80;
+
+/** Background pixels are read for every layer. This is used for fading legacy ALF content only. */
+const TInt KHuiFxEnableBackgroundInAllLayers = 0x100;
+
+/** Background pixels are not read for every frame (only once in a while), thus background content looks frozen if it is visible. */
+const TInt KHuiFxFrozenBackground = 0x200;
 
 class MAlfGfxEffectObserver
     {

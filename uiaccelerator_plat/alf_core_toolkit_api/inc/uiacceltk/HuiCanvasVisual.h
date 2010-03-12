@@ -418,6 +418,11 @@ private:
     static TBool RecursiveIsExternalContentDrawingEnabled(CHuiVisual* aVisual);
     static TBool RecursiveHasCommandBuffers(CHuiVisual* aVisual);
     
+    void CollectPaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const;
+    void CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const;
+    
+    TBool CanSkipDrawing() const;
+
 private: 
 
     struct THuiCanvasVisualData;

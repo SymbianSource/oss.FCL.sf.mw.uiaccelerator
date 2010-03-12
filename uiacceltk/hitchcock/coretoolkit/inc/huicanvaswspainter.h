@@ -196,6 +196,9 @@ private:
     void DestroyBuffer(TInt aIndex);
     void UpdateBufferUpdateRegions(TPoint aPos);
     
+    void RemoveBuffersWithMovedDisplayRect();
+    void ModifyBuffersWithChangedDisplayRect();
+    
 public:    
     void EnableRenderBufferIfNeeded(TBool aEnable);
 private:

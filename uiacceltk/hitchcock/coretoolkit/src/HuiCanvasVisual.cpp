@@ -312,6 +312,31 @@ TBool CHuiCanvasVisual::PrepareDrawL()
     }
     
     
+TBool CHuiCanvasVisual::CanSkipDrawing() const
+    {
+    TBool semiTranparentEffectActive = (Effect() && Effect()->IsSemitransparent());
+    TBool childWindowEffectActive = (Effect() && EffectIsAppliedToChildren());
+    TBool invisible = (iOpacity.Now() <= EPSILON && !semiTranparentEffectActive);
+    TBool effectAppliedToSurfacePixels = (Effect() && (Effect()->EffectFlags() & KHuiFxEnableBackgroundInAllLayers));
+    
+    if( invisible || 
+        (!HasCommandBuffers(ETrue /*include children*/) && 
+         !childWindowEffectActive &&
+         !IsBackgroundDrawingEnabled() && 
+         !IsExternalContentDrawingEnabled()&&
+         !IsExternalContentDrawingEnabled(ETrue /*include children*/) &&
+         !effectAppliedToSurfacePixels
+         
+        ))
+        {
+        return ETrue;
+        }
+    else
+        {
+        return EFalse;
+        }
+    }
+
 void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
     {
     if (Flags() & EHuiVisualFlagDrawOnlyAsExternalContent)
@@ -324,22 +349,9 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
     		}
     	}
     
-    TBool semiTranparentEffectActive = (Effect() && Effect()->IsSemitransparent());
-    TBool childWindowEffectActive = (Effect() && EffectIsAppliedToChildren());
-    TBool invisible = (iOpacity.Now() <= EPSILON && !semiTranparentEffectActive);
-    
-    if( invisible || 
-        (!HasCommandBuffers(ETrue /*include children*/) && 
-         !childWindowEffectActive &&
-         !IsBackgroundDrawingEnabled() && 
-         !IsExternalContentDrawingEnabled()&&
-         !IsExternalContentDrawingEnabled(ETrue /*include children*/)
-         
-        ))
+    // Optimization
+    if (CanSkipDrawing())
         {
-        // This will not be visible due to being completely transparent, or the visual does not actually draw anything
-    
-        // However, the draw should continue, if the effect is possibly manipulating the opacity of the visual. See CHuiFxVisualLayer::Draw.
         return;
         }
 
@@ -399,26 +411,25 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
         TBool transparent = EFalse; 
         transparent |= (!(Flags() & EHuiVisualFlagOpaqueHint)); // Does not have opaque hint -> always transparent
         transparent |= iOpacity.Now() < 1.0f; // Opacity less than 1.0f -> always transparent
-        
+                
         TBool refreshCache = EFalse;        
         if (EffectIsAppliedToChildren())
             {
             refreshCache |= ChildTreeChanged(EHuiCanvasFlagExcludeFromParentEffect);
+
+            iCanvasVisualData->iPaintedRegion.Clear();
+            CollectRecursivePaintedRegion(iCanvasVisualData->iPaintedRegion, EHuiCanvasFlagExcludeFromParentEffect);
             }
         else
             {
-            refreshCache |= Changed();
-            }
-        
-        // TODO: We could update this somewhere else, not here everytime
-        iCanvasVisualData->iPaintedRegion.Clear();
-        TInt paintedAreaCount = PaintedAreaCount();  
-        for (TInt i=0; i<paintedAreaCount; i++ )
-            {
-            iCanvasVisualData->iPaintedRegion.AddRect( CanvasPaintedArea(i).iPaintedRect.Round() );
+            refreshCache |= Changed();            
+
+            iCanvasVisualData->iPaintedRegion.Clear();
+            CollectPaintedRegion(iCanvasVisualData->iPaintedRegion, 0);
             }
         
         didDrawEffect = Effect()->CachedDraw(aGc, area, refreshCache, !transparent, iCanvasVisualData->iPaintedRegion);
+        
         }
     
     if ( !didDrawEffect )
@@ -506,7 +517,7 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
             }
         }
 
-    if ((IsDelayedEffectSource() || Freezed()))
+    if (IsContentDrawingEnabled() && (IsDelayedEffectSource() || Freezed()))
         {
         // Select right draw mode
         THuiCanvasDrawMode drawMode = (Flags() & EHuiVisualFlagOpaqueHint) ? EHuiCanvasDrawModeNormal : EHuiCanvasDrawModeBlend;
@@ -1126,6 +1137,7 @@ EXPORT_C void CHuiCanvasVisual::SetLayerUsesAlphaFlag(TBool aEnabled)
     if (aEnabled == KWindowIsDSAHost)
         {
         iCanvasVisualData->iCanvasFlags |= EHuiCanvasFlagDisableCanvasContent;        
+        ClearCommandSet();
         return;    
         }    
     iCanvasVisualData->iLayerUsesAlphaFlag = aEnabled;
@@ -1417,7 +1429,7 @@ void CHuiCanvasVisual::VisualExtension(const TUid& aExtensionUid, TAny** aExtens
             params->iResult = KErrNone;
             break;
         case THuiVisualQueryParams::EQueryHasDrawableContent:
-            params->iValue = HasCommandBuffers(EFalse);
+            params->iValue = HasCommandBuffers(EFalse) || IsBackgroundDrawingEnabled();
             params->iResult = KErrNone;
             break;
         default:
@@ -1428,4 +1440,47 @@ void CHuiCanvasVisual::VisualExtension(const TUid& aExtensionUid, TAny** aExtens
 	    {
 		CHuiVisual::VisualExtension(aExtensionUid, aExtensionParams);
 		}
+    }
+
+void CHuiCanvasVisual::CollectPaintedRegion(TRegion& aPaintRegion, TInt aExcludeCanvasFlags) const
+    {
+    // Only our own painted areas.
+    TInt paintedAreaCount = PaintedAreaCount();  
+    for (TInt i=0; i<paintedAreaCount; i++ )
+        {
+        aPaintRegion.AddRect( CanvasPaintedArea(i).iPaintedRect.Round() );
+        }
+    aPaintRegion.Tidy();
+    }
+
+void CHuiCanvasVisual::CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const
+    {
+    // First our own painted areas...
+    CollectPaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
+            
+    // ...then children (and their children).
+    const TInt count = Count();
+    for(TInt i = 0; i < count; ++i)
+        {
+        // Check wheter we should include this child visual or ignore it.
+        if (aExcludeCanvasFlags)
+            {
+            CHuiVisual* visual = (CHuiCanvasVisual*)&Visual(i);
+            if ( !(visual->Flags() & EHuiVisualFlagInactive) )
+                {
+                TInt canvasFlags = visual->QueryCanvasFlags();
+                    
+                if ( !(canvasFlags & aExcludeCanvasFlags) )
+                    {
+                    // If this is marked as Wserv visual, it should be safe to cast.
+                    if (visual->Flags() & EHuiVisualFlagWserv)
+                        {
+                        CHuiCanvasVisual* canvasVisual = (CHuiCanvasVisual*)visual;
+                        canvasVisual->CollectRecursivePaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
+                        }
+                    }
+                }        
+            }
+        }    
+    aRecursivePaintRegion.Tidy();
     }

@@ -20,6 +20,9 @@
 #ifndef __ALFRENDERSTAGE_H__
 #define __ALFRENDERSTAGE_H__
 
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h"
+
 #include <graphics/wsrenderstage.h>
 #include <graphics/wscursor.h>
 #include "alfrsgc.h"

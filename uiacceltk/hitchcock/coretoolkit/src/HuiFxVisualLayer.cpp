@@ -300,10 +300,29 @@ void CHuiFxVisualLayer::ApplyTransformations(CHuiGc& aGc)
     // if seems wiser to do the translation first, otherwise the results seem to be unpredictable.
     
     // Translation
-    if (iTranslationX != 0.0f || iTranslationY != 0.0f || iTranslationZ != 0.0f)
+	TReal32 translationX = 0.0f;
+	TReal32 translationY = 0.0f;
+	TReal32 translationZ = 0.0f;
+
+    if (iTranslationX != 0.0f)
+		{
+		translationX = iTranslationX - iVisual->EffectDisplayRect().iTl.iX;
+		}
+	if (iTranslationY != 0.0f)
         {
-        aGc.Translate(EHuiGcMatrixModel, iTranslationX, iTranslationY, iTranslationZ);
+        translationY = iTranslationY - iVisual->EffectDisplayRect().iTl.iY;
         }    
+
+	if (iTranslationZ != 0.0f)
+        {
+		// Z translation not supported by the model
+        translationZ = iTranslationZ;
+        }    
+
+	  if (translationX != 0.0f || translationY != 0.0f || translationZ != 0.0f)
+	  	{
+        aGc.Translate(EHuiGcMatrixModel, translationX, translationY, translationZ);
+		}
         
     // Scaling
     if (iScaleX != 1.0f || iScaleY != 1.0f || iScaleZ != 1.0f)

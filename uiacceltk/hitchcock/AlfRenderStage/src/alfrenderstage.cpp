@@ -71,7 +71,15 @@ CAlfRenderStage::~CAlfRenderStage()
 	delete iWsGraphicsContext;
 	delete iGoomSession;
 	
-	// Used just as a temporary holding place, do not delete!
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    if (Dll::Tls()!=NULL) 
+        {
+        delete AMT_CONTROL();
+        Dll::FreeTls();
+        }
+    #endif
+
+    // Used just as a temporary holding place, do not delete!
 	iWindowDrawingNode = NULL;	
 	}
 
@@ -109,6 +117,15 @@ void CAlfRenderStage::ConstructL(MWsGraphicDrawerEnvironment* aEnv, MWsScreen* a
       compcntrl->AlfBridgeCallback(MAlfBridge::ESetWindowTreeObserver,(MAlfCompositionAgnosticWindowTreeObserver*)this);  
       }
 
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF    
+    // Setup TLS and open global module testing chunk and mutex
+    if (Dll::Tls()==NULL) // create only for the first render stage!
+        {
+        User::LeaveIfError(Dll::SetTls(new(ELeave) CAlfModuleTestDataControl()));
+        User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects());
+        }
+    #endif         
+    
     __ALFLOGSTRING("CAlfRenderStage: ready to rock");
     }
 
@@ -348,17 +365,46 @@ void CAlfRenderStage::DoDrawTextCursor(
     drawRegion.AddRect( aExtent );
     TRegionFix<1> clipRegion;
     clipRegion.AddRect( aClipRect );
-            
+
+    TRgb penColor = TRgb(0x555555); 
+    TRgb brushColor = TRgb(0x555555); 
+    TRgb dotColor = TRgb(0xBBBBBB); 
+    
     WindowRedrawStart( aWindowTreeNode, drawRegion );
     iWsGraphicsContext->Reset();
     iWsGraphicsContext->SetDrawMode( MWsGraphicsContext::EDrawModePEN );
     iWsGraphicsContext->SetBrushStyle( MWsGraphicsContext::ESolidBrush );
     iWsGraphicsContext->SetPenStyle( MWsGraphicsContext::ESolidPen );
-    iWsGraphicsContext->SetBrushColor( KRgbBlack ); // color from interface is white, so temporirily putting black
-    //const TRect clipRect = cursor->ClipRect();
-    //const TRect cursorRect = cursor->Rect();
-    iWsGraphicsContext->SetClippingRegion( clipRegion );
+    iWsGraphicsContext->SetBrushColor( brushColor ); 
+    iWsGraphicsContext->SetPenColor( penColor );
+    iWsGraphicsContext->SetClippingRegion( clipRegion );    
     iWsGraphicsContext->DrawRect( aCursorRect );    
+
+    // Draw pattern to cursor so that it is visible in any color backgrounds.
+    iWsGraphicsContext->SetPenColor( dotColor );    
+    TPoint start = aCursorRect.iTl;
+    TPoint end = TPoint(aCursorRect.iTl.iX, aCursorRect.iBr.iY);
+    
+    for (TInt i=0; i<aCursorRect.Width();i++)
+        {    
+        TPoint point = start;
+        for (TInt j=0; j<aCursorRect.Height();j++)
+            {
+            if ((i % 2))
+                {
+                if (j % 2)
+                    iWsGraphicsContext->Plot(point);            
+                }
+            else
+                {
+                if (!(j % 2))
+                    iWsGraphicsContext->Plot(point);                        
+                }                
+            point.iY++;
+            }
+        start.iX++;
+        }
+        
     WindowRedrawEnd( aWindowTreeNode );
     }
 
@@ -544,6 +590,10 @@ void CAlfRenderStage::NodeCreated(const MWsWindowTreeNode& aWindowTreeNode, MWsW
         }
 #endif    
 	iAlfSendBuffer->CommitL();
+	
+    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
+    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
+    AMT_INC_COUNTER(iRsWindowGroupNodeCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -584,6 +634,9 @@ void CAlfRenderStage::NodeReleased(const MWsWindowTreeNode& aWindowTreeNode)
 	    __ALFLOGSTRING("CAlfRenderStage::NodeReleased - WARNING: Node not found!!");
 	    }
 
+    AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
+    AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
+    AMT_DEC_COUNTER(iRsWindowGroupNodeCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -601,6 +654,8 @@ void CAlfRenderStage::NodeActivated(const MWsWindowTreeNode& aWindowTreeNode)
 
 	iAlfSendBuffer->CommitL();
     __ALFLOGSTRING("CAlfRenderStage::NodeActivated <<");
+   
+    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeActivatedCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -637,6 +692,9 @@ void CAlfRenderStage::NodeExtentChanged(const MWsWindowTreeNode& aWindowTreeNode
             );    
         }
 	iAlfSendBuffer->CommitL();
+
+    AMT_INC_COUNTER( iRsNodeExtentChangedCount );
+    AMT_SET_VALUE( iRsLatestNodeExtentRect, aRect );
     }
 
 // ---------------------------------------------------------------------------
@@ -669,6 +727,8 @@ void CAlfRenderStage::FlagChanged(const MWsWindowTreeNode& aWindowTreeNode, TInt
             aNewValue,
             &aWindowTreeNode   );
 	iAlfSendBuffer->CommitL();
+
+    AMT_INC_COUNTER( iRsTotalNodeFlagChangedCount );
     }
 
 // ---------------------------------------------------------------------------
@@ -731,7 +791,9 @@ void CAlfRenderStage::AttributeChanged(const MWsWindowTreeNode& aWindowTreeNode,
                 }
             }
         iAlfSendBuffer->CommitL();
-        } 
+        
+        AMT_INC_COUNTER( iRsTotalNodeAttributeChangedCount );
+        }    
     }
 
 // ---------------------------------------------------------------------------

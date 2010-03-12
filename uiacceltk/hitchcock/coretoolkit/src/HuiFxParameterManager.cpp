@@ -216,6 +216,13 @@ void CHuiFxParameterManager::ResolveReference( TReal32& aDefaultValue, THuiFxRef
             // the bottom right corner of a rect is actually outside the rect
             aDefaultValue = aVisualRect.iBr.iX;
             break;
+        case EReferencePointDisplayHeightMinusVisualTop:
+            {
+            TReal32 height = aEngine.GetReferenceValue( aRef ); // this will be display.height
+            height -= aVisualRect.iTl.iY;
+            aDefaultValue = height;
+            break;
+            }
         default:
             // This will return reference points that depend on display size
             aDefaultValue = aEngine.GetReferenceValue( aRef );

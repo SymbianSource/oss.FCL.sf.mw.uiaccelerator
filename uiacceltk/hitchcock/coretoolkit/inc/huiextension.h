@@ -23,6 +23,25 @@
 
 #include <e32std.h>
 
+class CFbsBitmap;
+
+// Uid for Partial Bitmap Upload extension
+// THuiTexturePartialBitmapUploadParams used as parameter.
+const TUid KHuiTexturePartialBitmapUploadUid = { 0x2002C359 };
+
+// Parameter structure for Partial Bitmap Upload extension
+struct THuiTexturePartialBitmapUploadParams
+    {
+    // Input parameters
+    
+    TRect iRect;
+    CFbsBitmap* iBitmap;
+    
+    // Output parameters
+    
+    TInt iErrorCode;
+    };
+
 // Uid for Query visual extension
 const TUid KHuiVisualQueryUid = { 0x2002C36B };
 

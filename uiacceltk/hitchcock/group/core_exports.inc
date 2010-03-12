@@ -3,7 +3,7 @@
 *  Name        : core_exports.inc
 *  Part of     : Alfred UI Toolkit
 *  Description : Exported header files.
-*  Version     : %version: tr1sido#8.1.25 %
+*  Version     : %version: tr1sido#8.1.26 %
 *
 *  Copyright © 2006-2007 Nokia.  All rights reserved.
 *  This material, including documentation and any related computer
@@ -64,6 +64,10 @@ PRJ_EXPORTS
 ../coretoolkit/data/musicplayer_popup_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/musicplayer_popup_disappear.fxml
 ../coretoolkit/data/musicplayer_viewswitch_in.fxml /epoc32/release/winscw/urel/z/resource/effects/musicplayer_viewswitch_in.fxml
 ../coretoolkit/data/musicplayer_viewswitch_out.fxml /epoc32/release/winscw/urel/z/resource/effects/musicplayer_viewswitch_out.fxml
+../coretoolkit/data/notificationwidget_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/notificationwidget_appear.fxml
+../coretoolkit/data/notificationwidget_dd_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/notificationwidget_dd_appear.fxml
+../coretoolkit/data/notificationwidget_dd_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/notificationwidget_dd_disappear.fxml
+../coretoolkit/data/notificationwidget_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/notificationwidget_disappear.fxml
 ../coretoolkit/data/optionsmenu_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_cascade_disappear.fxml
@@ -75,6 +79,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/preview_popup_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/preview_popup_disappear.fxml
 ../coretoolkit/data/screensaver_activate.fxml /epoc32/release/winscw/urel/z/resource/effects/screensaver_activate.fxml
 ../coretoolkit/data/screensaver_deactivate.fxml /epoc32/release/winscw/urel/z/resource/effects/screensaver_deactivate.fxml
+../coretoolkit/data/skinchange.fxml /epoc32/release/winscw/urel/z/resource/effects/skinchange.fxml
 ../coretoolkit/data/systemnotify_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/systemnotify_appear.fxml
 ../coretoolkit/data/systemnotify_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/systemnotify_disappear.fxml
 ../coretoolkit/data/tab_effect.fxml /epoc32/release/winscw/urel/z/resource/effects/tab_effect.fxml
@@ -128,6 +133,10 @@ PRJ_EXPORTS
 ../coretoolkit/data/musicplayer_popup_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/musicplayer_popup_disappear.fxml
 ../coretoolkit/data/musicplayer_viewswitch_in.fxml /epoc32/release/winscw/udeb/z/resource/effects/musicplayer_viewswitch_in.fxml
 ../coretoolkit/data/musicplayer_viewswitch_out.fxml /epoc32/release/winscw/udeb/z/resource/effects/musicplayer_viewswitch_out.fxml
+../coretoolkit/data/notificationwidget_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/notificationwidget_appear.fxml
+../coretoolkit/data/notificationwidget_dd_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/notificationwidget_dd_appear.fxml
+../coretoolkit/data/notificationwidget_dd_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/notificationwidget_dd_disappear.fxml
+../coretoolkit/data/notificationwidget_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/notificationwidget_disappear.fxml
 ../coretoolkit/data/optionsmenu_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_cascade_disappear.fxml
@@ -139,6 +148,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/preview_popup_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/preview_popup_disappear.fxml
 ../coretoolkit/data/screensaver_activate.fxml /epoc32/release/winscw/udeb/z/resource/effects/screensaver_activate.fxml
 ../coretoolkit/data/screensaver_deactivate.fxml /epoc32/release/winscw/udeb/z/resource/effects/screensaver_deactivate.fxml
+../coretoolkit/data/skinchange.fxml /epoc32/release/winscw/udeb/z/resource/effects/skinchange.fxml
 ../coretoolkit/data/systemnotify_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/systemnotify_appear.fxml
 ../coretoolkit/data/systemnotify_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/systemnotify_disappear.fxml
 ../coretoolkit/data/tab_effect.fxml /epoc32/release/winscw/udeb/z/resource/effects/tab_effect.fxml
@@ -192,6 +202,10 @@ PRJ_EXPORTS
 ../coretoolkit/data/musicplayer_popup_disappear.fxml /epoc32/data/z/resource/effects/musicplayer_popup_disappear.fxml
 ../coretoolkit/data/musicplayer_viewswitch_in.fxml /epoc32/data/z/resource/effects/musicplayer_viewswitch_in.fxml
 ../coretoolkit/data/musicplayer_viewswitch_out.fxml /epoc32/data/z/resource/effects/musicplayer_viewswitch_out.fxml
+../coretoolkit/data/notificationwidget_appear.fxml /epoc32/data/z/resource/effects/notificationwidget_appear.fxml
+../coretoolkit/data/notificationwidget_dd_appear.fxml /epoc32/data/z/resource/effects/notificationwidget_dd_appear.fxml
+../coretoolkit/data/notificationwidget_dd_disappear.fxml /epoc32/data/z/resource/effects/notificationwidget_dd_disappear.fxml
+../coretoolkit/data/notificationwidget_disappear.fxml /epoc32/data/z/resource/effects/notificationwidget_disappear.fxml
 ../coretoolkit/data/optionsmenu_appear.fxml /epoc32/data/z/resource/effects/optionsmenu_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/data/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/data/z/resource/effects/optionsmenu_cascade_disappear.fxml
@@ -203,6 +217,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/preview_popup_disappear.fxml /epoc32/data/z/resource/effects/preview_popup_disappear.fxml
 ../coretoolkit/data/screensaver_activate.fxml /epoc32/data/z/resource/effects/screensaver_activate.fxml
 ../coretoolkit/data/screensaver_deactivate.fxml /epoc32/data/z/resource/effects/screensaver_deactivate.fxml
+../coretoolkit/data/skinchange.fxml /epoc32/data/z/resource/effects/skinchange.fxml
 ../coretoolkit/data/systemnotify_appear.fxml /epoc32/data/z/resource/effects/systemnotify_appear.fxml
 ../coretoolkit/data/systemnotify_disappear.fxml /epoc32/data/z/resource/effects/systemnotify_disappear.fxml
 ../coretoolkit/data/tab_effect.fxml /epoc32/data/z/resource/effects/tab_effect.fxml
