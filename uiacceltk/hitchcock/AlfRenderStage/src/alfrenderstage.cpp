@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Nokia Corporation and/or its subsidiary(-ies). 
+* Copyright (c) 2006-2008 Nokia Corporation and/or its subsidiary(-ies). 
 * All rights reserved.
 * This component and the accompanying materials are made available
 * under the terms of "Eclipse Public License v1.0"
@@ -140,6 +140,8 @@ TAny* CAlfRenderStage::ResolveObjectInterface(TUint aTypeId)
 			
     	case MWsDrawAnnotationObserver::EWsObjectInterfaceId:
     	    return static_cast<MWsDrawAnnotationObserver*>(this);
+        case KAlfSynchronizationInterfaceUid:
+            return static_cast<MAlfSynchronizationInterface*>(this);
     	default:
     	    return CWsRenderStage::ResolveObjectInterface(aTypeId);
 		}
@@ -162,6 +164,22 @@ void CAlfRenderStage::Begin(const TRegion* aRegion )
 	iUpdateRegion = aRegion;
 	iNext->Begin(aRegion);
 	}
+
+// ---------------------------------------------------------------------------
+// Synchronize
+// ---------------------------------------------------------------------------
+//
+TInt CAlfRenderStage::Synchronize(TInt& aId)
+    {
+    if ( iAlfSendBuffer )
+        {
+        ++iSyncId;
+        aId = iSyncId;
+        iAlfSendBuffer->Synchronize(iSyncId);
+        return KErrNone;
+        }
+    return KErrGeneral;
+    }
 
 // ---------------------------------------------------------------------------
 // End
@@ -420,7 +438,8 @@ void CAlfRenderStage::NodeCreated(const MWsWindowTreeNode& aWindowTreeNode, MWsW
             if( iScreenNumber == 0 )
 		        {          
                 if ( secureId != 0x10207218 && // Capserver / AKA goom
-                     secureId != 0x10204c27 )  // Policy server 
+                     secureId != 0x10204c27 && // Policy server
+                     secureId != 0x2000f85a )  // IAD application updater
                     {
                     // Todo: Must actually check whether the configuration uses goom
                     // would create drastic performance hit in a system that does not need

@@ -665,6 +665,10 @@ EXPORT_C CAlfAppUi::CAlfAppUi()
 //
 EXPORT_C CAlfAppUi::~CAlfAppUi()
     {
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    delete AMT_CONTROL();
+    #endif
+    
     delete iData;
     }
   
@@ -763,6 +767,17 @@ void CAlfAppUi::AllClientsClosed()
 EXPORT_C void CAlfAppUi::ConstructL()
     {
     __ALFLOGSTRING( "CAlfAppUi::ConstructL start" )
+    
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    __ALFLOGSTRING( "CAlfAppUi::ConstructL. Open and initialize ALF module test chunk. " )
+    // Initiliaze global data in TLS. 
+    User::LeaveIfError(Dll::SetTls(new(ELeave) CAlfModuleTestDataControl()));
+    // Open global module testing chunk and mutex
+    User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects());
+    __ALFLOGSTRING( "CAlfAppUi::ConstructL. ALF module test chunk ready. " )
+    #endif
+     
+  
     TInt flags = EStandardApp|ENoScreenFurniture|ENonStandardResourceFile|EAknEnableSkin;
     CCoeEnv* coe = CCoeEnv::Static();
     iData =  new (ELeave) CAlfAppUiData();
@@ -903,6 +918,10 @@ EXPORT_C void CAlfAppUi::ConstructL()
 	// Load Tfx server client API plugin, if exists
 	iData->iServer->CreateTfxServerPlugin();
     
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+    iData->iBridgeObj->ForceSwRendering(ETrue);
+#endif
+
     __ALFLOGSTRING( "CAlfAppUi::ConstructL end" )
     }
     

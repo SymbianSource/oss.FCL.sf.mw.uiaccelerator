@@ -22,6 +22,9 @@
 
 #include <e32hashtab.h>
 
+#define AMT_CONTROL()                static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h" 
+
 #include "alfscreen.h"
 #include "alfstreamerbridge.h"
 #include "alfdecoderserverclient.h"
@@ -29,6 +32,7 @@
 #include <alf/alfconstants.h>
 
 #include "HuiFxEffect.h"
+#include "huisynchronizationobserver.h"
 #include <alf/AlfTransEffectPlugin.h>
 #include <uiacceltk/HuiDisplay.h>
 
@@ -45,7 +49,8 @@ NONSHARABLE_CLASS(CAlfBridge):
     public MHuiDisplayRefreshObserver, 
     public MHuiBitmapProvider,
     public MAlfGfxEffectObserver,
-    public MHuiRosterObserver
+    public MHuiRosterObserver,
+    public MHuiSynchronizationObserver
     {
 	// Helper class for keeping ongoing effects in order. Kept in iEffectCleanupStack
     private:
@@ -224,6 +229,9 @@ public:
     void NotifyRosterDrawStart(CHuiDisplay& aDisplay);
     void NotifyRosterDrawEnd(CHuiDisplay& aDisplay);
     
+    // From MHuiSynchronizationObserver
+    void Synchronized(TInt aId);
+    
 private:    
     
     class CFullScreenEffectState;
@@ -384,10 +392,26 @@ private:
      */
     CHuiLayout* FindLayoutByEffectHandle(TInt aHandle);
     
-    /*
+    /**
      * HasActiveEffect
+	 *
+	 *	Note. The visual might not have effect, but it is child for visual that has effect. 
+	 *	In both cases, this method returns ETrue. Otherwise EFalse.
+	 *
+	 *	@param	aVisual	Visual to be checked for effect participation.
      */
     TBool HasActiveEffect(CHuiVisual* aVisual);
+
+    /**
+     * HasActiveEffect
+	 *
+	 *	Note. The visual might not have effect, but it is child for visual that has effect. 
+	 *	In both cases, this method returns ETrue. Otherwise EFalse.
+	 *
+	 *	@param	aVisual	Visual to be checked for effect participation.
+	 *	@param  aIndex	Index of the effect item in iEffectCleanupStack, if found. Otherwise KErrNotFound
+     */    
+    TBool HasActiveEffect(CHuiVisual* aVisual, TInt& aIndex);
     
    /*
 	*	FindEffectHandle
@@ -627,6 +651,7 @@ private:
             CHuiControlGroup& aGroup);
     
     void VisualizeControlGroupOrderL(
+            CAlfScreen& aScreen,
             CHuiRoster& aRoster, 
             CHuiControlGroup& aGroup);
     
@@ -714,9 +739,6 @@ public:
     // iEffectCleanupStack contains the entries for effects that are currently associated 
     // with visuals in iFullscreenEffectControlGroup
     RArray<TEffectCleanupStruct> iEffectCleanupStack;
-    
-    // Effects that have finished by their own, or framework requested to end them
-    RArray<TInt> iFinishedEffects;
     
     // Same as iEffectCleanupStack, but only the ones that can be now cleaned away.
     // See method RemoveTemporaryPresenterVisuals.
@@ -896,6 +918,11 @@ private:
     TBool iForcedSwRendering;
     TBool iLowMemoryMode;
     THuiMemoryLevel iCurrentMemoryLevel;
+    
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    TInt iTempTotalActiveVisualCount;
+    TInt iTempTotalPassiveVisualCount;
+    #endif
     };    
 
 #endif // __ALF_BRIDGE_H__

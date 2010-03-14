@@ -73,15 +73,14 @@ enum TAlfDecoderServerBindings
     EAlfEffectFxEndSyncronizedGroup,
     EAlfDSSetCapturingBitmap,
     EAlfDSSetCoveringBitmap,
+    
+    //140
     EAlfDSSetFadeEffect,
     EAlfReleaseTemporaryChunk,
-
-    // 140
     EAlfBridgeSetScreenRotation,
+    EAlfDSSynchronize,
 
     KUnInitialized
-    
-    
     };
 
 #endif /* ALFBRIDGECOMMANDS_H_ */

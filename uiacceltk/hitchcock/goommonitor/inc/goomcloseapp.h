@@ -83,6 +83,8 @@ private:
     void ConstructL();
     
     TUint iWgId;
+    TInt iCloseTimeout; 
+    TInt iWaitAfterClose; 
         
     TBool iAppCloserRunning;
     TApaTask iCurrentTask;

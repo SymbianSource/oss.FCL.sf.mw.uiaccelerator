@@ -77,6 +77,26 @@ EXPORT_C TBool CHuiFxEngine::FxmlUsesInput1(const TDesC &aFileName)
     return EFalse;
 #endif
     }
+
+TBool CHuiFxEngine::FxmlUsesInput1(CHuiFxEffect& aEffect)
+    {
+    RArray<THuiFxVisualSrcType> array;
+    aEffect.FxmlVisualInputs(array);
+ 
+    TInt c = array.Count();
+    for(TInt i = 0; i<c; i++)
+        {
+        THuiFxVisualSrcType val = array[i];
+        if (val == EVisualSrcInput1)
+            {
+            array.Close();
+            return ETrue;
+            }
+        }
+    array.Close();
+    return EFalse;    
+    }
+
     
 EXPORT_C void CHuiFxEngine::RegisterEffectL(const TDesC &aFileName)
     {
@@ -150,7 +170,6 @@ EXPORT_C void CHuiFxEngine::LoadEffectL(
 #ifdef HUIFX_EFFECTCACHE_ENABLED
     CHuiFxEffectCacheEffectNode *node = new (ELeave) CHuiFxEffectCacheEffectNode(aFileName, aEffect, aVisual, &iExtRect, this);
     node->SetEffectEndObserver( aEffectEndObserver, aHandle );
-    aFlags |= KHuiFxDelayRunUntilFirstFrameHasBeenDrawn;
     node->SetEffectFlags( aFlags );
     CleanupStack::PushL(node);
     iCache->FindOrCreateL(node); // takes ownership
@@ -206,7 +225,6 @@ EXPORT_C void CHuiFxEngine::LoadGroupEffectL(
 		aFlags |= KHuiFxWaitGroupSyncronization;
 		node->SetEffectGroup(aGroup);
     	}
-    aFlags |= KHuiFxDelayRunUntilFirstFrameHasBeenDrawn;
     node->SetEffectFlags( aFlags );
     
     CleanupStack::PushL(node);
@@ -314,6 +332,14 @@ EXPORT_C void CHuiFxEngine::AddEffectL(CHuiFxEffect* aEffect)
 #endif // #ifdef HUIFX_TRACE    
 
     iActiveEffects.AppendL(aEffect);
+
+    // Performance improvement, but this would be better to be a special hint param in the fxml
+    if (aEffect && FxmlUsesInput1(*aEffect))
+        {
+        TInt flags = aEffect->EffectFlags();
+        flags |= KHuiFxOpaqueHint;
+        aEffect->SetEffectFlags(flags);        
+        }
     }
 
 EXPORT_C void CHuiFxEngine::RemoveEffect(CHuiFxEffect* aEffect)

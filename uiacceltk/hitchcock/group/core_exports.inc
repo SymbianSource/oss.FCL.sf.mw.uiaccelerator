@@ -3,7 +3,7 @@
 *  Name        : core_exports.inc
 *  Part of     : Alfred UI Toolkit
 *  Description : Exported header files.
-*  Version     : %version: tr1sido#8.1.24 %
+*  Version     : %version: tr1sido#8.1.25 %
 *
 *  Copyright © 2006-2007 Nokia.  All rights reserved.
 *  This material, including documentation and any related computer
@@ -82,6 +82,8 @@ PRJ_EXPORTS
 ../coretoolkit/data/taskswapper_app_start_rect.fxml /epoc32/release/winscw/urel/z/resource/effects/taskswapper_app_start_rect.fxml
 ../coretoolkit/data/taskswapper_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/taskswapper_appear.fxml
 ../coretoolkit/data/taskswapper_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/taskswapper_disappear.fxml
+../coretoolkit/data/toolbar_ext_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/toolbar_ext_appear.fxml
+../coretoolkit/data/toolbar_ext_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/toolbar_ext_disappear.fxml
 ../coretoolkit/data/touchinput_close.fxml /epoc32/release/winscw/urel/z/resource/effects/touchinput_close.fxml
 ../coretoolkit/data/touchinput_open.fxml /epoc32/release/winscw/urel/z/resource/effects/touchinput_open.fxml
 ../coretoolkit/data/waitnote_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/waitnote_appear.fxml
@@ -144,6 +146,8 @@ PRJ_EXPORTS
 ../coretoolkit/data/taskswapper_app_start_rect.fxml /epoc32/release/winscw/udeb/z/resource/effects/taskswapper_app_start_rect.fxml
 ../coretoolkit/data/taskswapper_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/taskswapper_appear.fxml
 ../coretoolkit/data/taskswapper_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/taskswapper_disappear.fxml
+../coretoolkit/data/toolbar_ext_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/toolbar_ext_appear.fxml
+../coretoolkit/data/toolbar_ext_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/toolbar_ext_disappear.fxml
 ../coretoolkit/data/touchinput_close.fxml /epoc32/release/winscw/udeb/z/resource/effects/touchinput_close.fxml
 ../coretoolkit/data/touchinput_open.fxml /epoc32/release/winscw/udeb/z/resource/effects/touchinput_open.fxml
 ../coretoolkit/data/waitnote_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/waitnote_appear.fxml
@@ -166,7 +170,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/app_start_rect.fxml /epoc32/data/z/resource/effects/app_start_rect.fxml
 ../coretoolkit/data/app_start_switch.fxml /epoc32/data/z/resource/effects/app_start_switch.fxml
 ../coretoolkit/data/app_start_switch_rect.fxml /epoc32/data/z/resource/effects/app_start_switch_rect.fxml
-../coretoolkit/data/appshell_exit.fxml /epoc32/data/z/resource/effects/effects/appshell_exit.fxml
+../coretoolkit/data/appshell_exit.fxml /epoc32/data/z/resource/effects/appshell_exit.fxml
 ../coretoolkit/data/confirmationnote_appear.fxml /epoc32/data/z/resource/effects/confirmationnote_appear.fxml
 ../coretoolkit/data/confirmationnote_disappear.fxml /epoc32/data/z/resource/effects/confirmationnote_disappear.fxml
 ../coretoolkit/data/dialer_close.fxml /epoc32/data/z/resource/effects/dialer_close.fxml
@@ -206,6 +210,8 @@ PRJ_EXPORTS
 ../coretoolkit/data/taskswapper_app_start_rect.fxml /epoc32/data/z/resource/effects/taskswapper_app_start_rect.fxml
 ../coretoolkit/data/taskswapper_appear.fxml /epoc32/data/z/resource/effects/taskswapper_appear.fxml
 ../coretoolkit/data/taskswapper_disappear.fxml /epoc32/data/z/resource/effects/taskswapper_disappear.fxml
+../coretoolkit/data/toolbar_ext_appear.fxml /epoc32/data/z/resource/effects/toolbar_ext_appear.fxml
+../coretoolkit/data/toolbar_ext_disappear.fxml /epoc32/data/z/resource/effects/toolbar_ext_disappear.fxml
 ../coretoolkit/data/touchinput_close.fxml /epoc32/data/z/resource/effects/touchinput_close.fxml
 ../coretoolkit/data/touchinput_open.fxml /epoc32/data/z/resource/effects/touchinput_open.fxml
 ../coretoolkit/data/waitnote_appear.fxml /epoc32/data/z/resource/effects/waitnote_appear.fxml

@@ -611,7 +611,7 @@ TInt CBgAnimHost::ScreenSaverCallback(TAny* aPtr)
 
 void CBgAnimHost::DataReceived( CSensrvChannel& aChannel, TInt aCount, TInt aDataLost )
     {
-    if (iPlugin && iPlugin->receivesensordata);
+    if (iPlugin && iPlugin->receivesensordata)
         {
         iPlugin->receivesensordata((void*)&aChannel, aCount, aDataLost);
         }

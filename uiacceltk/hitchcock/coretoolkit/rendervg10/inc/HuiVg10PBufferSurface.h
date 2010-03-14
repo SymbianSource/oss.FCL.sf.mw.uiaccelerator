@@ -118,6 +118,12 @@ public: // From MHuiRenderSurface
     void SwapBuffers();
 
     /**
+     * Synchronizes the context. All rendering calls for the currently bound context are guaranteed 
+     * to be executed, when thsi method returns.
+     */
+    void Finish();
+
+    /**
      * Binds a texture to the surface to be used during subsequent drawing
      * operations.
      */

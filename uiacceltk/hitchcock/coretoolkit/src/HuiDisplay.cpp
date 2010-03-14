@@ -1525,10 +1525,8 @@ void CHuiDisplay::HWAcceleratedClearWithBackgroundItems(TRect aRect)
                     }
                 break;
             case EClearWithSkinBackground:
-                 TRect skinRect;
-                 TRect dummy;
-                 GetRectForItem(item.SkinBackground(), dummy, skinRect);
                  backgroundTexture = s60skin->BackgroundTexture(item.SkinBackground());
+                 TRect skinRect = s60skin->SkinRect(item.SkinBackground());
                  if (backgroundTexture)
                     {
                     THuiImage background(*backgroundTexture);

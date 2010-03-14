@@ -677,7 +677,7 @@ public:
      *
      * @return  Pointer to native window, or <code>NULL</code>.
      */
-    RDrawableWindow* NativeWindow();
+    IMPORT_C RDrawableWindow* NativeWindow();
 
     /**
      * Returns the rendering surface of the display.

@@ -2488,7 +2488,9 @@ TBool CHuiCanvasWsPainter::IsBufferCompletelyOutisideClippingRegion(const CHuiCa
 
 TInt CHuiCanvasWsPainter::EnableRenderBuffer(TBool aEnable)
     {
-    if (aEnable != iCanvasWsGc->IsRenderBufferEnabled())
+    iEnableRenderBuffer = aEnable;
+    
+    if (iCanvasWsGc && ( aEnable != iCanvasWsGc->IsRenderBufferEnabled() ) )
         {
         if (aEnable)
             {
@@ -2603,6 +2605,11 @@ void CHuiCanvasWsPainter::SelectGcL()
     if ( oldGc && oldGc != iCanvasWsGc )
         {
         oldGc->ClearCache();
+        }
+    if ( iCanvasWsGc )
+        {
+        // Forward 'enable render buffer' setting to new GC.
+        iCanvasWsGc->EnableRenderbuffer( iEnableRenderBuffer );
         }
 
     #ifdef HUI_DEBUG_TRACK_DRAWING

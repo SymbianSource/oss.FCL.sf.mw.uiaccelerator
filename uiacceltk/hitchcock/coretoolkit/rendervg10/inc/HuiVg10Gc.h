@@ -150,6 +150,11 @@ public:
     void SetDimmingFog(const TRgb& aColor, TReal32 aAmount) __SOFTFP;
 
     /**
+     * Clear rect using the current pen color
+     */
+    void Clear(const TRect& aRect);
+    
+    /**
      * Clear using the current pen color.
      */
     void Clear();
@@ -553,7 +558,8 @@ private:
     
     /** Default fill and stroke paint */
 	VGPaint iPaint;
-
+	TUint32 iPaintColor;
+	
     /** Gradient fill paint */
     VGPaint iGradientPaint;
     

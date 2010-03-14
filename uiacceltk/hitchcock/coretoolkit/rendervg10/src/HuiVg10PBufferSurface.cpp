@@ -409,6 +409,10 @@ void CHuiVg10PBufferSurface::SwapBuffers()
     // Pbuffers consist of a single buffer only (no front/back buffers to swap).
     }
 
+void CHuiVg10PBufferSurface::Finish()
+    {
+    vgFinish();
+    }
 
 void CHuiVg10PBufferSurface::BindTexture(TInt aTextureUnit,
                                            const MHuiSegmentedTexture& aTexture,

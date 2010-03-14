@@ -255,7 +255,7 @@ TInt CAlfNode::OrdinalPosition()
             {
             CAlfNode* parentNode = iModel->FindNode( iParent->iId );
             __ASSERT_DEBUG(parentNode, USER_INVARIANT());
-            if (parentNode->HasChildren())
+            if (parentNode  && parentNode->HasChildren())
                 {
                 // parent node is not added to the list
                 // the anims, cursor and sprites directly in this parent are added to the list
@@ -838,7 +838,7 @@ CAlfNode* CAlfNode::FindPreviousChild()
         }
     // starting from the first child, loop until this one is found.
     
-    while( previousSibling->iSibling != this)
+    while( previousSibling && previousSibling->iSibling != this)
         {
         previousSibling = previousSibling->iSibling;
         }
@@ -879,7 +879,7 @@ void CAlfNode::SetFaded( TBool aFaded )
         }
     if (iFadeState != iPostedFadeState)
         {
-        iModel->Server().Bridge()->AddData( EAlfDSSetFadeEffect, iId , iFadeState);
+        iModel->Server().Bridge()->AddData( EAlfDSSetFadeEffect, iId , iFadeState, (TAny*)iType);
         iPostedFadeState = iFadeState;
         }
     }

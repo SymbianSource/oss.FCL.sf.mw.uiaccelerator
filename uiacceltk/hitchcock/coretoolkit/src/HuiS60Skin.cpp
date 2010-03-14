@@ -72,7 +72,9 @@ EXPORT_C CHuiS60Skin::~CHuiS60Skin()
     if (iSkinSrvConnected)
         iSkinSrvSession.Close();
         
-   delete iBackgroundBitmap;
+    delete iBackgroundBitmap;
+    iCachedSkinItems.ResetAndDestroy();
+    iCachedSkinItems.Close();
     }
 
 
@@ -135,33 +137,45 @@ MAknsSkinInstance* CHuiS60Skin::SkinInstance() const
 
 void CHuiS60Skin::UpdateBackgroundL()
     {
-    if(iBackgroundTexture)
-         {
-         iBackgroundTexture->Reset();
-         delete iBackgroundTexture;
-         iBackgroundTexture = 0;
-         }
-
-    HUI_DEBUG1(_L("CHuiS60Skin::UpdateBackgroundL - Free memory in the beginning: %i"), HuiUtil::FreeMemory());
-    iBackgroundTexture = CreateSkinBackgroundL(KAknsIIDQsnBgScreen);
-    iBackgroundTexture->SetSkinContent(ETrue);
-    iBackgroundTexture->iContentObservers.AppendL(*this);
-
+    if(!iBackgroundTexture)
+        {
+        iBackgroundTexture = CreateSkinBackgroundL(KAknsIIDQsnBgScreen);
+        iBackgroundTexture->SetSkinContent(ETrue);
+        iBackgroundTexture->iContentObservers.AppendL(*this);
+        }
+    else if(iSkinChanged)
+        {
+        iBackgroundTexture->Reset();
+        delete iBackgroundBitmap;
+        iBackgroundBitmap = NULL;
+        iBackgroundBitmap = CHuiStatic::GetBgBitmapLC(KAknsIIDQsnBgScreen); 
+        CleanupStack::Pop(iBackgroundBitmap);
+        // update iBackgroundRect as well 
+        TRect dummy;
+        GetRectForItem(KAknsIIDQsnBgScreen, dummy, iBackgroundRect);
+        iBackgroundTexture->UploadL(*iBackgroundBitmap,NULL,EHuiTextureUploadFlagRetainResolution );                
+        iBackgroundTexture->SetSkinContent(ETrue);
+        }
+    else
+        {
+        // there should be already up-to-date background texture
+        }
     HUI_DEBUG1(_L("CHuiS60Skin::UpdateBackgroundL - Free memory at exit: %i"), HuiUtil::FreeMemory());
     }
 
 
-void CHuiS60Skin::SkinContentChanged()
+EXPORT_C void CHuiS60Skin::SkinContentChanged()
     {
     iSkinChanged = ETrue;
     }
 
-void CHuiS60Skin::SkinConfigurationChanged(
+EXPORT_C void CHuiS60Skin::SkinConfigurationChanged(
     const TAknsSkinStatusConfigurationChangeReason aReason )
     {
     
     }
-void CHuiS60Skin::SkinPackageChanged(
+
+EXPORT_C void CHuiS60Skin::SkinPackageChanged(
     const TAknsSkinStatusPackageChangeReason aReason )
     {
     
@@ -213,11 +227,12 @@ EXPORT_C void CHuiS60Skin::ReleaseTexture(TInt aSkinTextureResource)
 EXPORT_C void CHuiS60Skin::NotifyDisplaySizeChangedL()
     {
     // The background is now different.
-    iReloadBackground = ETrue;
     SkinContentChanged(); // for changing the iSkinChanged flag
     Env().NotifySkinChangedL();
     Env().TextStyleManager().NotifyDisplaySizeChangedL();
     ReloadBgTexturesL();
+
+    iSkinChanged = EFalse;
     }
 
 
@@ -300,8 +315,9 @@ void CHuiS60Skin::FreeBackgrounds()
         delete bgTexture.iBackgroundTexture;
         bgTexture.iBackgroundTexture = NULL;
         }
-    ((TPrivData*)(iSpare))->iBackgrounds.Reset(); 
+    ((TPrivData*)(iSpare))->iBackgrounds.Reset();
     
+    iCachedSkinItems.ResetAndDestroy(); // reset cached bg images & rects
     }
     
     
@@ -317,47 +333,82 @@ CHuiTexture* CHuiS60Skin::CreateSkinBackgroundL(const TAknsItemID& aID)
     MAknsSkinInstance* skin = SkinInstance();
     CHuiTexture* texture = CHuiTexture::NewL();
     
-    CleanupStack::PushL(texture);            
-    if(iSkinChanged)
-         {
-     
-        delete iBackgroundBitmap; 
-        iBackgroundBitmap = NULL;
-        
-        if (skin)
+    CleanupStack::PushL(texture);
+    
+    if (skin)
+        {
+        TRect skinrect;
+        TRect dummy;
+        GetRectForItem(aID, dummy, skinrect);
+
+        CFbsBitmap* bitmap = new (ELeave) CFbsBitmap();
+        CleanupStack::PushL(bitmap);
+        User::LeaveIfError( bitmap->Create(skinrect.Size(), EColor64K) );        
+
+        CFbsBitmapDevice* device = CFbsBitmapDevice::NewL(bitmap);
+        CleanupStack::PushL(device);
+
+        CFbsBitGc* gc = 0;
+        User::LeaveIfError( device->CreateContext(gc) );
+        CleanupStack::PushL(gc);
+        iSkinControlContext->SetRect(skinrect);
+        iSkinControlContext->SetBitmap(aID);
+
+        AknsDrawUtils::DrawBackground(skin, iSkinControlContext, NULL, *gc, TPoint(0,0), skinrect,
+                          KAknsDrawParamDefault);
+
+        CleanupStack::PopAndDestroy(gc);
+        CleanupStack::PopAndDestroy(device);
+
+        texture->UploadL(*bitmap,NULL,EHuiTextureUploadFlagRetainResolution );            
+        CleanupStack::PopAndDestroy(bitmap);
+        }
+    else
+        {
+        CFbsBitmap* bitmap = SearchCachedSkinItemBitmap(aID);
+        if(iSkinChanged || !bitmap)
             {
+            TRect skinrect;
             TRect dummy;
-            TRect skinRect;
-            GetRectForItem(aID, dummy, skinRect);
-    
-            iBackgroundBitmap = new (ELeave) CFbsBitmap();
-            User::LeaveIfError( iBackgroundBitmap->Create(skinRect.Size(), EColor64K) );        
-    
-            CFbsBitmapDevice* device = CFbsBitmapDevice::NewL(iBackgroundBitmap);
-            CleanupStack::PushL(device);
-    
-            CFbsBitGc* gc = 0;
-            User::LeaveIfError( device->CreateContext(gc) );
-            CleanupStack::PushL(gc);
-            iSkinControlContext->SetRect(skinRect);
-            iSkinControlContext->SetBitmap(aID);
-    
-            AknsDrawUtils::DrawBackground(skin, iSkinControlContext, NULL, *gc, TPoint(0,0), skinRect,
-                              KAknsDrawParamDefault);
-    
-            CleanupStack::PopAndDestroy(gc);
-            CleanupStack::PopAndDestroy(device);
+            GetRectForItem(aID, dummy, skinrect);
+
+            if( aID == KAknsIIDQsnBgScreen) // handle normal background id differently
+                {
+                delete iBackgroundBitmap; 
+                iBackgroundBitmap = NULL;
+                bitmap = CHuiStatic::GetBgBitmapLC(aID);
+                CleanupStack::Pop(bitmap);
+                iBackgroundBitmap = bitmap;
+                iBackgroundRect = skinrect;
+                }
+            else // others are cached in skin item array
+                {
+                bitmap = CHuiStatic::GetBgBitmapLC(aID);
+                TInt index = SearchCachedSkinItemIndex(aID);
+                if( index == KErrNotFound ) // add new
+                    {
+                    CSkinItem* newSkinItem = new (ELeave) CHuiS60Skin::CSkinItem();
+                    CleanupStack::PushL(newSkinItem);
+                    newSkinItem->iId = aID;
+                    newSkinItem->iSkinRect = skinrect;
+                    newSkinItem->iBitmap = bitmap;
+                    User::LeaveIfError(iCachedSkinItems.Append(newSkinItem));
+                    CleanupStack::Pop(newSkinItem);
+                    }
+                else // modify existing
+                    {
+                    iCachedSkinItems[index]->iSkinRect = skinrect;
+                    delete iCachedSkinItems[index]->iBitmap;
+                    iCachedSkinItems[index]->iBitmap = NULL; 
+                    iCachedSkinItems[index]->iBitmap = bitmap;
+                    }
+                CleanupStack::Pop(bitmap);                
+                }
             }
-        else
-            {
-            iBackgroundBitmap = CHuiStatic::GetBgBitmapLC(aID);   
-            CleanupStack::Pop( iBackgroundBitmap );
-            }
-         }
-    texture->UploadL(*iBackgroundBitmap,NULL,EHuiTextureUploadFlagRetainResolution );            
-    
+        texture->UploadL(*bitmap,NULL,EHuiTextureUploadFlagRetainResolution );            
+        }
+
     CleanupStack::Pop(texture);
-    iSkinChanged = EFalse;
     return texture;
     }
 
@@ -368,6 +419,8 @@ void CHuiS60Skin::ReloadBgTexturesL()
         // no need to render the skin backgrounds separately on bitgdi
         return;
         }
+    iCachedSkinItems.ResetAndDestroy(); // reset cached bg images & rects
+    
     TBackgroundTexture bgTexture;
     TInt itemCount = ((TPrivData*)(iSpare))->iBackgrounds.Count(); 
     for (TInt index = 0; index < itemCount; index++)
@@ -424,4 +477,63 @@ EXPORT_C CHuiTexture* CHuiS60Skin::BackgroundTexture(const TAknsItemID& aID)
             }
         }
     return NULL;
+    }
+
+
+TInt CHuiS60Skin::SearchCachedSkinItemIndex(const TAknsItemID& aId)
+    {
+    TInt cacheditemsCount = iCachedSkinItems.Count();
+    for(TInt i = 0; i < cacheditemsCount; i++ )
+        {
+        if( iCachedSkinItems[i]->iId == aId )
+            {
+            return i;
+            }
+        }
+
+    HUI_DEBUG2(_L("CHuiS60Skin::SeachCachedSkinItemIndex - cached TAknsItemID %i %i (iMajor, iMinor) not found"), aId.iMajor, aId.iMinor );
+
+    return KErrNotFound;
+    }
+
+TRect CHuiS60Skin::SearchCachedSkinItemRect(const TAknsItemID& aId)
+    {
+    TRect returnRect = TRect();
+    if(aId == KAknsIIDQsnBgScreen)
+        {
+        returnRect = iBackgroundRect;
+        }
+    else
+        {
+        TInt index = SearchCachedSkinItemIndex(aId);
+        if(index != KErrNotFound )
+            {
+            returnRect = iCachedSkinItems[index]->iSkinRect;
+            }
+        }   
+    return returnRect;
+    }
+
+CFbsBitmap* CHuiS60Skin::SearchCachedSkinItemBitmap(const TAknsItemID& aId)
+    {
+    CFbsBitmap* bitmap = NULL;
+    if(aId == KAknsIIDQsnBgScreen)
+        {
+        bitmap = iBackgroundBitmap;
+        }
+    else
+        {
+        TInt index = SearchCachedSkinItemIndex(aId);
+        if(index != KErrNotFound )
+            {
+            bitmap = iCachedSkinItems[index]->iBitmap;
+            }
+        }   
+    return bitmap;    
+    }
+
+
+TRect CHuiS60Skin::SkinRect(const TAknsItemID& aID)
+    {
+    return SearchCachedSkinItemRect(aID);
     }

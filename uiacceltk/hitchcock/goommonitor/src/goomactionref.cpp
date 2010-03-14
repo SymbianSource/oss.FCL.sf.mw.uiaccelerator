@@ -23,8 +23,8 @@ TActionRef::TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMod
     {   
     }
 
-TActionRef::TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMode, TInt aRamEstimate, TInt aWgId, TUint aWgIndex)
-: iType(aType), iPriority(aPriority), iSyncMode(aSyncMode), iRamEstimate(aRamEstimate), iWgId(aWgId), iWgIndex(aWgIndex), iRunPlugin(NULL)
+TActionRef::TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMode, TInt aRamEstimate, TInt aWgId, TUint aWgIndex, TInt aCloseTimeout, TInt aWaitAfterClose)
+: iType(aType), iPriority(aPriority), iSyncMode(aSyncMode), iRamEstimate(aRamEstimate), iWgId(aWgId), iWgIndex(aWgIndex), iRunPlugin(NULL), iCloseTimeout(aCloseTimeout), iWaitAfterClose(aWaitAfterClose)
     {   
     }
 
@@ -57,6 +57,16 @@ TInt TActionRef::RamEstimate() const
 TInt TActionRef::WgId() const
     {
     return iWgId;
+    }
+
+TInt TActionRef::CloseTimeout() const
+    {
+    return iCloseTimeout;
+    }
+
+TInt TActionRef::WaitAfterClose() const
+    {
+    return iWaitAfterClose;
     }
 
 TInt TActionRef::WgIndex() const

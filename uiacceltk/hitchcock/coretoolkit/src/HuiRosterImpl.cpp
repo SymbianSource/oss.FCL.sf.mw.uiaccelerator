@@ -527,10 +527,12 @@ void CHuiRosterImpl::DrawSelf(CHuiGc& aGc, CHuiDisplay* aDisplay) const
     TInt j = 0;
 
     CHuiDisplay* display = aDisplay ? aDisplay : iDisplay;
+    
+    ASSERT(display!=NULL);
 
     if (iCanvasRenderBuffer && iCanvasGc)
         {
-        DrawSelfFrozen(aGc, aDisplay);
+        DrawSelfFrozen(aGc, display);
         return;
         }
 
@@ -1214,13 +1216,11 @@ void CHuiRosterImpl::ClearChanged()
         for(TInt i = 0; i < visualCount; ++i)
             {
             // Ignore inactive visuals
-            if ( entry.iRootVisuals[i]->Flags()& EHuiVisualFlagInactive )
+            if ( !(entry.iRootVisuals[i]->Flags()& EHuiVisualFlagInactive) )
                 {
-                continue; 
-                }
-            
-            // This will clear the change flags of the entire tree of visuals.
-            entry.iRootVisuals[i]->ClearChanged();
+                // This will clear the change flags of the entire tree of visuals.
+                entry.iRootVisuals[i]->ClearChanged(); 
+                }            
             }
         }
     }

@@ -1979,4 +1979,11 @@ EXPORTS
 	_ZTI15MHuiFxParameter @ 1978 NONAME
 	_ZTV15MHuiFxParameter @ 1979 NONAME
 	_ZNK16CHuiCanvasVisual17HasCommandBuffersEi @ 1980 NONAME
+	_ZN11CHuiS60Skin18SkinContentChangedEv @ 1981 NONAME
+	_ZN11CHuiS60Skin18SkinPackageChangedE34TAknsSkinStatusPackageChangeReason @ 1982 NONAME
+	_ZN11CHuiS60Skin24SkinConfigurationChangedE40TAknsSkinStatusConfigurationChangeReason @ 1983 NONAME
+	_ZThn28_N11CHuiS60Skin18SkinContentChangedEv @ 1984 NONAME
+	_ZThn28_N11CHuiS60Skin18SkinPackageChangedE34TAknsSkinStatusPackageChangeReason @ 1985 NONAME
+	_ZThn28_N11CHuiS60Skin24SkinConfigurationChangedE40TAknsSkinStatusConfigurationChangeReason @ 1986 NONAME
+	_ZN7CHuiEnv11SynchronizeEiP27MHuiSynchronizationObserver @ 1987 NONAME
 

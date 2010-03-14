@@ -35,10 +35,12 @@ void CMemoryMonitorSession::CreateL()
 CMemoryMonitorSession::~CMemoryMonitorSession()
     {
     FUNC_LOG;
+	/* TODO - need to add the right condition
     if (iUseAbsoluteTargets)
         { // se3ssion terminated while on critical allocation, release lock
         Server().Monitor().SessionInCriticalAllocation(0);
         }
+	*/
     CloseAppsFinished(0, EFalse);
     }
 
@@ -63,22 +65,31 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
     iFunction = aMessage.Function();
     RThread t;
     aMessage.Client(t);
-    Server().Monitor().SetActiveClient(t.SecureId());
+    
+    TUint clientId = t.SecureId();
     t.Close();
     
+    TRACES1("NEW REQUEST from client %x", clientId);
     switch (aMessage.Function())
         {
         case EGOomMonitorRequestFreeMemory:
-            if (!iRequestFreeRam.IsNull())
+
+            //Do not take any more requests from the same client if previous request being served
+            if (!iRequestFreeRam.IsNull() && !Server().Monitor().IsSafeToProcessNewRequest(clientId))
                 {
+                TRACES1("CANNOT PROCESS NEW REQUEST from %x", clientId);
                 aMessage.Complete(KErrInUse);
                 return;
                 }
+            
+            Server().Monitor().SetActiveClient(clientId);
             // message will be completed when CloseAppsFinished() is called.
             if (aMessage.Int1() == 0)
                 {
                 iRequestFreeRam = aMessage;
 
+                Server().Monitor().SessionInCriticalAllocation(1, clientId);
+                
                 TRAPD(err, Monitor().RequestFreeMemoryL(aMessage.Int0(), iUseAbsoluteTargets));
                 if (err)
                     {
@@ -94,12 +105,19 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
                 TRAP_IGNORE(Monitor().HandleFocusedWgChangeL(appUid));
                 }
             break;
+            
+        case EGOomMonitorMemoryAllocationsComplete:
+            TRACES1("ServiceL : Memory Allocations complete from %x", clientId);
+            Server().Monitor().SessionInCriticalAllocation(0, clientId);
+            aMessage.Complete(KErrNone);
+            break;
 
         case EGOomMonitorCancelRequestFreeMemory:
             if (!iRequestFreeRam.IsNull())
                 {
                 iRequestFreeRam.Complete(KErrCancel);
                 }
+            Server().Monitor().SessionInCriticalAllocation(0, clientId);
             aMessage.Complete(KErrNone);
             break;
 
@@ -109,10 +127,11 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
             break;
 
         case EGOomMonitorRequestOptionalRam:
-            if (!iRequestFreeRam.IsNull())
+            if (!iRequestFreeRam.IsNull() && !Server().Monitor().IsSafeToProcessNewRequest(clientId))
                 {
                 aMessage.Complete(KErrInUse);
                 }
+            Server().Monitor().SetActiveClient(clientId);
             // message will be completed when CloseAppsFinished() is called.
             iRequestFreeRam = aMessage;
             iMinimumMemoryRequested = aMessage.Int1();
@@ -125,12 +144,12 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
             break;
             
         case EGOomMonitorSetPriorityNormal:
-               Monitor().SetPriorityNormal(aMessage.Int0());
+            Monitor().SetPriorityNormal(aMessage.Int0());
             aMessage.Complete(KErrNone);
             break;
 
         case EGOomMonitorSetPriorityHigh:
-               Monitor().SetPriorityHigh(aMessage.Int0());
+            Monitor().SetPriorityHigh(aMessage.Int0());
             aMessage.Complete(KErrNone);
             break;
 
@@ -141,12 +160,13 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
             TRAP_IGNORE(Monitor().HandleFocusedWgChangeL(appUid))
             break;
             }
+           
         case EGoomMonitorAppUsesAbsoluteMemTargets:
             {
             iUseAbsoluteTargets = aMessage.Int0();
-            TRACES2("EGoomMonitorAppUsesAbsoluteMemTargets this: 0x%x, use abs targets %d", this, iUseAbsoluteTargets);
+/*            TRACES2("EGoomMonitorAppUsesAbsoluteMemTargets this: 0x%x, use abs targets %d", this, iUseAbsoluteTargets);
             Server().Monitor().SessionInCriticalAllocation(iUseAbsoluteTargets);
-            aMessage.Complete(KErrNone);     
+*/           aMessage.Complete(KErrNone);     
             break;
             }    
             

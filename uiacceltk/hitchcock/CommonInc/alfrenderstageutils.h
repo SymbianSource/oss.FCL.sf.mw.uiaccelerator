@@ -18,6 +18,10 @@
 #ifndef _ALFRSUAPI_H_
 #define _ALFRSUAPI_H_
 
+#include <e32std.h>
+
+class MWsWindowTreeNode;
+
 const TInt KAlfCompositionAgnosticWindowTreeObserverInterfaceId(0x2002BCFB);
     
 class MAlfCompositionAgnosticWindowTreeObserver
@@ -78,7 +82,7 @@ public:
     virtual void MovedToWindowGroup(const MWsWindowTreeNode& aWindowTreeNode, const MWsWindowTreeNode& aNewWindowGroupNode) = 0;
     virtual void WindowGroupChained(const MWsWindowTreeNode& aParent, const MWsWindowTreeNode& aChild) = 0;
     virtual void WindowGroupChainBrokenAfter(const MWsWindowTreeNode& aWindowGroupNode) = 0;
-    virtual void FadeAllChildren(const MWsWindowTreeNode& aWindowTreeNode, TBool aFaded) = 0;
+    virtual void FadeAllChildren(const MWsWindowTreeNode& aWindowTreeNode, TBool aFaded) = 0;    
     };
 
 class RAlfBridgerClient;
@@ -98,5 +102,35 @@ class MAlfBridge
     virtual void WriteIntsL(TUint8 aCommand, TInt aCount, TInt* aArray) = 0;
     virtual RAlfBridgerClient* Client() = 0;
     };
+
+/**
+ * Synchronization interface
+ */
+class MAlfSynchronizationInterface
+    {
+public:
+    /**
+     * Start synchronization. 
+     * @param aId This will contain identifier for this synchronization.
+     * @return error code, KErrNone if synchronization is started.
+     */
+    virtual TInt Synchronize(TInt& aId) = 0;
+    };
+
+/**
+ * Use this UID as parameter when resolving MAlfSynchronizationInterface 
+ * interface.
+ */
+const TUint32 KAlfSynchronizationInterfaceUid = 0x2002C357;
+
+/**
+ * Category for P&S variable for synchronization finished indication.
+ */
+const TUid KAlfPSUidSynchronizer = { 0x10003B20 };
+
+/**
+ * Key for P&S variable for synchronization finished indication.
+ */
+const TUint32 KAlfPSKeySynchronizer = 0x2002C357;
 
 #endif // _ALFRSUAPI_H_

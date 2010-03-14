@@ -49,6 +49,9 @@ public:
      */
     inline TUint CalculateCloseAppPriority(const CGOomWindowGroupList& aWindowGroupList, TUint aAppIndexInWindowGroup);
     
+    TInt iCloseTimeout;
+    TInt iWaitAfterClose;
+    
 private:
     
     CGOomCloseAppConfig(TInt32 aId);

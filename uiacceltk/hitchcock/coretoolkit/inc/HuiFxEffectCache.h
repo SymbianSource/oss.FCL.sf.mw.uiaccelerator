@@ -62,6 +62,7 @@ private:
         };
     
     MHuiFxEffectCacheNode *Find(MHuiFxEffectCacheNode *aNode);
+    MHuiFxEffectCacheNode *FindDuplicate(MHuiFxEffectCacheNode *aNode);
     static bool Compare(MHuiFxEffectCacheNode *aNode1, MHuiFxEffectCacheNode *aNode2);
     void Remove(RPointerArray<MHuiFxEffectCacheNode> &aEffects, MHuiFxEffectCacheNode *aNode);
     void Remove(RHashMap<TInt, MHuiFxEffectCacheNode*> &aMap, MHuiFxEffectCacheNode *aNode);

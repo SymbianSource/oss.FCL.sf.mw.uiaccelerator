@@ -72,6 +72,11 @@ public:
     
     // Find the specificed application in the window group list and return the index
     TInt GetIndexFromAppId(TUint aAppId) const;
+    TInt GetIndexFromWgId(TInt aWgId) const;
+    
+    // Find all the windowgroups in the list that matches application id for this window group
+    void GetAllWgIdsMatchingAppId(TInt aWgId, RArray<TInt> & WgIdList) const;
+    
     
 private:    
 

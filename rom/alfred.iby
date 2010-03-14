@@ -51,6 +51,7 @@ ECOM_PLUGIN(alfhintplugindrawer.dll, alfhintplugindrawer.RSC)
 file=ABI_DIR\BUILD_DIR\alfhintplugin.dll               	SHARED_LIB_DIR\alfhintplugin.dll
 
 ECOM_PLUGIN(alfoogmplugin.dll, alfoogmplugin.RSC)
+ECOM_PLUGIN(alfcrpplugin.dll, alfcrpplugin.RSC)
 
 data=DATAZ_\ECOM_RESOURCE_DIR\alfnonsupportedwscommands.rsc     ECOM_RESOURCE_DIR\alfnonsupportedwscommands.rsc
 
@@ -133,6 +134,8 @@ data=DATAZ_/RESOURCE_FILES_DIR/effects/taskswapper_app_start_disappear.fxml RESO
 data=DATAZ_/RESOURCE_FILES_DIR/effects/taskswapper_app_start_rect.fxml RESOURCE_FILES_DIR/effects/taskswapper_app_start_rect.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/taskswapper_appear.fxml RESOURCE_FILES_DIR/effects/taskswapper_appear.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/taskswapper_disappear.fxml RESOURCE_FILES_DIR/effects/taskswapper_disappear.fxml
+data=DATAZ_/RESOURCE_FILES_DIR/effects/toolbar_ext_appear.fxml RESOURCE_FILES_DIR/effects/toolbar_ext_appear.fxml
+data=DATAZ_/RESOURCE_FILES_DIR/effects/toolbar_ext_disappear.fxml RESOURCE_FILES_DIR/effects/toolbar_ext_disappear.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/touchinput_close.fxml RESOURCE_FILES_DIR/effects/touchinput_close.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/touchinput_open.fxml RESOURCE_FILES_DIR/effects/touchinput_open.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/waitnote_appear.fxml RESOURCE_FILES_DIR/effects/waitnote_appear.fxml

@@ -21,4 +21,5 @@ EXPORTS
 	?UsesAbsoluteMemTargets@RGOomMonitorSession@@QAEXH@Z @ 20 NONAME ; void RGOomMonitorSession::UsesAbsoluteMemTargets(int)
 	?Connect@RGOomMonitorSession@@QAEHAAVTRequestStatus@@@Z @ 21 NONAME ; int RGOomMonitorSession::Connect(class TRequestStatus &)
 	?AppAboutToStart@RGOomMonitorSession@@QAEXAAVTRequestStatus@@ABVTUid@@@Z @ 22 NONAME ; void RGOomMonitorSession::AppAboutToStart(class TRequestStatus &, class TUid const &)
+	?MemoryAllocationsComplete@RGOomMonitorSession@@QAEXXZ @ 23 NONAME ; void RGOomMonitorSession::MemoryAllocationsComplete(void)
 

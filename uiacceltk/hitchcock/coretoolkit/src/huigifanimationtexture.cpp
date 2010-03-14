@@ -149,7 +149,10 @@ void CHuiGifAnimationTexture::TextureLoadingCompleted(CHuiTexture& aTexture,
     {
     if ((iAnimationState & EInitializing) && aTexture.iFrameCount > 1 && aTextureId == iTextureId1)
         {
+        delete iTexture;
         iTexture = iTexture1;
+        delete iTexture2;
+        iTexture2 = NULL;
         TRAP_IGNORE(iTexture2 = &iManager.LoadTextureL(*iFilename,EHuiTextureUploadFlagDefault, iTextureId2, 1))
         iFrameInterval = aTexture.iFrameInterval;
         iFrameCount = aTexture.iFrameCount;

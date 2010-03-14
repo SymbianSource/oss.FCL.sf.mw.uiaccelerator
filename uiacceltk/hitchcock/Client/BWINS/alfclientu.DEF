@@ -1105,4 +1105,7 @@ EXPORTS
 	?EnableLowMemoryState@RAlfDirectClient@@QAEXH@Z @ 1104 NONAME ; void RAlfDirectClient::EnableLowMemoryState(int)
 	?SetGroupEffectL@CAlfVisual@@QAEXABVTDesC16@@H@Z @ 1105 NONAME ; void CAlfVisual::SetGroupEffectL(class TDesC16 const &, int)
 	?ForceSwRendering@RAlfDirectClient@@QAEHH@Z @ 1106 NONAME ; int RAlfDirectClient::ForceSwRendering(int)
+	?Finish@CAlfDrawer@@QAEHXZ @ 1107 NONAME ; int CAlfDrawer::Finish(void)
+	??1CAlfDrawer@@UAE@XZ @ 1108 NONAME ; CAlfDrawer::~CAlfDrawer(void)
+	?NewL@CAlfDrawer@@SAPAV1@XZ @ 1109 NONAME ; class CAlfDrawer * CAlfDrawer::NewL(void)
 

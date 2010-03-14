@@ -37,6 +37,7 @@ const TInt KHuiFxWaitGroupSyncronization = 0x8;
 const TInt KHuiFxDelayRunUntilFirstFrameHasBeenDrawn = 0x10;
 const TInt KHuiFxDisableBackground = 0x20;
 const TInt KHuiFxAlwaysBlend = 0x40;
+const TInt KHuiFxOpaqueHint = 0x80;
 
 class MAlfGfxEffectObserver
     {

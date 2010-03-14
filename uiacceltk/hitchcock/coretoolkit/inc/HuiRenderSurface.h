@@ -104,6 +104,12 @@ public:
     virtual void SwapBuffers() = 0;
 
     /**
+     * Synchronizes the context. All rendering calls for the currently bound context are guaranteed 
+     * to be executed, when thsi method returns.
+     */
+    virtual void Finish() = 0;
+
+    /**
      * Binds a texture to the surface to be used during subsequent drawing
      * operations.
      *

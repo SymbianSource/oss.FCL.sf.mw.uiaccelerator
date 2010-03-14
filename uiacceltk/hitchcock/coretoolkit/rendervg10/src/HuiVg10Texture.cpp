@@ -1082,7 +1082,7 @@ void CHuiVg10Texture::SegmentUploadNvgL(const CFbsBitmap& aBitmap, const CFbsBit
         image = CreateRenderedImage(&nvgEngine, dataBuf, Size());
         
         // New functionality for checking the mask
-        if (header.GetBitmapId() != maskHeader.GetBitmapId() &&
+        if (header.GetBitmapId() != maskHeader.GetBitmapId() && maskDataBuf &&
             CompareNvgData(dataBuf, maskDataBuf) != 0)
             {
             VGImage maskImg = VG_INVALID_HANDLE;
@@ -1436,14 +1436,7 @@ void CHuiVg10Texture::SetNvgParamsFromIconHeader(CNvgEngine& aNvgEngine, HBufC8*
 TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisplay, EGLSurface aSurface, EGLContext aContext)
     {
     HUI_VG_INVARIANT();
-    // If the icon is also a current EGL surface, the getImageSubData
-    // won't succeed and return "image in use" -error..
-    if ( eglMakeCurrent( aDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT ) == EGL_FALSE )
-        {
-        HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL NO_Surface could not be made current, eglErr: %04x"), eglGetError());
-        return aSize;
-        }
-    
+        
 #ifndef __WINS__ // Should possibly query the supported mode instead?
     VGImageFormat imageInternalFormat = VG_sARGB_8888_PRE;
 #else
@@ -1470,7 +1463,7 @@ TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisp
     TReal R = 1.0;
     TInt HaN = Ha;
     
-    const TInt lastColumn = aSize.iHeight - 1;
+    const TInt lastColumn = aSize.iWidth - 1;
     for (TInt curRow = 0; curRow < lValidMargin; curRow++)
         {
         const TInt y = (aSize.iHeight - 1) - curRow; // h - 1 is the last line
@@ -1492,13 +1485,6 @@ TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisp
         }
     delete buf;
     HUI_VG_INVARIANT();
-    
-    // Make the PBuffer surface current again 
-    if ( eglMakeCurrent(aDisplay, aSurface, aSurface, aContext) == EGL_FALSE )
-        {
-        HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL aSurface could not be made current, eglErr: %04x"), eglGetError());
-        return aSize;
-        }
     
     // If icon size has to be changed, clear out old area for new DrawNVG round!
     if(aSize.iHeight > HaN)

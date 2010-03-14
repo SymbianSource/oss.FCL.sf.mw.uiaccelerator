@@ -105,6 +105,10 @@ SOURCE                  alfgc.cpp
 SOURCE                  alfcanvasvisual.cpp 
 SOURCE                  alfclientwindow.cpp
 SOURCE                  alfdirectclient.cpp
+
+SOURCE                  alfdrawer.cpp
+SOURCE                  alfcrppluginclient.cpp
+
 USERINCLUDE             ../inc
 USERINCLUDE             ../../CommonInc
 

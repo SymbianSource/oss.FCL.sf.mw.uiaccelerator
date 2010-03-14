@@ -379,6 +379,9 @@ private:
 #ifdef HUI_DEBUG_TRACK_DRAWING
     CAlfCommandDebug* iCommandDebugger;
 #endif
+    
+    // Boolean flag indicating if render buffer ought to be used.
+    TBool iEnableRenderBuffer;
   };
     
 #endif  // __HUICANVASWSPAINTER_H__

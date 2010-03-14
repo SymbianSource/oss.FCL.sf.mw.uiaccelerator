@@ -940,16 +940,18 @@ void CAlfAppSrvSessionBase::CancelPointerEvents()
 // 
 void CAlfAppSrvSessionBase::GetSystemEvents(const RMessage2* aMessage)
     {
-    if (aMessage && iData->iSystemEvent.IsNull())
+    __ASSERT_DEBUG(aMessage, USER_INVARIANT());
+    if (aMessage)
         {
-        iData->iSystemEvent = *aMessage;
+        if (iData->iSystemEvent.IsNull())
+            {
+            iData->iSystemEvent = *aMessage;
+            }
+        else 
+            {
+            aMessage->Complete(KErrInUse);
+            }
         }
-    else 
-        {
-	    __ASSERT_DEBUG(aMessage, USER_INVARIANT());
-        aMessage->Complete(KErrInUse);
-        }
-        
     }
 
 // ---------------------------------------------------------------------------

@@ -63,11 +63,17 @@ TInt CHuiFxEffectCache::UniqueId()
 void CHuiFxEffectCache::CreateL(MHuiFxEffectCacheNode *aNode)
     { // registration of fxml file
     MHuiFxEffectCacheNode *cachedNode = Find(aNode);
+    MHuiFxEffectCacheNode *dupNode = FindDuplicate(aNode);
     if (cachedNode)
        { // found in cache => duplicate registration => no need to do anything
        cachedNode->Ref(1);
        delete aNode;
        }
+    else if (dupNode)
+        { // found same file already being loaded
+        dupNode->Ref(1);
+        delete aNode;
+        }
     else
        { // not found in cache, so insert it and start parsing the effect.
        TInt id = UniqueId();
@@ -119,14 +125,14 @@ void CHuiFxEffectCache::UnUse(MHuiFxEffectCacheNode *aNode)
        TInt count = cachedNode->Ref(-1);
        if (count == 0)
            {
-           delete cachedNode;
            Remove(iCachedEffects, cachedNode);
+           delete cachedNode;
            }
        }
    if (cachedNode != aNode)
        { // this node was not found in iCachedEffects array, so it needs to be in iDuplicateEffects array
-       delete aNode;
        Remove(iDuplicateEffects, aNode);
+       delete aNode;
        }
    }
 
@@ -161,6 +167,19 @@ MHuiFxEffectCacheNode *CHuiFxEffectCache::Find(MHuiFxEffectCacheNode *aNode)
 	}
    return 0;
    }
+MHuiFxEffectCacheNode *CHuiFxEffectCache::FindDuplicate(MHuiFxEffectCacheNode *aNode)
+    {
+    TInt size = iDuplicateEffects.Count();
+    for(TInt i=0;i<size;i++)
+        {
+        MHuiFxEffectCacheNode *node = iDuplicateEffects[i].iNode;
+        if (Compare(node, aNode))
+            {
+            return node;
+            }
+        }
+    return 0;
+    }
 
 TInt CHuiFxEffectCache::FindById(TInt aId)
     {

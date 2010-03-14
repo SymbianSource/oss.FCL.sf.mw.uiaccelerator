@@ -39,6 +39,8 @@
 #include "HuiCmdBufferBrush.h"
 #include "huicanvasrenderbuffer.h"
 
+#include "huiextension.h"
+
 struct CHuiVisual::THuiVisualPrivateData
     {
 public: // Functions
@@ -67,8 +69,7 @@ public: // Functions
     
     // Data
     RArray<TTacticon> iTacticons;
-    CHuiDropShadow* iDropShadow;
-    TRect iPreviousDrawnTvOut; 
+    CHuiDropShadow* iDropShadow; 
     CHuiFxEffect* iEffect;
     CHuiFxEffectParser* iEffectParser;
     MHuiEffectable *iEffectable;
@@ -218,7 +219,7 @@ EXPORT_C CHuiVisual::~CHuiVisual()
         	CHuiDisplay* display = &Env().Display(i);
         	if (&(display->Roster()) == &roster)
         		{
-				const TRect& previousDirtyRect = display->IsDisplayTypeTvOut() ? iVisualData->iPreviousDrawnTvOut : iPreviousDrawn;
+				const TRect& previousDirtyRect = iPreviousDrawn;
 				TRect empty;
         		display->CombineAndAddDirtyRegion(previousDirtyRect, empty);
         		}
@@ -690,6 +691,34 @@ EXPORT_C TBool CHuiVisual::Clipping() const
 
 EXPORT_C THuiRealRect CHuiVisual::DisplayRect() const __SOFTFP
     {
+    // if this visual is wserv owned, we can take some shortcuts
+    // when calculating the displayrect (ie. none of the "advanced"
+    // functionality is used
+    if (iFlags & EHuiVisualFlagWserv)
+        {
+        TReal x = iPos.iX.iInterpolationStartValue;
+        TReal y = iPos.iY.iInterpolationStartValue;
+        TReal width = iSize.iX.iInterpolationStartValue;
+        TReal height = iSize.iY.iInterpolationStartValue;
+        
+        const CHuiVisual* iter = this;
+        while(iter)
+            {
+            // Move up in the tree.
+            iter = iter->iLayout;
+            if(iter)
+                {
+                x+=iter->iPos.iX.iInterpolationStartValue;
+                y+=iter->iPos.iY.iInterpolationStartValue;
+                }
+            }
+
+        iDisplayRect.iTl.iX = x;
+        iDisplayRect.iTl.iY = y;
+        iDisplayRect.iBr.iX = x+width;
+        iDisplayRect.iBr.iY = y+height;
+        return iDisplayRect;
+        }
     // Recalculate and cache as necessary. 
     TBool recalculationNeeded = ETrue;
     
@@ -1483,7 +1512,7 @@ EXPORT_C void CHuiVisual::ReportChanged()
             ExpandRectWithContent(dirty);
             }
 
-		TRect& previousDrawn = display->IsDisplayTypeTvOut() ? iVisualData->iPreviousDrawnTvOut : iPreviousDrawn;
+		TRect& previousDrawn = iPreviousDrawn;
         
         // CombineAndAddDirtyRegion modifies "dirty" param by transforming it.
         // "previousDrawn" is supposed to be already transformed. 
@@ -2152,4 +2181,51 @@ void CHuiVisual::SetEffectParser( CHuiFxEffectParser* aEffectParser )
     {
     delete iVisualData->iEffectParser;
     iVisualData->iEffectParser = aEffectParser;
+    }
+
+TInt CHuiVisual::QueryCanvasFlags()
+    {
+    THuiVisualQueryParams p;
+    p.iQueryType = THuiVisualQueryParams::EQueryCanvasFlags;
+    p.iValue = 0;
+    p.iResult = KErrNotSupported;
+    TAny* ptr = &p;
+    
+    VisualExtension(KHuiVisualQueryUid, &ptr);
+    
+    // If visual does not support this extension, assume 0
+    
+    return ( p.iResult == KErrNone ) ? p.iValue : 0;
+    }
+    
+TBool CHuiVisual::QueryExternalContentDrawingEnabled()
+    {
+    THuiVisualQueryParams p;
+    p.iQueryType = THuiVisualQueryParams::EQueryExternalContentDrawingEnabled;
+    p.iValue = 0;
+    p.iResult = KErrNotSupported;
+    TAny* ptr = &p;
+    
+    VisualExtension(KHuiVisualQueryUid, &ptr);
+    
+    // If visual does not support this extension, assume
+    // that visual does not have external content drawing enabled.
+    
+    return ( p.iResult == KErrNone ) && p.iValue;
+    }
+    
+TBool CHuiVisual::QueryHasDrawableContent()
+    {
+    THuiVisualQueryParams p;
+    p.iQueryType = THuiVisualQueryParams::EQueryHasDrawableContent;
+    p.iValue = 0;
+    p.iResult = KErrNotSupported;
+    TAny* ptr = &p;
+    
+    VisualExtension(KHuiVisualQueryUid, &ptr);
+
+    // If visual does not support this extension, assume
+    // that it has something to draw.
+    
+    return p.iValue || ( p.iResult != KErrNone );
     }
