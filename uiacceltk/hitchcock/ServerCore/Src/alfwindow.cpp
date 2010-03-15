@@ -26,6 +26,7 @@
 #include "alfwindowdata.h"
 
 #include <string.h>
+#include <s32mem.h>
 
 // ---------------------------------------------------------------------------
 // NewL
@@ -52,6 +53,8 @@ CAlfWindow::~CAlfWindow()
         delete iData->iBufferDev;
         delete iData->iInBuffer;
         delete iData->iOutBuffer;
+        
+        iData->iWindowArea.Close();
         
         delete iData;
         }
@@ -493,6 +496,183 @@ EXPORT_C void CAlfWindow::SetOpacity(TReal32 aOpacity, TUint aDuration) __SOFTFP
         }
     }
 
+
+// ---------------------------------------------------------------------------
+// CreateSetWindowAreaL
+// ---------------------------------------------------------------------------
+//
+TAny* CAlfWindow::CreateSetWindowAreaL(
+        TInt& aOffset, TInt aScreenNumber, const TPoint& aOrigin, const TRegion& aRegion)
+    {
+    const TInt size = ( 4*aRegion.Count() + 4 ) * sizeof(TInt32);
+    TAny* data = (TAny*)iData->iWindowManager->Bridge()->AppendVarDataL( size, aOffset );
+
+    RMemWriteStream str( data, size );
+    str.WriteInt32L( aScreenNumber );
+    str.WriteInt32L( aOrigin.iX );
+    str.WriteInt32L( aOrigin.iY );
+    str.WriteInt32L( aRegion.Count() );
+        
+    for (TInt i = 0; i < aRegion.Count(); ++i )
+        {
+        const TRect rect(aRegion[i]);
+        str.WriteInt32L(rect.iTl.iX);
+        str.WriteInt32L(rect.iTl.iY);
+        str.WriteInt32L(rect.iBr.iX);
+        str.WriteInt32L(rect.iBr.iY);
+        }
+    
+    return data;
+    }
+
+// ---------------------------------------------------------------------------
+// SetWindowArea
+// ---------------------------------------------------------------------------
+//
+void CAlfWindow::SetWindowArea()
+    {
+    if ( iData->iWindowArea.Count() )
+        {
+        // Now inserted to scene - forward
+        SetWindowArea(iData->iWindowAreaOrigin, iData->iWindowArea);
+        iData->iWindowArea.Clear();
+        }
+    }
+
+// ---------------------------------------------------------------------------
+// SetWindowArea
+// ---------------------------------------------------------------------------
+//
+void CAlfWindow::SetWindowArea(const TPoint& aOrigin, const TRegion& aRegion)
+    {
+    if ( WsInfo().iNodeType != MWsWindowTreeNode::EWinTreeNodeClient )
+        {
+        return;
+        }
+        
+    if (!IsInsertedToScene())
+     	{
+     	// Cache data to be able to send once this is inserted to scene
+        iData->iWindowAreaOrigin = aOrigin;
+        iData->iWindowArea.Copy(aRegion);
+        if ( iData->iWindowArea.CheckError() )
+            {
+            iData->iWindowArea.Clear();
+            }
+     	return;
+     	}
+
+    TAlfWServInfo wservInfo = WsInfo();
+    TInt offset = 0;
+    TAny* data = NULL;
+    
+    TRAP_IGNORE(data = CreateSetWindowAreaL( offset, wservInfo.iScreenNumber, aOrigin, aRegion ));  
+    
+    if (data)
+        {
+        TAlfBridgerData d;
+        d.Set(EAlfDSSetWindowArea, 
+            wservInfo.iRefId.iWindowGroupId, 
+            wservInfo.iRefId.iWindowIdentifer, 
+            (TAny*)offset); 
+
+        iData->iWindowManager->PostIt(d);
+        }
+    }
+
+// ---------------------------------------------------------------------------
+// SetTransparencyAlphaChannel
+// ---------------------------------------------------------------------------
+//
+void CAlfWindow::SetTransparencyAlphaChannel(TBool aActive)
+    {
+    if ( WsInfo().iNodeType != MWsWindowTreeNode::EWinTreeNodeClient )
+        {
+        return;
+        }
+
+    if (!IsInsertedToScene())
+        {
+        iData->iTransparencyAlphaChannel = aActive;
+        return;        
+        }
+        
+    TAlfWServInfo wservInfo = WsInfo();
+
+    TInt offset;
+    TAlfWindowAttributes* windowAttributes = CreateWindowAttributes(offset);
+    if ( windowAttributes )
+        {
+        windowAttributes->iActive = aActive; 
+        windowAttributes->iScreenNumber = wservInfo.iScreenNumber;
+        
+        TAlfBridgerData d;
+        d.Set(EAlfDSSetTransparencyAlphaChannel, 
+            wservInfo.iRefId.iWindowGroupId, 
+            wservInfo.iRefId.iWindowIdentifer, 
+            (TAny*)offset); 
+
+        if (iData->iWindowManager->PostIt(d))
+            {
+            iData->iTransparencyAlphaChannel = aActive;
+            }
+        }
+    }
+
+// ---------------------------------------------------------------------------
+// TransparencyAlphaChannel
+// ---------------------------------------------------------------------------
+//
+TBool CAlfWindow::TransparencyAlphaChannel() const
+    {
+    return iData->iTransparencyAlphaChannel;
+    }
+
+// ---------------------------------------------------------------------------
+// IsIncludedToVisibilityCalculation
+// ---------------------------------------------------------------------------
+//
+TBool CAlfWindow::IsIncludedToVisibilityCalculation() const
+    {
+    return iData->iIncludeToVisibilityCalculation;
+    }
+
+// ---------------------------------------------------------------------------
+// IncludeToVisibilityCalculation
+// ---------------------------------------------------------------------------
+//
+void CAlfWindow::IncludeToVisibilityCalculation(TBool aActive)
+    {
+    if (!IsInsertedToScene())
+        {
+        iData->iIncludeToVisibilityCalculation = aActive;
+        return;
+        }
+
+    TAlfWServInfo wservInfo = WsInfo();
+
+    TInt offset;
+    TAlfWindowAttributes* windowAttributes = CreateWindowAttributes(offset);
+    if ( windowAttributes )
+        {
+        windowAttributes->iActive = aActive; 
+        windowAttributes->iScreenNumber = wservInfo.iScreenNumber;
+        windowAttributes->iWindowNodeType = wservInfo.iNodeType; 
+        
+        TAlfBridgerData d;
+        d.Set(EAlfDSIncludeToVisibilityCalculation, 
+            wservInfo.iRefId.iWindowGroupId, 
+            wservInfo.iRefId.iWindowIdentifer, 
+            (TAny*)offset); 
+
+        if (iData->iWindowManager->PostIt(d))
+            {
+            iData->iIncludeToVisibilityCalculation = aActive;
+            }
+        }
+    }
+
+
 // ---------------------------------------------------------------------------
 // SetWsInfo
 // ---------------------------------------------------------------------------
@@ -522,8 +702,12 @@ void CAlfWindow::ConstructL(TUint aId, CAlfWindowManager& aOwner, const TSize& a
     memset(iData, 0, sizeof(TAlfWindowData)); // initialize all values to zero
     iData->iWindowManager = &aOwner;
     iData->iIdentifier = aId;
-    iData->iIsActive = ETrue;
+    iData->iIsActive = EFalse;
     iData->iOpacity = 1.0f;    
+    iData->iWindowArea = RRegion();
+    iData->iTransparencyAlphaChannel = EFalse;
+    iData->iIncludeToVisibilityCalculation = EFalse;
+    
     SetSize(aSizeInPixels);
     }
     

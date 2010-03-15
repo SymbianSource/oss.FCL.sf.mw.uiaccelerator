@@ -70,7 +70,7 @@ public:
             iStatus = KErrNotFound;
             }
 
-        static void DoGuardedOpL(const TAlfCommandParams& aInParams, 
+        static TInt DoGuardedOpErrL(const TAlfCommandParams& aInParams, 
                                   TDes8& aOutParams,
                                   RNotifier& aNotifier,
                                   const TDesC8* aInParams2 = 0 // ugly extension, really
@@ -113,13 +113,23 @@ public:
                 User::WaitForRequest(me->iTimerStatus);
                 aOutParams.Copy(*me->iRetBuf);    
                 delete me;
-                User::LeaveIfError(err);
+                return err;
                 }
             else 
                 {
                 me->SetActive(); 
-                User::Leave( KErrTimedOut );
+                return KErrTimedOut;
                 }
+            }
+
+        static void DoGuardedOpL(const TAlfCommandParams& aInParams, 
+                                  TDes8& aOutParams,
+                                  RNotifier& aNotifier,
+                                  const TDesC8* aInParams2 = 0 // ugly extension, really
+                                  )
+            {
+            TInt err = DoGuardedOpErrL(aInParams, aOutParams, aNotifier, aInParams2);
+            User::LeaveIfError(err);
             }
 
         static TInt DoGuardedOp(const TAlfCommandParams& aInParams, 
@@ -127,7 +137,12 @@ public:
                                   RNotifier& aNotifier)
             {
             TInt ret = KErrNone;    
-            TRAP(ret, DoGuardedOpL(aInParams, aOutParams, aNotifier);)
+            TInt err = KErrNone;
+            TRAP(ret, err = DoGuardedOpErrL(aInParams, aOutParams, aNotifier);)
+            if (ret == KErrNone)
+                {
+                ret = err;
+                }
             return ret;
             }    
 
@@ -176,9 +191,8 @@ public:
             iNotif.iLayoutMirrored = (iStatus.Int() > 0);         
             SetActive();
             TAlfCommandParams params={EAlfIsMirrorred,0,0,0};
-            TPckgC<TAlfCommandParams> pkg(params);
-            TBuf8<1> awkwardApiDummy;
-            iNotif.iNotif.StartNotifierAndGetResponse(iStatus,TUid::Uid(KAlfAppFwProxyUid), pkg, awkwardApiDummy);            
+            iParams() = params;
+            iNotif.iNotif.StartNotifierAndGetResponse(iStatus,TUid::Uid(KAlfAppFwProxyUid), iParams, iAwkwardApiDummy);
             }
     
         void DoCancel()
@@ -189,6 +203,9 @@ public:
 
         private:
             CAppFwProxy& iNotif;
+
+            TBuf8<1> iAwkwardApiDummy;
+            TPckgBuf<TAlfCommandParams> iParams;
             };    
 
     CAppFwProxy():iLayoutMirrored(KErrNotFound)

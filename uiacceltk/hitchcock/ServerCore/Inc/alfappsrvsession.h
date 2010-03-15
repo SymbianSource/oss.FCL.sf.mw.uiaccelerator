@@ -367,6 +367,8 @@ private:
     
     void EnvEnableLowMemoryState(const RMessage2& aMessage);
     void EnvForceSwRendering(const RMessage2& aMessage);
+    void EnvGetSizeAndRotation(const RMessage2& aMessage);
+    void EnvReadPixels(const RMessage2& aMessage);
         
 private:
 

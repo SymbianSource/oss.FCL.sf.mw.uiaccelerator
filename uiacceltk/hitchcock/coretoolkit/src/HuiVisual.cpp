@@ -2156,7 +2156,7 @@ EXPORT_C void CHuiVisual::SetEffect(CHuiFxEffect* aEffect)
     {
     SetFreezeState(EFalse);
 
-    __ALFFXLOGSTRING1("CHuiVisual::SetEffect - : 0x%d ", aEffect );
+    __ALFFXLOGSTRING2("CHuiVisual::SetEffect - : 0x%d on visual 0x%x", aEffect, this );
     // If effect is replaced by a new effect, we don't want the effect end callback
     // as it would end the new effect
     if ( iVisualData->iEffect )

@@ -250,6 +250,7 @@ private: //data
     TBool iRunningKillAppActions;
     
     TUint iCurrentPluginRun;
+    RArray<TInt> iLowOnMemWgs;
     };
 
 #include "goomactionlist.inl"

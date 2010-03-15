@@ -238,12 +238,15 @@ void CAppInfoCache::ReadArrayL(RFile& aFile)
 		const TUint aToUid = buf();
 		User::LeaveIfError(aFile.Read(buf));
 		const TUint root = buf();
+		User::LeaveIfError(aFile.Read(buf));
+		const TUint sid = buf();
 		if(KErrNone == Append(value)) //dont allow duplicates
 			{
 			const TInt index = IndexOf(value);
 			iAppInfo[index].iFlags = static_cast<TAppInfo::TFlags>(flags);
 			iAppInfo[index].iParent = TUid::Uid(aToUid);
 			iAppInfo[index].iRootWgId = static_cast<TInt>(root);
+			iAppInfo[index].iSecureId = static_cast<TUint>(sid);
 			}
 		}
 	}
@@ -259,6 +262,7 @@ void CAppInfoCache::WriteArrayL(RFile& aFile) const
 		User::LeaveIfError(aFile.Write(TPckgC<TUint>(info.iFlags)));
 		User::LeaveIfError(aFile.Write(TPckgC<TUint>(info.iParent.iUid)));
 		User::LeaveIfError(aFile.Write(TPckgC<TUint>(info.iRootWgId)));
+		User::LeaveIfError(aFile.Write(TPckgC<TUint>(info.iSecureId)));
 		}
 	}
 
@@ -362,7 +366,7 @@ TInt CAppInfoCache::SetUid(const TUid& aUid)
 	    {
 	    err = KErrNone;
 	    }
-	
+	__ALFFXLOGSTRING2("CAppInfoCache::SetUid - 0x%x, append result: %d (alf)", aUid, err);
 	return err;
 	}
 
@@ -375,7 +379,8 @@ void  CAppInfoCache::SetAppFlags(const TUid& aUid, TUint aFlag, TBool aSet)
 			iAppInfo[index].iFlags |= aFlag;
 		else
 			iAppInfo[index].iFlags &= ~aFlag;
-		}	
+		}
+	__ALFFXLOGSTRING2("CAppInfoCache::SetAppFlags - 0x%x, index: %d (alf)", aUid, index);
 	}
 	
  
@@ -386,12 +391,14 @@ TBool CAppInfoCache::GetAppFlags(const TUid& aUid, TUint aFlag) const
 
 	
 void CAppInfoCache::SetAvkonUid(const TUid& aUid)
-	{	
+	{
+    __ALFFXLOGSTRING1("CAppInfoCache::SetAvkonUid 0x%x (alf)", aUid)
   	SetAppFlags(aUid, TAppInfo::EAvkonApp, ETrue);
 	}
 
 void CAppInfoCache::RemoveAvkonUid(const TUid& aUid)
 	{
+    __ALFFXLOGSTRING1("CAppInfoCache::RemoveAvkonUid 0x%x (alf)", aUid)
 	SetAppFlags(aUid, TAppInfo::EAvkonApp, EFalse);
 	}
 
@@ -420,6 +427,16 @@ void CAppInfoCache::SetParent(const TUid& aUid, const TUid& aParentUid)
 	{
 	iAppInfo[IndexOf(aUid.iUid)].iParent = aParentUid;
 	}
+
+void CAppInfoCache::SetSecureId( const TUid& aUid, const TSecureId& aSecureId )
+    {
+    iAppInfo[IndexOf(aUid.iUid)].iSecureId = aSecureId.iId;
+    }
+    
+void CAppInfoCache::SetWgId( const TUid& aUid, TInt aWgId )
+    {
+    iAppInfo[IndexOf(aUid.iUid)].iRootWgId = aWgId;
+    }
 
      
 TInt CAppInfoCache::SetAction(const TUid& aUid, TInt aAction)
@@ -655,7 +672,11 @@ TBool CWsServerDrawerController::SetFocusUid(TInt aUid)
 void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, const TUid aUid2, TInt aData )
 	{	
 	TUid toUid = iEngine->ToUid();
+	TSecureId toSid = iEngine->ToSid();
+	TInt toWg = iEngine->ToWg();
 	TUid fromUid = iEngine->FromUid();
+	TSecureId fromSid = iEngine->FromSid();
+	TInt fromWg = iEngine->FromWg();
 	TInt flags = iEngine->Flags();
 #ifdef WSSERVERDRAWER_TIME_LOG //time log
 	if(aFromGfx)
@@ -695,7 +716,17 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
     	(iEngine->Action() == AknTransEffect::EEmbeddedApplicationStart);
     	
     iAppInfoCache->SetUid(toUid);
+    if ( toUid != TUid::Null() )
+        {
+        iAppInfoCache->SetSecureId( toUid, toSid );
+        iAppInfoCache->SetWgId( toUid, toWg );
+        }
     iAppInfoCache->SetUid(fromUid);
+    if ( fromUid != TUid::Null() )
+        {
+        iAppInfoCache->SetSecureId( fromUid, fromSid );
+        iAppInfoCache->SetWgId( fromUid, fromWg );
+        }
 		
 	if ((toUid != KNullUid) && !isEmbeddedAppContext) 
 		{
@@ -749,7 +780,8 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	if(iLastTypeTried == CStateHandler::EExit &&
        fstype == CStateHandler::EActivation)
 		{ //the current uid is not valid
-    	return; // activation not ok if exiting
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Last tried type was exit. Abort.");
+        return; // activation not ok if exiting
 		}
 		
     iLastTypeTried = fstype;
@@ -758,6 +790,7 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	if(iExitAborted &&
 	 CStateHandler::EActivation == fstype) 
 		{ //the current uid is not valid
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Exit was aborted. Activation should not happen. Abort.");
 		AbortTransition();  //if exit is aborted, we dont want either activation	
     	return; // activation not ok if exiting
 		}
@@ -767,6 +800,7 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	//we should know if its a dsa app before end can be called
 	if(iDSAActive)
 	    {
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Phone is booting. Abort.");
 	    return; //Do nothing if dsa active.
 	    }
 
@@ -774,6 +808,7 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	// TODO: remove && !iEngine->WaitingForRootWgId() when appuids available from wserv
 	if(fstype == CStateHandler::ENone) 
 		{
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Phone is booting. Abort.");
 		return;
 		}
 
@@ -781,7 +816,8 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	//Phone is booting, stop any FS effect.
 	if(!StartCheck(flags)) 
 		{
-		AbortTransition();
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Phone is booting. Abort.");
+        AbortTransition();
 		return;
 		}		
 	
@@ -789,6 +825,7 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	// that should be blocked then we abort all ongoing transitions.
 	if(!(AllowedCustomUid(toUid) && AllowedCustomUid(fromUid)))
         {
+        __ALFFXLOGSTRING2("CWsServerDrawerController::BeginFullscreen - Blocked uid 0x%x or 0x%x. Abort.", toUid, fromUid);
         AbortTransition();
         return;
         }
@@ -826,6 +863,7 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	if(CStateHandler::EActivation == fstype && currtype != CStateHandler::EStart &&
 	 !iAppInfoCache->AvkonUid(toUid))
 		{
+        __ALFFXLOGSTRING1("CWsServerDrawerController::BeginFullscreen - Non avkon app 0x%x. Abort.", toUid);
 		return;
 		}
 
@@ -937,10 +975,10 @@ void CWsServerDrawerController::CancelEndChecker()
 //
 void CWsServerDrawerController::EndExpired()
 	{
-	__ALFFXLOGSTRING("CWsServerDrawerController::EndExpired >>");
+	__ALFFXLOGSTRING("CWsServerDrawerController::EndExpired (Alf)>>");
 	AbortTransition(EAbortFullscreen);
 	iExitAborted = EFalse; //This is not valid when we have a time-out
-	__ALFFXLOGSTRING("CWsServerDrawerController::EndExpired <<");
+	__ALFFXLOGSTRING("CWsServerDrawerController::EndExpired (Alf)<<");
 	}
 
 // ---------------------------------------------------------------------------
@@ -948,11 +986,13 @@ void CWsServerDrawerController::EndExpired()
 //	
 void CWsServerDrawerController::EndFullscreen(TBool /*aFromGfx*/)
 	{
+    __ALFFXLOGSTRING("CWsServerDrawerController::EndFullscreen (Alf)>>");
  	/*
 	DSA end fix
 	*/
 	if(iDSAActive)
 	    {
+        __ALFFXLOGSTRING("CWsServerDrawerController::EndFullscreen - DSA Active - ABORTING (Alf)");
 	    AbortTransition();
 	    return; //Do nothing if dsa active.
 	    }
@@ -963,6 +1003,8 @@ void CWsServerDrawerController::EndFullscreen(TBool /*aFromGfx*/)
 #endif	//WSSERVERDRAWER_TIME_LOG
 
 	iStates->Signal(CStateBase::EEndFullscreen);
+	// the callback for FullScreenFinished will not come. this must be resetted here.
+	iLastTypeTried = CStateHandler::ENone; 
 	}
 
 
@@ -971,7 +1013,7 @@ void CWsServerDrawerController::EndFullscreen(TBool /*aFromGfx*/)
 //	
 void CWsServerDrawerController::FullscreenFinished(TInt aHandle)
 	{
-	if(aHandle == iEngine->CurrentHandle()) // Filter away stray finish signals.
+	if(aHandle == iEngine->CurrentFullScreenHandle()) // Filter away stray finish signals.
 		{
 		iLastTypeTried = CStateHandler::ENone;
 		iStates->Signal(CStateBase::EFinishFullscreen);
@@ -1009,7 +1051,7 @@ TInt CWsServerDrawerController::BeginControlTransition()
 	
 	if(iStates->GetState() == CStateBase::EComponent) 
 		{
-		return iEngine->CurrentHandle();
+		return iEngine->CurrentControlHandle();
 		}
 	else
 		{
@@ -1022,7 +1064,7 @@ TInt CWsServerDrawerController::BeginControlTransition()
 //	
 void CWsServerDrawerController::EndControlTransition(TInt aHandle)
 	{
-	if(aHandle == iEngine->CurrentHandle()) //Filter out stray endcomponent.
+	if(aHandle == iEngine->CurrentControlHandle()) //Filter out stray endcomponent.
 		{
 		iStates->Signal(CStateBase::EFinishComponent);
 		}
@@ -1082,12 +1124,14 @@ void CWsServerDrawerController::DSAEnd()
 //
 void CWsServerDrawerController::AbortTransition(TInt aToAbort)
     {
-    __ALFFXLOGSTRING("CWsServerDrawerController::AbortTransition >>");
+    __ALFFXLOGSTRING("CWsServerDrawerController::AbortTransition (Alf) >>");
     if ( aToAbort == EAbortFullscreen )
         {
         iLastTypeTried = CStateHandler::ENone;
 	    iExitAborted = iStates->GetCurrentFullscreenType() == CStateHandler::EExit;
+	    __ALFFXLOGSTRING1("CWsServerDrawerController::AbortTransition , iExitAborted %d (Alf)", iExitAborted);
         iStates->Signal(CStateBase::EAbortFullscreen);
+        iExitAborted = EFalse; // end of story for exit effect.
         }
     else if ( aToAbort == EAbortControl )
         {
@@ -1097,9 +1141,11 @@ void CWsServerDrawerController::AbortTransition(TInt aToAbort)
     	{
     	iLastTypeTried = CStateHandler::ENone;
 	    iExitAborted = iStates->GetCurrentFullscreenType() == CStateHandler::EExit;
-    	iStates->Signal(CStateBase::EAbort);
+	    __ALFFXLOGSTRING1("CWsServerDrawerController::AbortTransition , iExitAborted %d (Alf)", iExitAborted);
+	    iStates->Signal(CStateBase::EAbort);
+    	iExitAborted = EFalse; // end of story for exit effect.
     	}
-	__ALFFXLOGSTRING("CWsServerDrawerController::AbortTransition <<");
+	__ALFFXLOGSTRING("CWsServerDrawerController::AbortTransition (Alf) <<");
     }
 
 // ---------------------------------------------------------------------------
@@ -1108,7 +1154,7 @@ void CWsServerDrawerController::AbortTransition(TInt aToAbort)
 TBool CWsServerDrawerController::IsBlocked( const TUid& aFromUid, const TUid& aToUid )
     {
     TBool result = iStates->IsBlocked( aFromUid, aToUid );
-    __ALFFXLOGSTRING1("CWsServerDrawerController::IsBlocked - return %d", result);
+    __ALFFXLOGSTRING1("CWsServerDrawerController::IsBlocked - return %d (Alf)", result);
     return result;
     }
 

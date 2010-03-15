@@ -68,6 +68,49 @@ EXPORT_C TInt RAlfDirectClient::ForceSwRendering( TBool aEnabled )
     return SendReceive(EAlfForceSwRendering, TIpcArgs(aEnabled));
     }
 
+TInt RAlfDirectClient::GetSizeAndRotation(TSize& aSize, TInt& aRotation)
+    {
+    if (!Handle())
+        {
+        TRAPD(err, OpenL());
+        if (err)
+            {
+            return err;
+            }
+        }
+
+    TPckg<TSize> sizePckg(aSize);
+    TPckg<TInt> rotationPckg(aRotation);
+    return SendReceive(EAlfGetSizeAndRotation, TIpcArgs(&sizePckg, &rotationPckg));
+    }
+    
+TInt RAlfDirectClient::ReadPixels(TInt aBitmapHandle)
+    {
+    if (!Handle())
+        {
+        TRAPD(err, OpenL());
+        if (err)
+            {
+            return err;
+            }
+        }
+
+    return SendReceive(EAlfReadPixels, TIpcArgs(aBitmapHandle));
+    }
+
+EXPORT_C TInt RAlfDirectClient::BlankScreen( TBool aEnabled )
+    {
+    if (!Handle())
+        {
+        TRAPD(err, OpenL());
+        if (err)
+            {
+            return err;
+            }
+        }
+    return SendReceive(EAlfBlankScreen, TIpcArgs(aEnabled));
+    }
+
 // ---------------------------------------------------------------------------
 // Constructor
 // ---------------------------------------------------------------------------

@@ -62,6 +62,18 @@ public:
     void ValidateToken(CAlfStreamerServerSession* aSession, const RMessage2& aMessage);
 
     void FreeCompositionSessionExtents(CAlfStreamerServerSession* aSession);
+
+    // ALF use
+    void CreatePermissionTokenL(TInt aAlfToken, TInt aWindowHandle, TInt aWindowGroup);
+    void ReleasePermissionTokenL(TInt aAlfToken);
+    void QueueRequestSessionsL(TInt aAlfToken, const TPtrC8& aPtr, TInt aOp);  
+    void HandleCompositionRequestL(CAlfStreamerServerSession* aSession, TInt aOp, TPtr8& aClientBuf);
+
+    void RemoveTargetFromInactiveSurfaces(TInt aTarget);
+    void AddTargetFromInactiveSurfaces(TInt aTarget);
+    void GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aMessage, TBool aActiveAlso = ETrue);
+    void QueueRequestBGAnimSessionsL(const TPtrC8& aPtr, TInt aOp);
+    
     
 private:
     void ConstructL();
@@ -72,6 +84,10 @@ private:
     CSession2* NewSessionL(const TVersion& aVersion,const RMessage2& aMessage) const;
 
     CAlfStreamerServerSession* WservSession(TInt aScreenNumber);
+    
+    TInt SearchCommonEntryForToken(const RMessage2& aMessage);
+    CAlfStreamerServerSession* SearchSessionForToken(TInt aToken);
+    
     
 private:
     CAlfStreamerBridge* iBridge; // not owned
@@ -84,15 +100,15 @@ private:
     RPointerArray<CAlfStreamerServerSession> iCompositionHostSessions;
     RPointerArray<CAlfStreamerServerSession> iWindowServerSessions;
     
-    class CCompositionToken : public CBase
-    {   
-    public:
+    class TCompositionToken
+        {   
+        public:
         
         /*
          * CCompositionToken is used by CAlfCompositionSource and CAlfCompositionHost
          * for maintaining layer sharing permissions.
          */
-        CCompositionToken( TInt aKey, TInt aSecretKey, TInt aFlags, TInt aTarget, TInt aScreenNumber, TBool aCombinedTarget = EFalse) : 
+        TCompositionToken( TInt aKey, TInt aSecretKey, TInt aFlags, TInt aTarget, TInt aScreenNumber, TBool aCombinedTarget = EFalse) : 
             iKey(aKey),
             iSecretKey(aSecretKey), 
             iFlags(aFlags),
@@ -106,10 +122,25 @@ private:
             TInt iTarget;
             TInt iScreenNumber;
             TBool iCombinedTarget;
+            TInt iAlfKey;
+            
     };
     
-    RArray<CCompositionToken> iCompositionTokens;
+    RArray<TCompositionToken> iCompositionTokens;
+
     CAsyncCallBack * iRendezvous;
+
+public:    
+    struct TAlfCompParams
+        {
+        TInt iTarget; 
+        TInt iTarget2;  // padding actually
+        TInt iWindowHandle;
+        TInt iWindowGroup;
+        }; 
+
+    RArray<TAlfCompParams> iAlfTargets;
+    RArray<TAlfCompParams> iInactiveSurfaces;
     };
 
 NONSHARABLE_CLASS(CAlfStreamerServerSession): public CSession2
@@ -129,6 +160,8 @@ public:
     void SetScreenNumber(TInt aScreennumber);
     TInt ScreenNumber() const;
     TSurfaceId& ExtentSurfaceId();
+    TInt& AlfToken(){ return iAlfToken; }
+    TBool IsBgAnimSession(){return iIsBgAnimSession;}
     
 private:
     RArray<TInt> iLoadedPlugins;
@@ -143,7 +176,9 @@ private:
     
     // Surface id of the composition client. If composition client has set extent to some other screen than where its actual window is. 
     // This is used to identify layers created for this composition client 
-    TSurfaceId iExtentSurfaceId;  
+    TSurfaceId iExtentSurfaceId;
+    TInt iAlfToken;
+    TBool iIsBgAnimSession;
     };
 
 #endif

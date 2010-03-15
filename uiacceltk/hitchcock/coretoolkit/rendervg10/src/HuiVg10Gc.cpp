@@ -34,6 +34,8 @@
 #include "HuiRenderSurface.h"
 #include "../../CommonInc/uiacceltkdomaincrkeys.h"
 
+#include "huiextension.h"
+
 #include <e32math.h>
 #include <VG/vgu.h>
 #ifdef __NVG
@@ -1479,7 +1481,7 @@ void CHuiVg10Gc::DrawEllipse(const TRect& aRect, THuiFillMode aDrawMode, const T
     destinationRect.iBr.iX -= 0.5f;
     destinationRect.iBr.iY -= 0.5f;
     
-    VGfloat alpha = PenAlpha();
+    VGfloat alpha = PenAlpha()/255.0f;
     vgClearPath(iEllipsePath, VG_PATH_CAPABILITY_APPEND_TO);
     
     VGfloat cx = (destinationRect.iTl.iX + destinationRect.iBr.iX) / 2.f; 
@@ -2322,6 +2324,85 @@ void CHuiVg10Gc::DiscardPaintPattern()
         }
     }
 
+void CHuiVg10Gc::GcExtension(const TUid& aExtensionUid, TAny** aExtensionParams)
+    {
+    if ( aExtensionUid == KHuiGcCopyScreenToBitmap && aExtensionParams && *aExtensionParams)
+        {
+        THuiGcCopyScreenToBitmapParams* params = static_cast<THuiGcCopyScreenToBitmapParams*>(*aExtensionParams);
+        params->iErrorCode = DoCopyScreenToBitmap(params->iBitmap);
+        }
+    else
+        {
+        CHuiGc::GcExtension(aExtensionUid, aExtensionParams);
+        }
+    }
+
+TInt CHuiVg10Gc::DoCopyScreenToBitmap(CFbsBitmap* aBitmap)
+    {
+    if (!aBitmap || 
+        !aBitmap->Handle() || 
+        aBitmap->IsCompressedInRAM() || 
+        aBitmap->ExtendedBitmapType() != KNullUid )
+        {
+        return KErrNotSupported;
+        }
+
+    VGImageFormat dataFormat = VG_sARGB_8888_PRE;
+    TBool displayModeSupported = ETrue;    
+    switch (aBitmap->DisplayMode())
+        {
+    case EColor16MAP:
+        dataFormat = VG_sARGB_8888_PRE;
+        break;
+    case EColor64K:
+        dataFormat = VG_sRGB_565;
+        break;
+    case EColor16MU:
+        dataFormat = VG_sXRGB_8888;
+        break;
+    case EColor16MA:
+        dataFormat = VG_sARGB_8888;
+        break;
+
+    default:
+        displayModeSupported = EFalse;
+        break;
+        }
+    
+    if (!displayModeSupported)
+        {
+        return KErrNotSupported;
+        }
+        
+    TRect copyRect(aBitmap->SizeInPixels());
+    if (copyRect.IsEmpty())
+        {
+        return KErrArgument;
+        }
+    
+    TInt dataStride = CFbsBitmap::ScanLineLength(copyRect.Width(), 
+        aBitmap->DisplayMode());
+
+    aBitmap->BeginDataAccess();
+    TUint8* data = (TUint8*)aBitmap->DataAddress();
+    
+    // image is upside down..
+    data += (copyRect.Height() - 1)*dataStride;
+    dataStride = -dataStride;
+    
+    vgReadPixels(
+        data,
+        dataStride,
+        dataFormat,
+        0,                // sx
+        0,                // sy
+        copyRect.Width(), // width
+        copyRect.Height() // height
+        );
+    
+    aBitmap->EndDataAccess(EFalse);
+    return KErrNone;
+    }
 
 // End of file
 

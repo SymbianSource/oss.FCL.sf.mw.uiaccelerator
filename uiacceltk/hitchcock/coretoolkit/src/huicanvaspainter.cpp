@@ -68,10 +68,13 @@ void CHuiCanvasPainter::AddCommandSetL( const TDesC8& aMoreCommands )
     CHuiCanvasCommandBuffer* newBuffer = new(ELeave) CHuiCanvasCommandBuffer; 
     CleanupStack::PushL(newBuffer);
     newBuffer->iCommands = commands;
-    if (iCanvasVisual && iCanvasVisual->Display())
+	
+	// the orientation will be defined by the commandbuffer
+    /*if (iCanvasVisual && iCanvasVisual->Display())
         {
         newBuffer->iOrientation = iCanvasVisual->Display()->Orientation();
-        }
+        }*/
+		
     iCommandBuffers.AppendL( newBuffer);    
     CleanupStack::Pop(2, commands);
     
@@ -240,3 +243,25 @@ TBool CHuiCanvasPainter::HasOldCommandBuffers(TInt aLifeTimeInMs)
 
     return EFalse;    
     }
+
+
+TRect CHuiCanvasPainter::CommandBufferCoverage(TInt aOrientation)
+    {
+    TInt bufferCount = iCommandBuffers.Count();
+    RRegion tempRegion;
+    
+    for (TInt cb = 0; cb < bufferCount; cb++)
+        {        
+        if (iCommandBuffers[cb]->iOrientation == aOrientation)
+            {
+            // should this be original display rect or update region
+            tempRegion.AddRect(iCommandBuffers[cb]->iOriginalDisplayRect);
+            }
+        }    
+    return tempRegion.BoundingRect();
+    }
+
+void CHuiCanvasPainter::ClearCapturingBufferArea(const TRect& /*aRect*/)
+    {
+    // Not supported by default
+    }  

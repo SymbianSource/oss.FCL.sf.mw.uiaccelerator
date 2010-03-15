@@ -38,7 +38,11 @@ enum
     EAlfBridgerBlindSend,
     EAlfSetScreenRotation, 
     EAlfGetNativeWindowHandles,
-    EAlfSynchronize
+    EAlfSynchronize,
+    EAlfPostDataToCompositionClient,
+    EAlfPostDataToCompositionTarget,
+    EAlfGetListOfWGsHavingInactiveSurfaces, 
+    EAlfQueueRequestBGSessions
     };
 
 enum TAlfCompOps{
@@ -65,7 +69,9 @@ enum TAlfCompOps{
     KAlfCompositionWServScreenNumber,
     KAlfCompositionSourceScreenNumber,
     KAlfCompositionGoodOnGraphicsMemory,
-    KAlfCompositionTargetVisible
+    KAlfCompositionTargetVisible,
+    KAlfCompositionTargetHiddenBGAnim,
+    KAlfCompositionTargetVisibleBGAnim,
     
     };
 

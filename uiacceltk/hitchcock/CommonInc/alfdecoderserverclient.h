@@ -50,6 +50,14 @@ public:
     IMPORT_C void SendAsynchronous(TInt aOp, const TIpcArgs& aIPCArgs,TRequestStatus& aStatus );
 
     IMPORT_C TInt SendBlind(TInt aOp, const TIpcArgs& aIPCArgs );
+    
+     /**
+     * Asks list of window groups that have graphics surfaces even
+     * they are not supposed to be seen on screen
+     * @param aArray array to be populated
+     * @return error code.
+     */    
+    IMPORT_C TInt GetListOfInactiveWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups);
 private:
     TInt iSpare1;
     TInt iSpare2;

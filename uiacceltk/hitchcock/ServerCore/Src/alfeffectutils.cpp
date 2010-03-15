@@ -18,10 +18,11 @@
 #include <s32mem.h>
 #include "alfeffectutils.h"
 #include <akntransitionutils.h>
+#include <alflogger.h>
 
-
-const TInt KRosterFreezeEndTimeoutInMs = 400;
-const TInt KFirstTimeoutForApplicationEndFullScreenInMs = 50;
+const TInt KRosterFreezeEndTimeoutInMs = 100;
+const TInt KFirstTimeoutForApplicationEndFullScreenInMs = 20;
+const TReal KMinimumPaintedAreaBeforeForcedEffect = 0.75;
 
 // ---------------------------------------------------------
 // CAlfRosterFreezeEndTimer
@@ -55,6 +56,7 @@ CAlfRosterFreezeEndTimer::~CAlfRosterFreezeEndTimer()
 
 void CAlfRosterFreezeEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod )
     {
+    __ALFLOGSTRING("CAlfRosterFreezeEndTimer::Start");
     if (!IsActive())
         {
         After( aPeriod );
@@ -63,9 +65,34 @@ void CAlfRosterFreezeEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod )
 
 void CAlfRosterFreezeEndTimer::RunL()
     {
-    iBridge.iHuiEnv->Display(0).SetDirty();
-    TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(EFalse));
-    iBridge.SetVisualTreeVisibilityChanged(ETrue);    
+    __ALFLOGSTRING("CAlfRosterFreezeEndTimer::RunL");
+	
+	TBool timeout = EFalse;
+	
+	if (iSafeCounter >= 0)	
+	    {
+		iSafeCounter++;
+		if (iSafeCounter == 10)
+			{
+			timeout = ETrue;
+			iSafeCounter = 0;
+			}
+		}
+
+    if (!iBridge.IsFullScreenDrawn(0) && !timeout)
+        {
+        __ALFLOGSTRING("CAlfRosterFreezeEndTimer::RunL - Not ready in new orientation. waiting 50ms more");
+        After( 50000 );
+        return;
+        }
+    else
+        {
+        __ALFLOGSTRING("CAlfRosterFreezeEndTimer::RunL - ready in new orientation. ");
+        iBridge.iHuiEnv->Display(0).SetDirty();
+        iBridge.iHuiEnv->iPauseDrawing = EFalse;
+	    TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(EFalse));
+        iBridge.SetVisualTreeVisibilityChanged(ETrue);
+        }
     }
 
 void CAlfRosterFreezeEndTimer::DoCancel()
@@ -166,15 +193,12 @@ void CAlfLayoutSwitchEffectCoordinator::Cancel()
 //
 void CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch()
     {
-    // Hm. what to do if earlier is already in progress ?
-    //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch"));
-    if ( iBridge.iHuiEnv->MemoryLevel() <= EHuiMemoryLevelLowest )
+    if (iRosterFreezeEndTimer)
         {
-        // No effects in low memory mode
-        return;
-        }
-    
-    if (!iLayoutSwitchEffectContext)
+		iRosterFreezeEndTimer->Cancel();
+		}
+
+    if (!iLayoutSwitchEffectContext && !( iBridge.iHuiEnv->MemoryLevel() <= EHuiMemoryLevelLowest ))
         {
         TBool tfxOn = CAknTransitionUtils::TransitionsEnabled(AknTransEffect::ELayoutswitchTransitionsOff );
         TBool tfxExists = LayoutSwitchEffectsExist();
@@ -206,7 +230,6 @@ void CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch()
             
             if (iRosterFreezeEndTimer)
                 {
-                iBridge.iHuiEnv->Display(0).SetDirty();
                 TRAP_IGNORE(iBridge.iHuiEnv->Display(0).Roster().FreezeVisibleContentL(ETrue));
                 
                 // Remove all other effects
@@ -214,6 +237,7 @@ void CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch()
                 iBridge.RemoveAllTemporaryPresenterVisuals();
 
                 // Set remove freeze timer
+                __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch - Freeze timer started");
                 iRosterFreezeEndTimer->Start(KRosterFreezeEndTimeoutInMs*1000); 
                 }            
             //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::BeginLayoutSwitch - tfx are set OFF -> I am not starting effect."));                        
@@ -349,6 +373,7 @@ CAlfEffectEndTimer::CAlfEffectEndTimer( CAlfBridge& aBridge )
 void CAlfEffectEndTimer::ConstructL()
     {
     CTimer::ConstructL();
+    iHandles.ReserveL(5);
     CActiveScheduler::Add( this );
     }
 
@@ -363,13 +388,18 @@ CAlfEffectEndTimer* CAlfEffectEndTimer::NewL( CAlfBridge& aBridge )
 
 CAlfEffectEndTimer::~CAlfEffectEndTimer()
     {
-    Cancel();        
+    Cancel();
+    iHandles.Close();
     }
 
-void CAlfEffectEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod, TInt aHandle )
+void CAlfEffectEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod )
     {
-    iHandle = aHandle;
     After( aPeriod );
+    }
+
+void CAlfEffectEndTimer::AddFinishedHandleL(TInt aHandle)
+    {
+    iHandles.Append(aHandle);
     }
 
 void CAlfEffectEndTimer::RunL()
@@ -377,7 +407,11 @@ void CAlfEffectEndTimer::RunL()
     //
     // timer completes and control is returned to caller
     //
-    iBridge.TransitionFinishedHandlerL( iHandle );
+    while(iHandles.Count())
+        {
+        iBridge.TransitionFinishedHandlerL( iHandles[0]);
+        iHandles.Remove(0);
+        }
     // We don't become active unless we are explicitly restarted
     }
 
@@ -437,13 +471,15 @@ void CFullScreenEffectState::ConstructL(
     iHandle = aStream.ReadInt32L();
 
     iType = aStream.ReadInt32L();
-    iWg1 = aStream.ReadInt32L();
-    iWg2 = aStream.ReadInt32L();
+    iToWg = aStream.ReadInt32L();
+    iFromWg = aStream.ReadInt32L();
     iToAppId = aStream.ReadInt32L();
     iFromAppId = aStream.ReadInt32L();
 
     if (iType == AknTransEffect::EParameterType)
         {
+        iToSecureId = aStream.ReadInt32L();
+        iFromSecureId = aStream.ReadInt32L();
         /*screen1 =*/aStream.ReadInt32L();
         /*screen2 =*/aStream.ReadInt32L();
         }
@@ -465,9 +501,10 @@ TInt doNotifyDrawingTimeout( TAny* aPtr )
     return 0; // must return something
     }
 
-TBool CFullScreenEffectState::ResetTimerL(CAlfBridge* aBridge)
+TBool CFullScreenEffectState::InitDelayedEffectL(CAlfBridge* aBridge, TSize aDisplaySize)
     {
     iBridge = aBridge;
+    iDisplaySize = aDisplaySize;
     if (!iDrawingCompleteTimer)
         {
         iDrawingCompleteTimer = CPeriodic::NewL( EPriorityNormal );
@@ -481,8 +518,16 @@ TBool CFullScreenEffectState::ResetTimerL(CAlfBridge* aBridge)
 
 void CFullScreenEffectState::NotifyDrawingTimeout()
     {
-    TRect b = iPaintedRegion.BoundingRect();
-    if ( (b.Width() * b.Height()) > 0.75 * (iDisplaySize.iWidth * iDisplaySize.iHeight))
+    
+    iPaintedRegion.ClipRect(TRect(0,0, iDisplaySize.iWidth, iDisplaySize.iHeight));
+    iPaintedRegion.Tidy(); // remove overlapping regions
+    TInt size(0);
+    for(TInt i=0; i< iPaintedRegion.Count();i++ )
+        {
+        size += iPaintedRegion[i].Width()*iPaintedRegion[i].Height();
+        }
+    // lets continue, if the covered area is more than 75% of the screen. This is usually enough.
+    if ( size > KMinimumPaintedAreaBeforeForcedEffect  * (iDisplaySize.iWidth * iDisplaySize.iHeight))
         {
         iBridge->HandleGfxEndFullScreenTimeout(this);
         delete iDrawingCompleteTimer;

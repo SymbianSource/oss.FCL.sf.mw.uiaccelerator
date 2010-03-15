@@ -205,3 +205,18 @@ TBool CHuiCanvasWsBitGc::IsRenderBufferEnabled() const
     {
     return ETrue;
     }
+
+void CHuiCanvasWsBitGc::ClearCapturingBufferArea(const TRect& aRect)
+    {
+    if ( iCapturingBitGc )
+        {
+        TRgb clearColor = KRgbBlack;
+	    clearColor.SetAlpha(0x0);
+        
+	    iCapturingBitGc->SetDrawMode(CGraphicsContext::EDrawModeWriteAlpha);
+        iCapturingBitGc->SetPenColor(clearColor);
+        iCapturingBitGc->SetBrushColor(clearColor);
+        iCapturingBitGc->SetBrushStyle(CGraphicsContext::ESolidBrush);
+  	    iCapturingBitGc->Clear(aRect);
+        }
+    }

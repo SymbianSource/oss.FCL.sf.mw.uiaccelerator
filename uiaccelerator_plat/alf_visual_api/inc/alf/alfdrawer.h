@@ -19,6 +19,9 @@
 
 #include <e32base.h>
 
+class CWsScreenDevice;
+class CFbsBitmap;
+
 /**
  * This provides additional alf drawing synchronization.
  * 
@@ -46,6 +49,21 @@ public:
      * @return error code, KErrNone upon success.
      */
     IMPORT_C TInt Finish();
+
+    /**
+     * Fallback copy screen to bitmap. This copies pixels from UI surface.
+     * This is similar to @c CWsScreenDevice::CopyScreenToBitmap. That method
+     * may use GPU memory and so cannot be guaranteed to succeed always.
+     * 
+     * @param aDevice screendevice.
+     * @param aBitmap bitmap to which pixels ought to be copied.
+     * @param aRect rect to copy.
+     * @return error code.
+     */
+    IMPORT_C static TInt FallbackCopyScreenToBitmap(
+        CWsScreenDevice& aDevice,
+        CFbsBitmap* aBitmap, 
+        const TRect& aRect);
 
 private:
     CAlfDrawer();

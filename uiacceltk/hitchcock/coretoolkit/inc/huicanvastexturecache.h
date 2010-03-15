@@ -219,6 +219,9 @@ public:
     // Combined image
     RArray<THuiCachedBitmap> iSubImages;
     TSize iImageSize; 
+    
+	// Used for identifying recycled bitmap handles
+    TInt64 iSerialNumber;
     };
 
 

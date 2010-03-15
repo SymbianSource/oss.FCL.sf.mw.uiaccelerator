@@ -101,6 +101,7 @@ class MAlfBridge
     virtual void CommitL() = 0;
     virtual void WriteIntsL(TUint8 aCommand, TInt aCount, TInt* aArray) = 0;
     virtual RAlfBridgerClient* Client() = 0;
+    virtual void SetOrientation(TInt aOrientation) = 0;
     };
 
 /**

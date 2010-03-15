@@ -255,6 +255,39 @@ public:
      * @param Duration to new opacity value
      */
     IMPORT_C void SetOpacity(TReal32 aOpacity, TUint aDuration = 0) __SOFTFP;
+
+    /**
+     * Window area
+	 * @param aOrigin origin of shape.
+	 * @param aRegion window shape.
+     */
+    void SetWindowArea(const TPoint& aOrigin, const TRegion& aRegion);
+    
+	/**
+	 * Reset current window area.
+	 */
+    void SetWindowArea();
+
+    /**
+	 * Set transparency alpha channel.
+	 * @param aActive ETrue if transparency alpha channel enabled, EFalse if not.
+	 */
+    void SetTransparencyAlphaChannel(TBool aActive);
+
+    /**
+	 * Returns transparency alpha channel.
+	 */
+    TBool TransparencyAlphaChannel() const;
+
+    /**
+     * Returns ETrue if included to visibility calculation. EFalse otherwise.
+     */
+    TBool IsIncludedToVisibilityCalculation() const;
+    
+    /**
+     * Include to visibility calculation.
+     */
+    void IncludeToVisibilityCalculation(TBool aActive);
     
     public: // utils
     
@@ -355,6 +388,9 @@ private:
     TAlfWindowAttributes* CreateWindowAttributes(TInt& aIndex);
 
     TAlfWindowCommandBufferAttributes* CreateWindowCommandBufferAttributes(TInt& aIndex);
+
+    TAny* CreateSetWindowAreaL(TInt& aOffset, TInt aScreenNumber, 
+        const TPoint& aOrigin, const TRegion& aRegion);
 
     void CreateInBufferL();
 

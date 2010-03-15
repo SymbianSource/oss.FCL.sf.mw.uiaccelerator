@@ -162,6 +162,7 @@ private:
 	void DoNodeWindowGroupChainedL();
 	void DoNodeWindowGroupChainBrokenAfterL();
 	void DoNodeAttributeChangedL();
+	void DoNodeSetWindowAreaL();
 	void DoNodeDebugTrackL();
 	void DoNodeFadeAllChildrenL();
 private: // from bridge

@@ -34,7 +34,8 @@ public:
     virtual void LowOnGraphicsMemory()=0;
     virtual void GraphicsMemoryGood(){}
     
-    virtual void AlfBridgeCallback(TInt, TAny*){};
+    virtual void AlfBridgeCallback(TInt, TAny*){}
+    virtual void HideTarget(TInt,TBool){};
     }; 
 
 /** Wrapper class IPC <-> MAlfCompositionController **/

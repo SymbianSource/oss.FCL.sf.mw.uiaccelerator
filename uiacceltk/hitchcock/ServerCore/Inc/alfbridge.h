@@ -65,12 +65,14 @@ NONSHARABLE_CLASS(CAlfBridge):
                         CHuiVisual* aEffectedVisual,
                         CHuiVisual* aTemporaryPresenterVisual,
                         TBool aIsLayout, 
-                        TBool aHideWhenFinished) 
+                        TBool aHideWhenFinished,
+                        TBool aCanDestroyOrHideImmediately) 
                 : iHandle(aHandle), 
                 iEffectedVisual(aEffectedVisual),
                 iTemporaryPresenterVisual(aTemporaryPresenterVisual),
                 iIsLayout(aIsLayout),
-                iHideWhenFinished(aHideWhenFinished)
+                iHideWhenFinished(aHideWhenFinished),
+                iCanDestroyOrHideImmediately(aCanDestroyOrHideImmediately)
                         {
 //                        RDebug::Printf("TEffectCleanupStruct - 0x%x 0x%x, %d", iEffectedVisual, iTemporaryPresenterVisual, iIsLayout );
                         };
@@ -80,6 +82,8 @@ NONSHARABLE_CLASS(CAlfBridge):
                 TBool iIsLayout;
 
                 TBool iHideWhenFinished;
+                
+                TBool iCanDestroyOrHideImmediately;
 				
 				// not own, unless iEffectedVisual has EShouldDestroy flag enabled
                 CHuiVisual* iEffectedVisual;
@@ -129,7 +133,18 @@ public:
             TRect& aFullscreen,
             CAlfScreen* aScreen,
             TBool& aSubtreeVisible,
+            TBool& aHasVisualsWithLayers,
             TBool aChildCanBeOpaque );
+
+    /**
+     * Updates layer visibilities.
+     */
+    void HandleLayerVisibility(
+            CHuiLayout* aLayout,
+            CHuiControlGroup& aControlGroup,
+            CHuiControl& aControl,
+            TBool aVisible );
+    
     /**
      * This method shows the control group in roster, however the aWhere param
      * is modified so that controlgroup appears at the right position depending on
@@ -227,6 +242,21 @@ public:
     void LowMemoryCancelAllEffects();
 
     /**
+     * Gets size & rotation.
+     * @param aSize size.
+     * @param aRotation rotation.
+     * @return error code.
+     */
+    TInt GetSizeAndRotation(TSize& aSize, TInt& aRotation);
+    
+    /**
+     * Reads pixels to bitmap.
+     * @param aBitmap bitmap.
+     * @return error code.
+     */
+    TInt ReadPixels(CFbsBitmap* aBitmap);
+
+    /**
       * Sets HuiControlGroup as Alf application window group
       */
     void SetWindowGroupAsAlfApp(TInt aId);
@@ -245,7 +275,10 @@ public:
      * gets another N milliseconds. Most cases, the first N milliseconds is enough.
      */
     void HandleGfxEndFullScreenTimeout(CFullScreenEffectState* aFullScreenEffectData);
-        
+    
+	// Experimental
+    TBool IsFullScreenDrawn( TInt aOrientation);
+	
 private:    
     
     
@@ -285,12 +318,14 @@ private:
     // This is needed if we have to abort an effect
     void HandleGfxStopEffectsL( TAlfBridgerData data );
     
+    void HandleGfxStopControlEffectsL( TAlfBridgerData data );
+    
 	/**
 	*	RemoveEffectFromApp
 	*
 	*	Removes effects on appui.
 	*/
-    void RemoveEffectFromApp(TInt aAppUid);
+    void RemoveEffectFromApp(TInt aSecureId, TInt aWgId = -1 );
     
     // component effect handling
     void HandleGfxControlEffectsL( TAlfBridgerData data );
@@ -341,7 +376,7 @@ private:
 	 *	@return	ETrue, 	if layout have been initialized succesfully for the effect
 	 			EFalse,	if any visuals have been removed. Effect should not be applied.
      */
-    TBool SetupEffectLayoutContainerL(TInt aHandle,CHuiLayout* aSourceLayout, TBool aIsExitEffect);
+    TBool SetupEffectLayoutContainerL(TInt aHandle,CHuiLayout* aSourceLayout, TBool aIsExitEffect, TBool aCanDestroyOrHideImmediately);
 
     /*
      *	AddEffectItemL
@@ -358,7 +393,8 @@ private:
             CHuiControl* aEffectControl,
             TBool aInsertTemporaryVisual,
             TBool& aItemDestroyed,
-            TBool aIsExitEffect = EFalse);
+            TBool aIsExitEffect = EFalse,
+            TBool aCanDestroyOrHideImmediately = EFalse);
             
 
     /*
@@ -371,20 +407,13 @@ private:
             CHuiControl* aEffectControlGroup,
             TInt& aItemsDestroyed,
             TBool aAddLayout = ETrue,
-            TBool aIsExitEffect = EFalse);
+            TBool aIsExitEffect = EFalse,
+            TBool aCanDestroyOrHideImmediately = EFalse);
 
     /*
      *	ListFamilyTreeL
      */   
     void ListFamilyTreeL( RPointerArray<CHuiLayout>& aArray, const CHuiLayout* aLayout );
-    /*
-     * SetupEffectLayoutContainerL
-     * 
-     * This method creates an own temporary presenter visual visual and binds it to aSourceVisul
-     * using SetExternalContentL. Finally the effect entry is added to iEffectCleanupStack, 
-     * thus it can be cleaned after effect completion.
-     */
-    void SetupEffectContainerL(TInt aHandle, CHuiCanvasVisual* aSourceVisual, TBool aIsExitEffect);
 
     /*
      * RemoveTemporaryPresenterItem
@@ -478,6 +507,12 @@ private:
 	void HandleSetWindowRotationL( TAlfBridgerData& aData );
 	
 	void HandleSetWindowOpacityL( TAlfBridgerData& aData );
+	
+	void HandleSetTransparencyAlphaChannelL( TAlfBridgerData& aData );
+	
+	void HandleIncludeToVisibilityCalculationL( TAlfBridgerData& aData );
+	
+	void HandleSetWindowAreaL( TAlfBridgerData& aData );
 	
 	void HandleReorderWindowL( TAlfBridgerData& aData );
 	
@@ -605,7 +640,30 @@ private:
             TInt& aScreenNumber, 
             TAlfControlGroupEntry** aAlfGroup = NULL );
 
-    CHuiControlGroup* FindControlGroupByAppId( TInt aAppId );
+    /**
+     * Finds control group which matches the given secure ID. For more detailed search, 
+     * you can provide the client window group ID.
+     * 
+     * @param aSecureId Secure ID to seacrh for
+     * @param aWgId Client window group ID. Ignored if -1.
+     * @return Pointer to found control gruop. NULL if not found.
+     */
+    CHuiControlGroup* FindControlGroupBySecureId( TInt aSecureId, TInt aWgId = -1 ) const;
+    
+    /**
+     * Finds control gruop which matches the full screen effect end state.
+     * 
+     * @return Pointer to found control gruop. NULL if not found.
+     */
+    CHuiControlGroup* FindControlGroupByFullScreenToEffect() const;
+    
+    /**
+     * Finds control gruop which matches the full screen effect start state.
+     * 
+     * @return Pointer to found control gruop. NULL if not found.
+     */
+    CHuiControlGroup* FindControlGroupByFullScreenFromEffect() const;
+    
     /**
      * This method deletes controlgroup which has been assosiated with given window group id. 
      * Control group may or may not be active in roster.
@@ -703,6 +761,19 @@ private:
     RPointerArray<CAlfScreen> iAlfScreens;
     void SetCursorTimerL(TUint aTime = 0, CHuiVisual* aCursor = 0);
     TBool IsAlfOriginatedWindow(CHuiCanvasVisual& aVisual);
+    
+   // Experimental
+    TBool IsFullScreenDrawnRecursive(
+            CHuiLayout* aLayout, 
+            CHuiControlGroup& aControlGroup,
+            CHuiControl& aControl,
+            TBool& aFullscreenCovered, 
+            TRect& aFullscreen,
+            CAlfScreen* aScreen,
+            TBool& aSubtreeVisible, 
+            TBool& aHasVisualsWithLayers,
+            TBool aChildCanBeOpaque,
+            TInt aOrientation);
 
 NONSHARABLE_CLASS ( TDeadControlGroup )
     {
@@ -846,6 +917,10 @@ public:
     RArray<TRegisteredEffectsStruct> iAlfRegisteredEffects;
     CHuiEnv* iHuiEnv;
 	CAlfAppUi* iAppUi;
+    CAlfLayoutSwitchEffectCoordinator* LayoutSwitchEffectCoordinator()
+        {
+        return iLayoutSwitchEffectCoordinator;
+        }
 
 private:    
 
@@ -879,10 +954,6 @@ private:
     TBool iLowMemoryMode;
     THuiMemoryLevel iCurrentMemoryLevel;
     
-    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
-    TInt iTempTotalActiveVisualCount;
-    TInt iTempTotalPassiveVisualCount;
-    #endif
     #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
     TInt activevisualcount;
     TInt passivevisualcount;

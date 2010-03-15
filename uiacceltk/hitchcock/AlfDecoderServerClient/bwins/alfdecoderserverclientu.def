@@ -40,4 +40,5 @@ EXPORTS
 	?SendEvent@CAlfCompositionClientBase@@IAEHHPBXH@Z @ 39 NONAME ; int CAlfCompositionClientBase::SendEvent(int, void const *, int)
 	??1CAlfCompositionCntrlClient@@UAE@XZ @ 40 NONAME ; CAlfCompositionCntrlClient::~CAlfCompositionCntrlClient(void)
 	?SetSourceRect@CAlfCompositionSource@@UAEHABVTRect@@@Z @ 41 NONAME ; int CAlfCompositionSource::SetSourceRect(class TRect const &)
+	?GetListOfInactiveWindowGroupsWSurfaces@RAlfBridgerClient@@QAEHPAV?$RArray@H@@@Z @ 42 NONAME ; int RAlfBridgerClient::GetListOfInactiveWindowGroupsWSurfaces(class RArray<int> *)
 

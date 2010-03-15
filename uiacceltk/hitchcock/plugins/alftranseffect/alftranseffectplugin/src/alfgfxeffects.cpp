@@ -152,7 +152,11 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
     TInt op = inStream.ReadInt32L();
     TUint action = 0;
     TUid uid1( KNullUid );
+    TSecureId sid1( KNullUid );
+    TInt wgid1= 0;
     TUid uid2( KNullUid );
+    TSecureId sid2( KNullUid );
+    TInt wgid2= 0;
     HBufC* resourceDir = NULL;
     HBufC* fileName = NULL;
     HBufC* backgroundFileName = NULL;
@@ -174,7 +178,7 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
     // The engine reservers the windows if needed, it first runs all the checks
     // to see if the effects are allowed (effects are not done for some combinations)
     
-    __ALFFXLOGSTRING2("CAlfGfxEffects::HandleMessageL - Operation: %d, Action: %d", op, action );
+    __ALFFXLOGSTRING4("CAlfGfxEffects::HandleMessageL - Operation: %d, Action: %d, Cenrep error: %d, Effect value: %d", op, action, error, value & AknTransEffect::EFullScreenTransitionsOff);
     __ALFFXLOGSTRING2("CAlfGfxEffects::HandleMessageL - Dir: %S, File: %S", &resourceDir, &fileName );
     switch ( op )
         {
@@ -202,8 +206,17 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
                 uid1 = TUid::Uid( inStream.ReadInt32L() );
                 uid2 = TUid::Uid( inStream.ReadInt32L() );
                 TInt data = inStream.ReadInt32L();
+                
+                if ( type == AknTransEffect::EParameterType )
+                    {
+                    sid1 = TSecureId( inStream.ReadInt32L() );
+                    wgid1 = inStream.ReadInt32L();
+                    sid2 = TSecureId( inStream.ReadInt32L() );
+                    wgid2 = inStream.ReadInt32L();
+                    }
+                
                 iEngine->BeginFullscreen( action, effectRect, type,
-                    uid1, uid2, data );
+                    uid1, uid2, data, sid1, wgid1, sid2, wgid2 );
 		        }
             break;
         case MAlfGfxEffectPlugin::EEndFullscreen:

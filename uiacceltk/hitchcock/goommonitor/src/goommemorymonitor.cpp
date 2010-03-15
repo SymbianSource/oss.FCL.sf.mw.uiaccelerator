@@ -23,12 +23,7 @@
 #include <libc/string.h>
 #include <UikonInternalPSKeys.h>
 
-//TODO: to be removed for wk44 onwards, should use only <EGL/egl.h> which is already included in goommemorymonitor.h
-#ifdef USE_ASYNCYH_NOTIFICATIONS
 #include <EGL/egl.h>
-#else // use local 
-#include "eglext.h"
-#endif
 
 #include "goommemorymonitor.h"
 #include "goommonitorplugin.h"

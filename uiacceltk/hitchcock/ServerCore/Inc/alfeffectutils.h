@@ -43,6 +43,8 @@ NONSHARABLE_CLASS( CAlfRosterFreezeEndTimer ):public CTimer
       
     private:    // Data
         CAlfBridge& iBridge;
+ 	public:
+	   	TInt iSafeCounter;
                 
     };
 
@@ -60,7 +62,8 @@ NONSHARABLE_CLASS( CAlfEffectEndTimer ):public CTimer
         virtual ~CAlfEffectEndTimer();
 
     public: // New functions
-        void Start( TTimeIntervalMicroSeconds32 aPeriod, TInt aHandle );
+        void Start( TTimeIntervalMicroSeconds32 aPeriod );
+        void AddFinishedHandleL(TInt aHandle);
         
     protected:  // Functions from base classes
         void DoCancel();
@@ -72,8 +75,7 @@ NONSHARABLE_CLASS( CAlfEffectEndTimer ):public CTimer
       
     private:    // Data
         CAlfBridge& iBridge;
-        TInt iHandle;
-                
+        RArray<TInt> iHandles;
     };
 
 // ---------------------------------------------------------
@@ -92,11 +94,24 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
     public:
         void BeginLayoutSwitch();
         void Cancel();
-        
+        TBool LayoutSwitchEffectsExist();
+		void EnableSafeCounter(TBool aEnable)
+			{
+			if (iRosterFreezeEndTimer)
+				{
+				if (aEnable)
+					{
+					iRosterFreezeEndTimer->iSafeCounter = 0;
+					}
+				else
+					{
+					iRosterFreezeEndTimer->iSafeCounter = KErrNotFound;
+					}
+				}
+			}        
     private:
         AknTransEffect::TContext NextLayoutSwitchContext();
         void SetLayoutSwitchEffect(AknTransEffect::TContext aContext);
-        TBool LayoutSwitchEffectsExist();
         
     private: // Data
         
@@ -104,7 +119,7 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         AknTransEffect::TContext iLayoutSwitchEffectContext;
         TThreadPriority iOriginalPriority;
         CAlfRosterFreezeEndTimer* iRosterFreezeEndTimer;
-    };
+	};
 
 // ---------------------------------------------------------
 // Effects states are used for effects request that arrive before the effected 
@@ -160,16 +175,18 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         
         void ConstructL(TInt aAction, RMemReadStream& aStream);
         
-        TBool ResetTimerL(CAlfBridge* aBridge);
+        TBool InitDelayedEffectL(CAlfBridge* aBridge, TSize aDisplaySize);
         
         void NotifyDrawingTimeout();
 
         // Information from BeginFullScreen
         TInt iType;
-        TInt iWg1;
-        TInt iWg2;
+        TInt iToWg;
+        TInt iFromWg;
         TInt iToAppId;
         TInt iFromAppId;
+        TInt iToSecureId;
+        TInt iFromSecureId;
         TRect iRect;
         
         // ETrue if waiting for window group to appear
@@ -182,7 +199,7 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         // used for resolving the iCleanupStackItem that holds the frozen app layout underneath the starting application
         TInt iAppStartScreenshotItemHandle;
         
-        RRegion iPaintedRegion;
+        
         enum TEffectType
         {
             ENotDefinedEffect = 0,
@@ -191,8 +208,17 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         };
         
         TEffectType iEffectType;
+        
+        // Display dimension, iPaintedRegion is clipped to this when determining, if there is enough drawing to the group
         TSize iDisplaySize;
+        
+        // gathers the painted region for the effected application. When enough region has been painted, the effect is forced.
+        RRegion iPaintedRegion;
+        
         CAlfBridge* iBridge; // for callback. not own.
+        
+        // If the visual is shown by some other visual by a screenshot, this is set ETrue.
+        TBool iCanDestroyOrHideImmediately;
         
         CPeriodic* iDrawingCompleteTimer;
         };

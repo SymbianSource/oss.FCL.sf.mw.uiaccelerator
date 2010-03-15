@@ -75,8 +75,9 @@ LIBRARY         hal.lib
 LIBRARY         efsrv.lib
 LIBRARY         xmlframework.lib
 LIBRARY         cone.lib
-LIBRARY			libEGL.lib
-LIBRARY			libc.lib
+LIBRARY		libEGL.lib
+LIBRARY		libc.lib
+LIBRARY         alfdecoderserverclient.lib
 
 #ifdef _DEBUG
 LIBRARY         flogger.lib

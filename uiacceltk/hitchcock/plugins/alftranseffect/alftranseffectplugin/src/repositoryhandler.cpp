@@ -67,6 +67,7 @@ CRepositoryHandler::~CRepositoryHandler()
 //
 void CRepositoryHandler::RunL()
     {
+    __ALFFXLOGSTRING("CRepositoryHandler::RunL (alf)");
     iError = iCrep->NotifyRequest(iKey, iStatus);
     TInt value;
     TInt err = iCrep->Get(iKey, value);
@@ -80,6 +81,7 @@ void CRepositoryHandler::RunL()
     	SetActive();
     	iError = err;
     	}
+    __ALFFXLOGSTRING2("CRepositoryHandler::RunL (alf) iValue: %d, iError %d <<", iValue, iError);
     }
     
 // ---------------------------------------------------------------------------

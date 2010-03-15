@@ -146,6 +146,9 @@ protected:
      */
     void UpdateBackgroundL();
 
+private:
+    
+    void FreeAllBackgroundTextureResources();
 
 private:
 
@@ -163,7 +166,6 @@ private:
      
     /** Background should be reloaded the next time it is needed. */
     TBool iReloadBackground;
-    TBool iSkinChanged;
 
     class CSkinItem : public CBase
         {

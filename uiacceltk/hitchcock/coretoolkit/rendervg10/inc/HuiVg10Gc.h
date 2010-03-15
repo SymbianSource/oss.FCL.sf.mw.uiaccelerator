@@ -39,6 +39,7 @@
 class MNVGIcon;
 class CNvgEngine;
 #endif
+class CFbsBitmap;
 
 /**
  * CHuiVg10Gc implements an OpenVG 1.0 version of the HUITK
@@ -433,6 +434,11 @@ protected:
 
     void SetQuality(THuiQuality aQuality);
     
+    /**
+     * From CHuiGc.
+     */
+    void GcExtension(const TUid& aExtensionUid, TAny** aExtensionParams);
+    
 private:
     /** 
      *  Synchronize a specific OpenVG matrix with the main matrix.
@@ -509,6 +515,12 @@ private:
     
     void UsePaintPattern();
     void DiscardPaintPattern();
+    
+    /**
+     * Copy screen to bitmap.
+     * @internal
+     */
+    TInt DoCopyScreenToBitmap(CFbsBitmap* aBitmap);
     
 private:
     /** Matrix characteristics */

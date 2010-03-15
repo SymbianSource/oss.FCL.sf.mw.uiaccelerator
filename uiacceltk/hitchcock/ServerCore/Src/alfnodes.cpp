@@ -1476,6 +1476,8 @@ void CAlfNodeVisual::FlagChanged( MWsWindowTreeObserver::TFlags aFlag, TBool aNe
             		{
                     iWindow->SetActive( EFalse );
             		}
+            	
+            	iWindow->IncludeToVisibilityCalculation( iVisible && iNodeActivated );
             	}
             break;
             }
@@ -1488,6 +1490,10 @@ void CAlfNodeVisual::FlagChanged( MWsWindowTreeObserver::TFlags aFlag, TBool aNe
         case MWsWindowTreeObserver::EAlphaChannelTransparencyEnabled:
             {
             iAlphaChannelTransparencyEnabled = aNewValue;
+            if ( iWindow )
+                {
+                iWindow->SetTransparencyAlphaChannel( aNewValue );
+                }
             break;
             }
         }
@@ -1637,7 +1643,9 @@ void CAlfNodeVisual::ActivateNode()
         		{
         		iWindow->SetActive( ETrue );
         		}
-        	}
+        	
+        	iWindow->IncludeToVisibilityCalculation( iVisible && iNodeActivated );
+            }
          }
      else
          {
@@ -1760,6 +1768,38 @@ void CAlfNodeWindow::MoveToWindowGroup( TUint32 aNewGroupId )
 		USER_INVARIANT();
 		}
 	}
+
+// ---------------------------------------------------------------------------
+// SetWindowAreaL
+// ---------------------------------------------------------------------------
+//
+void CAlfNodeWindow::SetWindowAreaL( RMemReadStream* aStream )
+    {
+    TPoint pos;
+    RRegion region;
+    CleanupClosePushL( region );
+    
+    pos.iX = aStream->ReadInt32L();
+    pos.iY = aStream->ReadInt32L();
+    
+    TInt count = aStream->ReadInt32L();
+    for ( TInt i = 0; i < count; ++i )
+        {
+        TRect r;
+        aStream->ReadL((TUint8*)&r.iTl.iX, 4 * sizeof(TInt32 ));
+        region.AddRect(r);
+        }
+    
+    if ( region.CheckError() )
+        {
+        // Fallback to non-shape version
+        region.Clear();
+        }
+    
+    iWindow->SetWindowArea( pos, region );
+    
+    CleanupStack::PopAndDestroy();
+    }
 
 // ---------------------------------------------------------------------------
 // NewL

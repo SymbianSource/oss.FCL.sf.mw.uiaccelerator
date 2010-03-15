@@ -44,7 +44,7 @@ CStateBase* CRestingState::NewL(MAlfDrawerEngine& aEngine, CStateHandler& aHandl
 //
 CStateBase* CRestingState::SignalL(TSignal aSignal)
 	{
-	__ALFFXLOGSTRING1("CRestingState::SignalL %d >>", aSignal);
+	__ALFFXLOGSTRING1("CRestingState::SignalL %d (Alf)>>", aSignal);
 	TInt error = KErrNone;
 	switch( aSignal ) 
 		{
@@ -99,7 +99,7 @@ CStateBase* CControlState::NewL(MAlfDrawerEngine& aEngine, CStateHandler& aHandl
 //
 CStateBase* CControlState::SignalL(TSignal aSignal)
 	{
-    __ALFFXLOGSTRING1("CControlState::SignalL %d >>", aSignal);
+    __ALFFXLOGSTRING1("CControlState::SignalL %d (Alf)>>", aSignal);
 
     TInt error = KErrNone;	
 	switch( aSignal )
@@ -159,6 +159,7 @@ CStateBase* CPhase1State::NewL(MAlfDrawerEngine& aEngine, CStateHandler& aHandle
 CStateBase* CPhase1State::SignalL(TSignal aSignal)
 	{
     TInt error = KErrNone;	
+    __ALFFXLOGSTRING1("CPhase1State::SignalL(TSignal %d) (Alf)", aSignal);
 	switch(aSignal)
 		{
 		case EAbort:
@@ -215,7 +216,8 @@ CStateBase* CPhase2State::NewL(MAlfDrawerEngine& aEngine, CStateHandler& aHandle
 //
 CStateBase* CPhase2State::SignalL(TSignal aSignal)
 	{
-    TInt error = KErrNone;	
+    TInt error = KErrNone;
+    __ALFFXLOGSTRING1("CPhase2State::SignalL %d (Alf)>>", aSignal);
 	switch(aSignal)
 		{
 		case EAbort:

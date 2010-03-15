@@ -208,7 +208,9 @@ void CAlfWindowManager::BindWindowToHitchL(CAlfWindow* aWindow, CAlfWindowManage
         aWindow->SetOpacity(aWindow->Opacity());
         }
 	aWindow->SetSurfaceExtent(aWindow->SurfaceExtent());
-        
+    aWindow->SetWindowArea();
+    aWindow->SetTransparencyAlphaChannel(aWindow->TransparencyAlphaChannel());
+    aWindow->IncludeToVisibilityCalculation(aWindow->IsIncludedToVisibilityCalculation());
 	aWindow->SetActive(aWindow->IsActive());
 	}
 

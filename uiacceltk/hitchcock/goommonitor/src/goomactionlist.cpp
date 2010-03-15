@@ -219,6 +219,14 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     
     aWindowGroupList.RefreshL();
     
+    for (TInt i = 0; aWindowGroupList.LowOnMemWgs(i) != KErrNotFound ; i++ )
+        {
+        if ( iLowOnMemWgs.Find(aWindowGroupList.LowOnMemWgs(i)) == KErrNotFound)
+            {
+            iLowOnMemWgs.Append(aWindowGroupList.LowOnMemWgs(i));    
+            }
+        }
+        
     iRunningKillAppActions = ETrue;
     
     if (aWindowGroupList.Count())
@@ -433,6 +441,17 @@ void CGOomActionList::MemoryGood()
             iActionRefs[actionRefIndex].RunPlugin().MemoryGood();
             }
         }
+    // notify window groups which were triggered to low mem that 
+    TWsEvent event;
+    event.SetType(KGoomMemoryGoodEvent); // naive
+
+    for (TInt i = iLowOnMemWgs.Count()-1; i>=0; i--)
+        {
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+        iWs.SendEventToWindowGroup(iLowOnMemWgs[i], event);
+#endif // #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+        iLowOnMemWgs.Remove(i);
+		}    
     }
 
 TBool CGOomActionList::FreeMemoryAboveTarget(TInt& aFreeMemory)

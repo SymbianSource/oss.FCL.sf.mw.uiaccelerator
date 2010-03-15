@@ -39,9 +39,9 @@ void CHighResTimer::CallBack(const TInt aWaitInMilliSecs)
 	    {
 	    wait = 1000;
 	    }
-	if (wait > 15000)
+	if (wait > 100000)
 	    {
-	    wait = 15000;
+	    wait = 100000;
 	    }
             
     HighRes( TTimeIntervalMicroSeconds32( wait ) );

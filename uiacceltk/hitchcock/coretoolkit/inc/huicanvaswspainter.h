@@ -281,6 +281,8 @@ private:
     void WsUseFontL() ;
 	void WsSetShapeRegionL( TInt aIndex );
     
+    virtual void ClearCapturingBufferArea(const TRect& aRect);
+    
 private:
     
     /** Region which this painter updates with current command buffers */

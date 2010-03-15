@@ -18,6 +18,8 @@
 #ifndef CALFSENDBUFFER_H_
 #define CALFSENDBUFFER_H_
 
+//#define RD_SUBWINDOW_EFFECTS 
+
 #include <e32cmn.h>
 #include <e32std.h> 
 #include <s32mem.h>
@@ -119,6 +121,19 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
 	    void WriteRegionL( const TUint8& aCommand, const TRegion& aRegion );
 	    
 	    /**
+	     * Writes ints followed by region.
+         * 
+         * Convenience function for writing region to the stream 
+         *
+         * @param aCommand   CommandId
+         * @param aRegion    Region
+         * @param aCount    Amount of TInt values to be streamed
+         * @param aFirst    The first value
+         * @param ...       variable aCount-1 amount of TInt values
+	     */
+	    void WriteRegionIntsL( const TUint8& aCommand, const TRegion& aRegion, TInt aCount, TRefByValue<const TInt> aFirst, ...);
+	    
+	    /**
          * WriteDescriptorAndIntsL
          * 
          * Convenience function for writing TDesC reference and TInt values to the stream.
@@ -187,13 +202,15 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
          * @param aPoWriteIntList  Point array to be streamed
          */
         void WritePointArrayL( const TUint8& aCommand, const TArray<TPoint>* aPoWriteIntList );
-        
+
         /**
-         * WriteFlagsL
+         * SetOrientation
          * 
-         * Write flags to the stream
-         */
-        void WriteFlagsL();
+         * Set orientation. All drawing buffers will be tagged with the current orientation.
+         *
+         * @param aOrientatation 	New orientation
+         */        
+        void SetOrientation(TInt aOrientation);
         
 	//
 	// ARRAY IMPLEMENTATION
@@ -206,7 +223,7 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
     TRect iBoundingRectangle;
     };
 
-
+#ifdef RD_SUBWINDOW_EFFECTS
 	void WriteArrayHeaderTemplateL();
 	void InitTOffsetElemArray(RArray<TOffsetElem> &aOffset);
 	void WriteArrayHeaderL(const TOffsetElem &aIndexArrayOffset);
@@ -216,6 +233,7 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
 	void EndMarkerL(RArray<TOffsetElem> &aOffset, TInt &aMarker, const TRect &aRectangle, TInt aLayerId);
     void StartMarkerL(TRect aBoundingRectangle, TInt aLayerId);
     void EndMarkerL();
+#endif // RD_SUBWINDOW_EFFECTS
 	
        /**
         * SendL
@@ -789,6 +807,7 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
         CAlfCompositionCntrlClient* iAlfCompositionCntrlClient;
         
         // array implementation
+#ifdef RD_SUBWINDOW_EFFECTS		
         RArray<TOffsetElem> iOffsetArray;
         TInt iMarker;
         TRect iBoundingRectangle;
@@ -797,5 +816,7 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
         TInt iPreviousBlockOffset;
         TInt iExtraLayerId;
         TBool iLayersEnabled;
+#endif        
+        TInt iOrientation;
 	};
 #endif /*CALFSENDBUFFER_H_*/

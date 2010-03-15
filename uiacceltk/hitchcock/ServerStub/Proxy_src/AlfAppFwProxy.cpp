@@ -164,7 +164,7 @@ public:
                 if (!iBitmap)
                     {
                     iBitmap = new (ELeave) CFbsBitmap();
-                    User::LeaveIfError( iBitmap->Create(skinRect.Size(), EColor64K) ); // is 64k still valid?        
+                    User::LeaveIfError( iBitmap->Create(skinRect.Size(), EColor16MAP) );         
                     }
                 
                 User::LeaveIfError(iBitmap->Resize(skinRect.Size()));
@@ -323,7 +323,7 @@ public:
     void UpdateWgListL()
         {
         TInt wgId=0;
-        const TInt count=iWsSession.NumWindowGroups();
+        TInt count=iWsSession.NumWindowGroups();
         if (count)
             {
             TInt* ptr = iWgIdArray;    
@@ -333,6 +333,8 @@ public:
             CApaWindowGroupName* wgName=CApaWindowGroupName::NewL(iWsSession);
             CleanupStack::PushL(wgName);
             User::LeaveIfError(iWsSession.WindowGroupList(wgIdArray)); // all groups
+            count = wgIdArray->Count(); // count might have changed
+            
             iWgEntriesWritten = 0;
             for (TInt ii=0; ii < count-1; ii++)
                 { 

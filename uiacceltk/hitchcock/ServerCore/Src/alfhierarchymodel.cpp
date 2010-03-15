@@ -555,6 +555,13 @@ void CAlfHierarchyModel::ExecuteCommandsL(  )
                 DoNodeAttributeChangedL();
                 break;
                 }
+            
+            case EAlfNodeSetWindowArea:
+                {
+                DoNodeSetWindowAreaL();
+                }
+                break;
+                
             case EAlfCommitBatch:
                 {
                 RequestFrameEndCallback();
@@ -876,7 +883,13 @@ void CAlfHierarchyModel::DoNodeExtentChangedL()
 #endif
 
     AMT_INC_COUNTER_IF(node, iNodeExtentChangedCount );
-    AMT_SET_VALUE_IF(node, iLatestNodeExtentRect, rect );        
+    AMT_SET_VALUE_IF(node, iLatestNodeExtentRect, rect );
+    AMT_MAP_SET_VALUE_IF( ( node && node->iWindow ),
+                          iSizeMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
+                          rect.Size(), EAlfModuleTestTypeHierarchyModelChangeSize );
+    AMT_MAP_SET_VALUE_IF( ( node && node->iWindow ),
+                          iPositionMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
+                          rect.iTl, EAlfModuleTestTypeHierarchyModelChangePosition );
     }
 
 // ---------------------------------------------------------------------------
@@ -937,7 +950,10 @@ void CAlfHierarchyModel::DoNodeFlagChangedL()
         USER_INVARIANT();
         }
 
-    AMT_INC_COUNTER_IF(node, iTotalNodeFlagChangedCount );    
+    AMT_INC_COUNTER_IF(node, iTotalNodeFlagChangedCount );
+    AMT_MAP_INC_VALUE_IF( ( node && node->iWindow ),
+                          iIntMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
+                          EAlfModuleTestTypeHierarchyModelChangeFlag );    
     }
 
 // ---------------------------------------------------------------------------
@@ -1025,6 +1041,17 @@ void CAlfHierarchyModel::DoNodeLayerExtentChangedL()
             {
             node->Window()->SetLayerUsesAplhaFlag(KWindowIsDSAHost);
             }
+        if (extent.IsEmpty())
+            {
+            iServer.ReleasePermissionTokenL(node->iId);
+            }
+        else
+            {
+            iServer.CreatePermissionTokenL(node->iId, 
+                                           node->Window()->WsInfo().iClientSideId.iWindowIdentifer,
+                                           node->Window()->WsInfo().iClientSideId.iWindowGroupId );
+            }    
+        
         }
     else if( node ) // this would mean that node has being orphaneded but not yet deleted
         {
@@ -1127,6 +1154,26 @@ void CAlfHierarchyModel::DoNodeAttributeChangedL()
 
     AMT_INC_COUNTER_IF(node, iTotalNodeAttributeChangedCount );    
     }
+    
+// ---------------------------------------------------------------------------
+// DoNodeAttributeChangedL
+// ---------------------------------------------------------------------------
+//
+void CAlfHierarchyModel::DoNodeSetWindowAreaL()
+    {
+    TUint32 nodeId = (TUint32)iStream->ReadUint32L();
+    CAlfNode* node = FindNode(nodeId);
+    if ( node && node->Type() == MWsWindowTreeNode::EWinTreeNodeClient )
+        {
+        CAlfNodeWindow* w = static_cast<CAlfNodeWindow*>(node);
+        w->SetWindowAreaL( iStream );
+        }
+    else
+        {
+        USER_INVARIANT(); // set window area change for unexpected node type. new code needed!
+        }
+    }
+
 // ---------------------------------------------------------------------------
 // DoNodeWindowGroupChainBrokenAfterL
 // ---------------------------------------------------------------------------

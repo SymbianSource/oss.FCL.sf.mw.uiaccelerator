@@ -70,6 +70,7 @@ private:
     TInt iId;
     TReal32 iElapsedTime;
     TInt iAnimatedTextureGroupId;
+    TBool iOriginalFileInUse;
     };
 
 

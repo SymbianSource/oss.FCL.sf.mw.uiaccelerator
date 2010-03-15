@@ -741,9 +741,12 @@ EXPORT_C TInt CHuiEnv::RefreshCallBack(TAny* aInstance)
     TReal32 elapsedTime = 0;
 
     // Investigate whether the environment is released
-    if(self->iState == EReleased)
+    if(self->iState == EReleased /*|| self->iPauseDrawing*/ )
         {
-        HUI_DEBUG(_L("CHuiEnv::RefreshCallBack() - Warning: Refresh callback called while environment is released."));
+        if (!self->iPauseDrawing)
+            {    
+            HUI_DEBUG(_L("CHuiEnv::RefreshCallBack() - Warning: Refresh callback called while environment is released."));
+            }        
         return KErrNone;
         }
 

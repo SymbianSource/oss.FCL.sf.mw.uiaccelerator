@@ -104,7 +104,13 @@ enum THuiCanvasFlags
     /** Effect is excluded from parent (or grandparent) effect (if it has effect which is applied to children) */
     EHuiCanvasFlagExcludeFromParentEffect = 0x80,
     /** Hint flag which is used for optimizations. Tells if fade effect(s) exist in visual tree */
-    EHuiCanvasFlagExternalFadeExistsInsideVisualTree = 0x100 
+    EHuiCanvasFlagExternalFadeExistsInsideVisualTree = 0x100,
+    /** Flag to indicate whether to include this visual to visibility calculation */
+    EHuiCanvasFlagIncludeToVisibilityCalculation = 0x200,
+    /** Flag to indicate whether surface is invisible (based on visibility calculation) */
+    EHuiCanvasFlagSurfaceInvisible = 0x400,
+    /** Flag to indicate whether surface is visible (based on visibility calculation) */
+    EHuiCanvasFlagSurfaceVisible = 0x800
     };
 
 /**
@@ -352,6 +358,26 @@ public:
     IMPORT_C TRect& LayerExtent(); 
     IMPORT_C void SetLayerExtent(TRect& aExtent); 
 
+    // window area
+public:
+    
+    /**
+     * Sets shape. This affects only visible area calculation.
+     */
+    IMPORT_C void SetShape(const TPoint& aOrigin, const TRegion& aRegion);
+    /**
+     * Returns true if shape is different than display rect.
+     */
+    IMPORT_C TBool HasCustomShape() const;
+    /**
+     * Returns origin of window shape.
+     */
+    IMPORT_C TPoint ShapeOrigin() const;
+    /**
+     * Returns shape as region.
+     */
+    IMPORT_C const TRegion& ShapeRegion() const;
+
 public:
     
     void SetSize(const THuiRealSize& aSize, TInt aTransitionTime=0);    
@@ -402,6 +428,7 @@ public:
     void DrawStoredVisualRenderBuffer(TInt aCanvasDrawMode) const;
     void DrawStoredFullScreenRenderBuffer(TInt aCanvasDrawMode, CHuiGc& aGc) const;
     IMPORT_C void FreeRenderBuffer();
+    IMPORT_C TRect CommandBufferCoverage(TInt aOrientation);
 
 protected:
     virtual void VisualExtension(const TUid& aExtensionUid, TAny** aExtensionParams);

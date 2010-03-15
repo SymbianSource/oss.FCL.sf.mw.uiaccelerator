@@ -279,42 +279,16 @@ void CAlfStreamerBridge::SetWgIdArray(TInt* aArray)
     iWgArray = aArray;
     }
 
-EXPORT_C TUid CAlfStreamerBridge::FindAppUidForWgId(TInt aWgId)
+EXPORT_C TUid CAlfStreamerBridge::FindAppUidForWgId(TInt /*aWgId*/)
     {
-    if (iWgArray)    
-        {TInt* ptr = iWgArray;     
-        for (TInt i=0; i<39; i=i+2) // magic
-            {
-            if (ptr[i] == aWgId)
-                {
-                return TUid::Uid(ptr[i+1]);
-                }
-            if (!ptr[i])
-                {
-                break;
-                }    
-            }
-        }
-    return KNullUid; 
+    __ASSERT_DEBUG(EFalse, User::Leave(KErrNotSupported));
+    return KNullUid;
     }        
 
-EXPORT_C TInt CAlfStreamerBridge::FindWgForAppUid(TUid aAppUid)
+EXPORT_C TInt CAlfStreamerBridge::FindWgForAppUid(TUid /*aAppUid*/)
     {
-    if (iWgArray)    
-        {TInt* ptr = iWgArray;     
-        for (TInt i=0; i<39; i=i+2) // magic
-            {
-            if (ptr[i+1] == aAppUid.iUid)
-                {
-                return ptr[i];
-                }
-            if (!ptr[i])
-                {
-                break;
-                }    
-            }
-        }
-    return 0; 
+    __ASSERT_DEBUG(EFalse, User::Leave(KErrNotSupported));
+    return 0;
     }        
     
 // ---------------------------------------------------------------------------

@@ -2055,6 +2055,11 @@ THuiCanvasWsGcType CHuiCanvasWsHwGc::Type() const
     return EHuiCanvasWsHw;
     }
 
+void CHuiCanvasWsHwGc::ClearCapturingBufferArea(const TRect& /*aRect*/)
+    {
+    // Not supported by HW GC.
+    }
+
 THuiCanvasDrawMode CHuiCanvasWsHwGc::SelectCanvasDrawMode(TInt aWsDrawMode)
     {
     if (aWsDrawMode == MWsGraphicsContext::EDrawModeWriteAlpha)

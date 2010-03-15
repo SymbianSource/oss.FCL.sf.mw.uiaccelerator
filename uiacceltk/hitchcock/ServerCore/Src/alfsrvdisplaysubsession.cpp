@@ -33,6 +33,13 @@
 #include <uiacceltk/HuiEvent.h>
 #include <mtransitionserver.h>
 
+// ETrue if client defined display quality is supported, EFalse if not.
+// As there is other content than this ALF application content in the scene, 
+// it's better ignore client quality hints.
+// Note: If this is supported and client gains focus, client quality setting is
+//       taken into use and applied to the whole scene. However, when client loses
+//       focus, quality setting is not restored.
+const TBool KAlfSrvClientQualitySupport = EFalse;
 
 // ======== MEMBER FUNCTIONS ========
 
@@ -257,7 +264,12 @@ void CAlfSrvDisplaySubSession::SetClearBackgroundL( const RMessage2& aMessage )
         iBackgroundItems.Reset();
 
         // Set background
-        Display().SetClearBackgroundL( CHuiDisplay::TClearMode( clearBackground ));
+        TRAPD(err, Display().SetClearBackgroundL( CHuiDisplay::TClearMode( clearBackground )) );
+        // Don't let client see timeout errors from our internal services implementation
+        if( err != KErrNone && err != KErrTimedOut ) 
+            {
+            User::Leave(err);
+            }
         }
     
     // Complete
@@ -368,7 +380,7 @@ void CAlfSrvDisplaySubSession::SetQualityL( const RMessage2& aMessage )
     TPckg<THuiQuality> valuePckg(value); 
     aMessage.Read(1,valuePckg);
 
-    if ( session.IsFocused() )
+    if ( KAlfSrvClientQualitySupport && session.IsFocused() )
         {
         // Set quality
         Display().SetQuality(value);    
@@ -395,7 +407,7 @@ void CAlfSrvDisplaySubSession::QualityL( const RMessage2& aMessage )
     THuiQuality value = EHuiQualityAccurate;
     TPckg<THuiQuality> valuePckg(value); 
 
-    if ( session.IsFocused() )
+    if ( KAlfSrvClientQualitySupport && session.IsFocused() )
         {
         // Get quality
         value = Display().Quality();    
@@ -696,8 +708,11 @@ void CAlfSrvDisplaySubSession::SetSessionFocused(TBool aFocused)
                 TRAP_IGNORE(iDisplay->SetClearBackgroundL(
                         CHuiDisplay::TClearMode(iDisplayClearBackground)))                                        
                 }    
-                        
-            iDisplay->SetQuality(THuiQuality(iDisplayRenderingQuality));
+
+            if ( KAlfSrvClientQualitySupport )
+                {
+                iDisplay->SetQuality(THuiQuality(iDisplayRenderingQuality));
+                }
             iDisplay->SetUseDepth(iDisplayUseDepthTest);
             
             UpdateAutomaticFading(); // update non-fading to app ui container

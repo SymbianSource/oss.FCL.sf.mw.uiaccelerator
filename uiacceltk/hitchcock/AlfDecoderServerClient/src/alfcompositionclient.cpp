@@ -386,7 +386,18 @@ void CAlfCompositionCntrlClient::HandleEventL(TInt aEventType, TAny* aEventData)
             iController->DeleteTarget(target);
             break;
             }
-            
+        
+        case KAlfCompositionTargetVisible:
+            {
+            iController->HideTarget(target, EFalse);
+            break;
+            }    
+
+        case KAlfCompositionTargetHidden:
+            {
+            iController->HideTarget(target, ETrue);
+            break;
+            }    
         default:
             break;
         }

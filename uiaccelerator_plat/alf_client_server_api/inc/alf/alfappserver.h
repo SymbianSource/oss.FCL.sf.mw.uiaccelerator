@@ -260,6 +260,9 @@ public: // internals
      */
     CAlfAppSrvSessionBase* UpMostClientAboveWg( TInt aWgId );
 
+    
+    CAlfAppSrvSessionBase* SrvSessionForControlGroup(CHuiControlGroup& aGroup);
+    
 public:
     
     CAlfAppSrvSessionBase* iOldSession;

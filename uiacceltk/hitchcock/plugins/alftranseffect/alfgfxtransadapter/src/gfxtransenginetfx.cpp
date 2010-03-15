@@ -768,6 +768,161 @@ void CGfxTransAdapterTfx::BeginFullScreen(TUint /*aAction*/, const TRect& /*aEff
 	}
 
 // ---------------------------------------------------------------------------
+// GfxTransEffect::SecureIdFromAppUid
+// ---------------------------------------------------------------------------
+//
+TSecureId CGfxTransAdapterTfx::SecureIdFromAppUid( TUid aAppUid )
+    {
+    TSecureId result(aAppUid);
+    if ( aAppUid == TUid::Null() )
+        {
+        return result;
+        }
+
+    TBool found = EFalse;
+
+    // first check the cache
+    if ( iCachedUidMapping.iAppUid == aAppUid.iUid && iCachedUidMapping.iSecureId != 0 )
+        {
+        result = iCachedUidMapping.iSecureId;
+        found = ETrue;
+    }
+    
+    if ( !found )
+        {
+        // do the hard work
+        // first check this process - this is quick
+        // also, if this is the start-up effect on an application, the TApaTask is not yet updated with the 
+        // window group created by this application (yet).
+        TInt windowGroupId = -1;
+        RProcess thisProcess;
+        TUidType uidType = thisProcess.Type();
+        if ( uidType.IsValid() )
+            {
+            if ( uidType[2] == aAppUid ) // 0 = UID1, 1 = UID2, 2 = UID3
+                { 
+                result = thisProcess.SecureId();
+                // take the window gruop ID as well if available
+                CCoeEnv* env = CCoeEnv::Static();
+                if ( env )
+                    {
+                    windowGroupId = env->RootWin().Identifier();
+                    }
+                found = ETrue;
+                }
+            }
+        thisProcess.Close();
+
+        // If not this application, find UID using the TApaTask
+        if ( !found )
+            {
+            TApaTaskList taskList( CCoeEnv::Static()->WsSession() ); 
+            const TApaTask task = taskList.FindApp( aAppUid );
+            const TThreadId threadId = task.ThreadId();
+            RThread otherThread;
+            if ( otherThread.Open( threadId ) == KErrNone ) // ignore error
+                {
+                result = otherThread.SecureId();
+                windowGroupId = task.WgId(); // take it for free at this point.
+                found = ETrue;
+                }
+            otherThread.Close();
+            }
+        
+        if ( found )
+            {
+            // update cache
+            if ( iCachedUidMapping.iAppUid == aAppUid.iUid )
+                {
+                // found the missing secure ID
+                iCachedUidMapping.iSecureId = result.iId;
+                
+                if ( windowGroupId > 0 )
+                    {
+                    // if we got the window group ID, update that as well to the cache
+                    iCachedUidMapping.iWindowGroupId = windowGroupId;
+                    }
+                }
+            else 
+                {
+                iCachedUidMapping.iAppUid = aAppUid.iUid;
+                iCachedUidMapping.iSecureId = result.iId;
+                // wgid might not be updated at this point.
+                iCachedUidMapping.iWindowGroupId = Max(windowGroupId,0); // might be -1 -> treat 0 and -1 is just 0
+                }
+            }
+        }
+    
+    if ( !found )
+        {
+        __ALFFXLOGSTRING1( "CGfxTransAdapterTfx::SecureIdFromAppUid AppUid 0x%x not found (yet)", aAppUid.iUid );
+        }
+    else if ( aAppUid.iUid != result.iId )
+        {
+        __ALFFXLOGSTRING2( "CGfxTransAdapterTfx::SecureIdFromAppUid SecureID 0x%x differs form AppUid 0x%x", result.iId, aAppUid.iUid );
+        }
+
+    return result;
+    }
+
+// ---------------------------------------------------------------------------
+// GfxTransEffect::WindowGroupIdFromAppUid
+// ---------------------------------------------------------------------------
+//
+TInt32 CGfxTransAdapterTfx::WindowGroupIdFromAppUid( TUid aAppUid )
+    {
+    if ( aAppUid == TUid::Null() )
+        {
+        return 0;
+        }
+    
+    TInt result = 0;
+    TBool found = EFalse;
+    
+    // check the cache. most likely this is already up-to-date due the previous execution of SecureIdFromAppUid
+    if ( iCachedUidMapping.iAppUid == aAppUid.iUid )
+        {
+        if ( iCachedUidMapping.iWindowGroupId > 0 )
+            {
+            result = iCachedUidMapping.iWindowGroupId;
+            found = true;
+            }
+        }
+    
+    if ( !found )
+        {
+        // do the hard work
+        TApaTaskList taskList( CCoeEnv::Static()->WsSession() ); 
+        const TApaTask task = taskList.FindApp( aAppUid );
+        result = TInt32(task.WgId());
+        
+        if ( result > 0 )
+            {
+            // update cache
+            found = ETrue;
+            if ( iCachedUidMapping.iAppUid != aAppUid.iUid )
+                {
+                iCachedUidMapping.iAppUid = aAppUid.iUid;
+                iCachedUidMapping.iSecureId = 0;
+                }
+            iCachedUidMapping.iWindowGroupId = result;
+            }
+        else
+            {
+            result = 0; // might be -1 -> treat 0 and -1 is just 0
+            }
+        }
+    
+    if ( !found )
+        {
+        __ALFFXLOGSTRING1( "CGfxTransAdapterTfx::WindowGroupIdFromAppUid AppUid 0x%x not found (yet)", aAppUid.iUid );
+        }
+
+    return TInt32(result);
+    }
+
+
+// ---------------------------------------------------------------------------
 // GfxTransEffect::BeginFullscreen gets passed here.
 // ---------------------------------------------------------------------------
 //
@@ -815,7 +970,10 @@ void CGfxTransAdapterTfx::BeginFullScreen(TUint aAction, const TRect& aEffectAre
             inBuf.WriteInt32L( params().iNext.iUid );
             inBuf.WriteInt32L( params().iPrev.iUid );
             inBuf.WriteInt32L( params().iFlags );
-     
+            inBuf.WriteInt32L( SecureIdFromAppUid(params().iNext).iId );
+            inBuf.WriteInt32L( WindowGroupIdFromAppUid(params().iNext) );
+            inBuf.WriteInt32L( SecureIdFromAppUid(params().iPrev) );
+            inBuf.WriteInt32L( WindowGroupIdFromAppUid(params().iPrev) );
     		}    
     	else if ( aType == AknTransEffect::EParameterAvkonInternal )
     	    {

@@ -272,6 +272,10 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
         
         // Check if cache is up-to date or does it need to be refreshed
         TBool cachedRenderTargetNeedsRefresh = (iRoot->Changed() || aRefreshCachedRenderTarget || (enableBackground && !useFrozenBackground));
+        if (!iCachedRenderTarget || (iCachedRenderTarget && iCachedRenderTarget->Size() !=  iRoot->VisualRect().Size())) 
+            {
+            cachedRenderTargetNeedsRefresh = ETrue;
+            }
 
         // Try to apply also margins, we cannot just use aDisplayRect directly
         TRect targetRect = iRoot->VisualRect();

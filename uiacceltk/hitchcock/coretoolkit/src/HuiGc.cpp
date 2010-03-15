@@ -28,6 +28,8 @@
 #include "uiacceltk/HuiUtil.h"  // For hui assert.
 #include "uiacceltk/HuiTransformation.h"
 
+#include "huiextension.h"
+
 #include <e32math.h>
 #include <AknUtils.h>
 
@@ -765,6 +767,18 @@ EXPORT_C void CHuiGc::NotifyImagePreferredSize(const THuiImage& aImage, THuiReal
             notifiedTexture->NotifyPreferredSize(THuiRealSize(width,height));    
             }
         }
+    }
+
+TInt CHuiGc::CopyScreenToBitmap(CFbsBitmap* aBitmap)
+    {
+    THuiGcCopyScreenToBitmapParams params;
+    params.iErrorCode = KErrNotSupported;
+    params.iBitmap = aBitmap;
+    TAny* ptr = &params;
+    
+    GcExtension(KHuiGcCopyScreenToBitmap, &ptr);
+    
+    return params.iErrorCode;
     }
 
 EXPORT_C void CHuiGc::TransformDirtyRect(THuiRealRect& /*aRect*/)

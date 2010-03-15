@@ -37,7 +37,6 @@ CScreenSaverPropertyListener* CScreenSaverPropertyListener::NewL(TCallBack aCall
     CleanupStack::PushL(me);
     me->ConstructL();
     CleanupStack::Pop();
-    RDebug::Print(_L("screensaverlistener constructed"));
     return me;
     }
 
@@ -48,7 +47,6 @@ void CScreenSaverPropertyListener::ConstructL()
 
 void CScreenSaverPropertyListener::RunL()
     {
-    RDebug::Print(_L("screensaverlistener - runl"));
     if (iStatus.Int() != KErrCancel)
         {
         IssueRequest();
@@ -64,7 +62,6 @@ void CScreenSaverPropertyListener::DoCancel()
 
 void CScreenSaverPropertyListener::IssueRequest()
     {
-    RDebug::Print(_L("screensaverlistener issuereq"));
     iSCProperty.Subscribe(iStatus);
     SetActive();
     }

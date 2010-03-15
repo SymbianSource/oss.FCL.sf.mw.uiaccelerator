@@ -275,7 +275,23 @@ private:
     void SubConBegin(const CCoeControl* aControl);
     void SubConAbort( const CCoeControl* aControl );
     
+    /*
+     * Finds the secure ID for the given application UID.
+     * 
+     * @param aAppUid Application UID
+     * @return Secure ID.
+     */
+    TSecureId SecureIdFromAppUid( TUid aAppUid );
     
+    /*
+     * Finds the Windoe group ID for the given application UID.
+     * 
+     * @param aAppUid Application UID
+     * @return Window group ID. Returns 0 if not found.
+     */
+    TInt32 WindowGroupIdFromAppUid( TUid aAppUid );
+
+
 private: // data
     /**
      * pointer to the client side
@@ -330,6 +346,17 @@ private: // data
 //    RPointerArray<const CCoeControl> iIgnoredWOChildControls;
 
 //    TInt iSequence;
+	
+	struct TUidMapping
+	    {
+	    TUidMapping() : iAppUid(0), iSecureId(0), iWindowGroupId(0) {}
+	    TInt32 iAppUid;
+	    TInt32 iSecureId;
+	    TInt32 iWindowGroupId;
+	    };
+	
+	TUidMapping iCachedUidMapping; // cache one - this is covering most of the cases
+	
     };
 
 #endif

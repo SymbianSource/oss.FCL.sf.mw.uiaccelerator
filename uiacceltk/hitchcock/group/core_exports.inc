@@ -3,7 +3,7 @@
 *  Name        : core_exports.inc
 *  Part of     : Alfred UI Toolkit
 *  Description : Exported header files.
-*  Version     : %version: tr1sido#8.1.26 %
+*  Version     : %version: tr1sido#8.1.31 %
 *
 *  Copyright © 2006-2007 Nokia.  All rights reserved.
 *  This material, including documentation and any related computer
@@ -19,6 +19,10 @@
 
 PRJ_EXPORTS
 
+
+// Effect definitions are considered as differentiating SW and thus not available for foundation.
+#ifndef ALF_USE_OPENWF_COMPOSITION
+
 //
 //	READ THIS!!!
 //
@@ -29,13 +33,18 @@ PRJ_EXPORTS
 
 // for EMULATOR UREL
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_add_page.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_bg_appear.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_editmode.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_close_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_widgetmanager.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_close_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_left.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_left.fxml
+../coretoolkit/data/activeidle_viewswitch_left_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_left_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_left_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_left_disappear.fxml
 ../coretoolkit/data/activeidle_viewswitch_open_editmode.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_open_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_open_widgetmanager.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_open_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_remove_page.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_remove_page.fxml
 ../coretoolkit/data/activeidle_viewswitch_right.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_right.fxml
+../coretoolkit/data/activeidle_viewswitch_right_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_right_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_right_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_right_disappear.fxml
 ../coretoolkit/data/app_activate.fxml /epoc32/release/winscw/urel/z/resource/effects/app_activate.fxml
 ../coretoolkit/data/app_exit.fxml /epoc32/release/winscw/urel/z/resource/effects/app_exit.fxml
 ../coretoolkit/data/app_start.fxml /epoc32/release/winscw/urel/z/resource/effects/app_start.fxml
@@ -45,7 +54,11 @@ PRJ_EXPORTS
 ../coretoolkit/data/appshell_exit.fxml /epoc32/release/winscw/urel/z/resource/effects/appshell_exit.fxml
 ../coretoolkit/data/confirmationnote_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/confirmationnote_appear.fxml
 ../coretoolkit/data/confirmationnote_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/confirmationnote_disappear.fxml
+../coretoolkit/data/contextmenu_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/contextmenu_appear.fxml
+../coretoolkit/data/contextmenu_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/contextmenu_disappear.fxml
 ../coretoolkit/data/dialer_close.fxml /epoc32/release/winscw/urel/z/resource/effects/dialer_close.fxml
+../coretoolkit/data/dialer_list_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/dialer_list_appear.fxml
+../coretoolkit/data/dialer_list_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/dialer_list_disappear.fxml
 ../coretoolkit/data/dialer_open.fxml /epoc32/release/winscw/urel/z/resource/effects/dialer_open.fxml
 ../coretoolkit/data/discreet_popup_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/discreet_popup_appear.fxml
 ../coretoolkit/data/discreet_popup_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/discreet_popup_disappear.fxml
@@ -91,6 +104,12 @@ PRJ_EXPORTS
 ../coretoolkit/data/toolbar_ext_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/toolbar_ext_disappear.fxml
 ../coretoolkit/data/touchinput_close.fxml /epoc32/release/winscw/urel/z/resource/effects/touchinput_close.fxml
 ../coretoolkit/data/touchinput_open.fxml /epoc32/release/winscw/urel/z/resource/effects/touchinput_open.fxml
+../coretoolkit/data/viewswitch_left.fxml /epoc32/release/winscw/urel/z/resource/effects/viewswitch_left.fxml
+../coretoolkit/data/viewswitch_left_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/viewswitch_left_appear.fxml
+../coretoolkit/data/viewswitch_left_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/viewswitch_left_disappear.fxml
+../coretoolkit/data/viewswitch_right.fxml /epoc32/release/winscw/urel/z/resource/effects/viewswitch_right.fxml
+../coretoolkit/data/viewswitch_right_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/viewswitch_right_appear.fxml
+../coretoolkit/data/viewswitch_right_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/viewswitch_right_disappear.fxml
 ../coretoolkit/data/waitnote_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/waitnote_appear.fxml
 ../coretoolkit/data/waitnote_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/waitnote_disappear.fxml
 ../coretoolkit/data/warningnote_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/warningnote_appear.fxml
@@ -98,13 +117,18 @@ PRJ_EXPORTS
 
 // for EMULATOR UDEB
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_add_page.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_bg_appear.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_editmode.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_close_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_widgetmanager.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_close_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_left.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_left.fxml
+../coretoolkit/data/activeidle_viewswitch_left_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_left_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_left_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_left_disappear.fxml
 ../coretoolkit/data/activeidle_viewswitch_open_editmode.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_open_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_open_widgetmanager.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_open_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_remove_page.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_remove_page.fxml
 ../coretoolkit/data/activeidle_viewswitch_right.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_right.fxml
+../coretoolkit/data/activeidle_viewswitch_right_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_right_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_right_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_right_disappear.fxml
 ../coretoolkit/data/app_activate.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_activate.fxml
 ../coretoolkit/data/app_exit.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_exit.fxml
 ../coretoolkit/data/app_start.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_start.fxml
@@ -114,7 +138,11 @@ PRJ_EXPORTS
 ../coretoolkit/data/appshell_exit.fxml /epoc32/release/winscw/udeb/z/resource/effects/appshell_exit.fxml
 ../coretoolkit/data/confirmationnote_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/confirmationnote_appear.fxml
 ../coretoolkit/data/confirmationnote_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/confirmationnote_disappear.fxml
+../coretoolkit/data/contextmenu_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/contextmenu_appear.fxml
+../coretoolkit/data/contextmenu_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/contextmenu_disappear.fxml
 ../coretoolkit/data/dialer_close.fxml /epoc32/release/winscw/udeb/z/resource/effects/dialer_close.fxml
+../coretoolkit/data/dialer_list_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/dialer_list_appear.fxml
+../coretoolkit/data/dialer_list_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/dialer_list_disappear.fxml
 ../coretoolkit/data/dialer_open.fxml /epoc32/release/winscw/udeb/z/resource/effects/dialer_open.fxml
 ../coretoolkit/data/discreet_popup_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/discreet_popup_appear.fxml
 ../coretoolkit/data/discreet_popup_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/discreet_popup_disappear.fxml
@@ -160,6 +188,12 @@ PRJ_EXPORTS
 ../coretoolkit/data/toolbar_ext_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/toolbar_ext_disappear.fxml
 ../coretoolkit/data/touchinput_close.fxml /epoc32/release/winscw/udeb/z/resource/effects/touchinput_close.fxml
 ../coretoolkit/data/touchinput_open.fxml /epoc32/release/winscw/udeb/z/resource/effects/touchinput_open.fxml
+../coretoolkit/data/viewswitch_left.fxml /epoc32/release/winscw/udeb/z/resource/effects/viewswitch_left.fxml
+../coretoolkit/data/viewswitch_left_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/viewswitch_left_appear.fxml
+../coretoolkit/data/viewswitch_left_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/viewswitch_left_disappear.fxml
+../coretoolkit/data/viewswitch_right.fxml /epoc32/release/winscw/udeb/z/resource/effects/viewswitch_right.fxml
+../coretoolkit/data/viewswitch_right_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/viewswitch_right_appear.fxml
+../coretoolkit/data/viewswitch_right_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/viewswitch_right_disappear.fxml
 ../coretoolkit/data/waitnote_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/waitnote_appear.fxml
 ../coretoolkit/data/waitnote_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/waitnote_disappear.fxml
 ../coretoolkit/data/warningnote_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/warningnote_appear.fxml
@@ -167,13 +201,18 @@ PRJ_EXPORTS
 
 // For ROM
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_add_page.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_appear.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_bg_appear.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_editmode.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_close_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_widgetmanager.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_close_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_left.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_left.fxml
+../coretoolkit/data/activeidle_viewswitch_left_appear.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_left_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_left_disappear.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_left_disappear.fxml
 ../coretoolkit/data/activeidle_viewswitch_open_editmode.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_open_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_open_widgetmanager.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_open_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_remove_page.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_remove_page.fxml
 ../coretoolkit/data/activeidle_viewswitch_right.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_right.fxml
+../coretoolkit/data/activeidle_viewswitch_right_appear.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_right_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_right_disappear.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_right_disappear.fxml
 ../coretoolkit/data/app_activate.fxml /epoc32/data/z/resource/effects/app_activate.fxml
 ../coretoolkit/data/app_exit.fxml /epoc32/data/z/resource/effects/app_exit.fxml
 ../coretoolkit/data/app_start.fxml /epoc32/data/z/resource/effects/app_start.fxml
@@ -183,7 +222,11 @@ PRJ_EXPORTS
 ../coretoolkit/data/appshell_exit.fxml /epoc32/data/z/resource/effects/appshell_exit.fxml
 ../coretoolkit/data/confirmationnote_appear.fxml /epoc32/data/z/resource/effects/confirmationnote_appear.fxml
 ../coretoolkit/data/confirmationnote_disappear.fxml /epoc32/data/z/resource/effects/confirmationnote_disappear.fxml
+../coretoolkit/data/contextmenu_appear.fxml /epoc32/data/z/resource/effects/contextmenu_appear.fxml
+../coretoolkit/data/contextmenu_disappear.fxml /epoc32/data/z/resource/effects/contextmenu_disappear.fxml
 ../coretoolkit/data/dialer_close.fxml /epoc32/data/z/resource/effects/dialer_close.fxml
+../coretoolkit/data/dialer_list_appear.fxml /epoc32/data/z/resource/effects/dialer_list_appear.fxml
+../coretoolkit/data/dialer_list_disappear.fxml /epoc32/data/z/resource/effects/dialer_list_disappear.fxml
 ../coretoolkit/data/dialer_open.fxml /epoc32/data/z/resource/effects/dialer_open.fxml
 ../coretoolkit/data/discreet_popup_appear.fxml /epoc32/data/z/resource/effects/discreet_popup_appear.fxml
 ../coretoolkit/data/discreet_popup_disappear.fxml /epoc32/data/z/resource/effects/discreet_popup_disappear.fxml
@@ -229,9 +272,18 @@ PRJ_EXPORTS
 ../coretoolkit/data/toolbar_ext_disappear.fxml /epoc32/data/z/resource/effects/toolbar_ext_disappear.fxml
 ../coretoolkit/data/touchinput_close.fxml /epoc32/data/z/resource/effects/touchinput_close.fxml
 ../coretoolkit/data/touchinput_open.fxml /epoc32/data/z/resource/effects/touchinput_open.fxml
+../coretoolkit/data/viewswitch_left.fxml /epoc32/data/z/resource/effects/viewswitch_left.fxml
+../coretoolkit/data/viewswitch_left_appear.fxml /epoc32/data/z/resource/effects/viewswitch_left_appear.fxml
+../coretoolkit/data/viewswitch_left_disappear.fxml /epoc32/data/z/resource/effects/viewswitch_left_disappear.fxml
+../coretoolkit/data/viewswitch_right.fxml /epoc32/data/z/resource/effects/viewswitch_right.fxml
+../coretoolkit/data/viewswitch_right_appear.fxml /epoc32/data/z/resource/effects/viewswitch_right_appear.fxml
+../coretoolkit/data/viewswitch_right_disappear.fxml /epoc32/data/z/resource/effects/viewswitch_right_disappear.fxml
 ../coretoolkit/data/waitnote_appear.fxml /epoc32/data/z/resource/effects/waitnote_appear.fxml
 ../coretoolkit/data/waitnote_disappear.fxml /epoc32/data/z/resource/effects/waitnote_disappear.fxml
 ../coretoolkit/data/warningnote_appear.fxml /epoc32/data/z/resource/effects/warningnote_appear.fxml
 ../coretoolkit/data/warningnote_disappear.fxml /epoc32/data/z/resource/effects/warningnote_disappear.fxml
 
+
+// Effect definitions are considered as differentiating SW and thus not available for foundation.
+#endif // ifndef ALF_USE_OPENWF_COMPOSITION
 

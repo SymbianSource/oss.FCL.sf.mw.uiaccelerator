@@ -48,12 +48,17 @@ const TInt KFrameOffsetTemplate = 12345678;
 const TInt KCacheChunkMinSize = 50000;
 const TUint8 KDivisibleByX = 8;
 const TInt KWindowFrameHeader1 = 6; // bytes
-const TInt KWindowFrameHeader2 = 18 + 10; // bytes // TP +10 
 
+#ifdef RD_SUBWINDOW_EFFECTS 
+const TInt KWindowFrameHeader2 = 23 + 10; // bytes // TP +10 
+#else
+const TInt KWindowFrameHeader2 = 23;
+#endif
 const TInt KAllRenderersMask = 63;
 const TInt KPossiblePerformanceProblemInWindow = 64;
 const TInt KPossiblePerformanceProblemInWindowThreshold = 1000;
 
+const TInt KFlushBufferTimeout = 50*1000; // 50ms
 
 enum TPatternSearchStates
     {
@@ -442,23 +447,6 @@ void CAlfRsSendBuffer::DoCancel()
     }
 
 // ---------------------------------------------------------------------------
-// WriteFlagsL
-// ---------------------------------------------------------------------------
-//
-void CAlfRsSendBuffer::WriteFlagsL( )
-    {
-    if (iDisabled) // return if this send buffer is not in use
-        {
-        return;
-        }
-    
-    // space has been reserved for us
-    WriteInt8L( EAlfFrameFlags ); 
-    WriteInt32L( iFlags);
-    WriteInt8L( EAlfCommandEndMarker );
-    }
-
-// ---------------------------------------------------------------------------
 // WriteCommandL
 // writes 1 TInt value to the stream
 // ---------------------------------------------------------------------------
@@ -663,6 +651,49 @@ void CAlfRsSendBuffer::WriteRegionL( const TUint8& aCommand, const TRegion& aReg
         WriteInt8L( EAlfCommandEndMarker );
         }
   
+    }
+
+// ---------------------------------------------------------------------------
+// WriteRegionIntsL
+// ---------------------------------------------------------------------------
+//
+void CAlfRsSendBuffer::WriteRegionIntsL( const TUint8& aCommand, const TRegion& aRegion, 
+        TInt aCount, TRefByValue<const TInt> aFirst, ...)
+    {
+    if (iDisabled) // return if this send buffer is not in use
+        {
+        return;
+        }
+    
+    TInt count = aRegion.Count();
+    const TInt size = sizeof(TInt32) * ( 4 * count + 1 + aCount);
+
+    if (! InitCommandL( aCommand, size )){ return;}
+#ifdef _ALF_PRINT_WS_COMMANDS_    
+    iCommandDebugger->SetDescriptionAndSize( aCommand, size, R_ALF_COMMAND_DESCRIPTION_ARRAY );
+    iCommandDebugger->SetRegion( aRegion );
+    iCommandDebugger->Print();
+#endif
+
+	if ( aCount > 0 )
+	    {
+	    aCount--; // first item is serialized separately. It seems to exist at different location as rest of the parameters.
+	    WriteInt32L( aFirst );
+	    WriteL( (TUint8*)&aFirst + sizeof(TInt32), aCount * sizeof(TInt32) );
+	    }
+
+    WriteInt32L( count );
+    TInt i = 0;
+    while( i < count )
+        {
+        WriteL( (TUint8*)&aRegion[i].iTl.iX, 4 * sizeof(TInt32 ));
+        i++;
+        }
+    
+    if ( !iReceivingDrawingCommands )
+        {
+        WriteInt8L( EAlfCommandEndMarker );
+        }    
     }
 
 // ---------------------------------------------------------------------------
@@ -973,6 +1004,7 @@ void CAlfRsSendBuffer::WriteWindowDataL(
     TInt size = sizeof(TUint32) + // windowId
         sizeof(TUint32) + // next frame offset
         3 * sizeof(TUint8) + // command + contains unsupported commands + end marker
+        sizeof(TUint8) + sizeof(TUint32) + // orientation
         sizeof(TUint8) + // screen number ( in WriteFollowingFrameOffsetTemplate)
         sizeof(TUint32) * ( 4 * aRegionSize + 1 ) +  // updateregion 
         sizeof(TUint8) * KDivisibleByX + // possible padding
@@ -1037,12 +1069,19 @@ void CAlfRsSendBuffer::WriteFollowingFrameOffsetTemplateL()
             {
             WriteInt8L( 0 );
 			}
+#ifdef RD_SUBWINDOW_EFFECTS         
         iArrayImplOffset = iOffset;
         InitMarker(iMarker);
+#endif        
 		WriteInt8L( EAlfFrameContainsUnsupportedCommands );
         WriteInt8L( 0 );
+		WriteInt8L( EAlfFrameOrientation );
+		WriteInt32L( iOrientation ); 
+        // These are for subwindow effects, that are not currently enabled
+#ifdef RD_SUBWINDOW_EFFECTS         
         WriteArrayHeaderTemplateL();
         InitTOffsetElemArray(iOffsetArray);
+#endif
         // </HEADER2>
         }
     }
@@ -1057,11 +1096,13 @@ TBool CAlfRsSendBuffer::WriteFollowingFrameOffsetL(TBool aSendArray)
         {
         return ETrue;
         }
+#ifdef RD_SUBWINDOW_EFFECTS  
     TOffsetElem e;
     if (aSendArray)
         {
         e = WriteIndexArrayL(iOffsetArray);
         }
+#endif
     
 #ifdef _OLD_STREAM    
     if ( iBufStream->Sink() )
@@ -1109,10 +1150,14 @@ TBool CAlfRsSendBuffer::WriteFollowingFrameOffsetL(TBool aSendArray)
 			}
         WriteInt8L( EAlfFrameContainsUnsupportedCommands );
 		WriteInt8L( iNonSupportedCommandsInWindow );
+	    WriteInt8L( EAlfFrameOrientation );
+	    WriteInt32L( iOrientation ); 
+#ifdef RD_SUBWINDOW_EFFECTS 
 		if (aSendArray) 
 		    {
 		    WriteArrayHeaderL(e);
 		    }
+#endif
 		/*iWindowHeaderStruct.iWindowEndOffset = previousPos.Offset();
         iWindowHeaderStruct.iUnsupportedCommandsInWindow = iNonSupportedCommandsInWindow;
         iBufStream->WriteL( (TUint8*)&iWindowHeaderStruct, sizeof(TWindowHeaderStruct) );*/
@@ -1134,6 +1179,7 @@ TBool CAlfRsSendBuffer::WriteFollowingFrameOffsetL(TBool aSendArray)
 const TInt KArrayOffsetTemplate = 23456789;
 const TInt KArraySizeTemplate = 23456789;
 
+#ifdef RD_SUBWINDOW_EFFECTS
 void CAlfRsSendBuffer::WriteArrayHeaderTemplateL()
 {
     WriteInt8L( EAlfCommandIndexArrayHeader );
@@ -1246,6 +1292,8 @@ void CAlfRsSendBuffer::EndMarkerL()
     {
     EndMarkerL(iOffsetArray, iMarker, iBoundingRectangle, iLayerId);
     }
+#endif // RD_SUBWINDOW_EFFECTS
+
 // ---------------------------------------------------------------------------
 // SendL
 // sends data syncronously in one or more packets to the streamer server
@@ -1354,15 +1402,17 @@ void CAlfRsSendBuffer::CommitL( )
       if ( !iFlushBufferTimer )
         {
         iFlushBufferTimer = CPeriodic::NewL( EPriorityNormal );
-        iFlushBufferTimer->Start( 5000, 10 * 1000000 , TCallBack( doFlushBuffer, this ));
+        iFlushBufferTimer->Start( KFlushBufferTimeout, 10 * 1000000 , TCallBack( doFlushBuffer, this ));
         }
     if ( !iFlushBufferTimer->IsActive() )
         {
         //__ALFLOGSTRING("CAlfRsSendBuffer::CommitL, activating timer");
-        iFlushBufferTimer->After( 5000 );
+        iFlushBufferTimer->After( KFlushBufferTimeout );
         }
     else
     	{
+        iFlushBufferTimer->Cancel();
+        iFlushBufferTimer->After( KFlushBufferTimeout );
     	//__ALFLOGSTRING("CAlfRsSendBuffer::CommitL, timer already active ");
     	}
     }
@@ -2119,3 +2169,13 @@ void CAlfRsSendBuffer::SeekL( const TInt aOffset )
 #endif    
     iOffset = aOffset;
     }
+
+// ---------------------------------------------------------------------------
+// SetOrientation
+// ---------------------------------------------------------------------------
+//
+void CAlfRsSendBuffer::SetOrientation(TInt aOrientation)
+    {
+    iOrientation = aOrientation;
+    }
+      
