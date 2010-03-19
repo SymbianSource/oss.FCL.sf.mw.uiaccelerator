@@ -70,9 +70,16 @@ void CAlfHierarchyModel::ConstructL()
         {
         iServer.Bridge()->SetBatchObserver(this);
         }                
-#ifdef ALF_DEBUG_TRACK_DRAWING 
+    #ifdef ALF_DEBUG_TRACK_DRAWING 
     iCommandDebugger = CAlfCommandDebug::NewL();
-#endif
+    #endif
+
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // Initiliaze global data in TLS and Open global module testing chunk and mutex
+    User::LeaveIfError(Dll::SetTls(new(ELeave) CAlfModuleTestDataControl()));
+    User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects());
+    #endif
+    
 	}
 
 // ---------------------------------------------------------------------------
@@ -131,6 +138,11 @@ CAlfHierarchyModel::~CAlfHierarchyModel()
     iChunk.Close();
 #ifdef ALF_DEBUG_TRACK_DRAWING 
     delete iCommandDebugger;
+#endif
+    
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    delete AMT_CONTROL();
+    Dll::FreeTls();
 #endif
     }
 
@@ -233,6 +245,13 @@ void CAlfHierarchyModel::HandleMessageL( const RMessage2& aMessage )
 			aMessage.Complete( EAlfBridgerSendChunk );
             return;
             }
+        case EAlfSynchronize:
+            {
+            iServer.Bridge()->AddData( EAlfDSSynchronize, aMessage.Int0() );
+            aMessage.Complete( KErrNone );
+            }
+            break;
+            
         default:
             {
             doComplete= ETrue;
@@ -768,6 +787,10 @@ void CAlfHierarchyModel::DoNodeCreatedL()
         //CAlfNode::PrintInfo( 0, (CAlfNodeVisual*)node, TPtrC(KText) , iSearchNode);
         }
 #endif
+
+    AMT_INC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeCount ); 
+    AMT_INC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeGroup),  iWindowGroupNodeCount ); 
+    AMT_INC_COUNTER_IF(node, iTotalNodeCount );         
     }
 
 // ---------------------------------------------------------------------------
@@ -797,6 +820,10 @@ void CAlfHierarchyModel::DoNodeReleasedL()
         {
         USER_INVARIANT();
         }
+
+    AMT_DEC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeCount ); 
+    AMT_DEC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeGroup),  iWindowGroupNodeCount ); 
+    AMT_DEC_COUNTER_IF(node, iTotalNodeCount );     
     }
 
 // ---------------------------------------------------------------------------
@@ -816,6 +843,8 @@ void CAlfHierarchyModel::DoNodeActivatedL()
         {
         USER_INVARIANT();
         }
+    
+    AMT_INC_COUNTER_IF( node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeActivatedCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -846,6 +875,8 @@ void CAlfHierarchyModel::DoNodeExtentChangedL()
         }
 #endif
 
+    AMT_INC_COUNTER_IF(node, iNodeExtentChangedCount );
+    AMT_SET_VALUE_IF(node, iLatestNodeExtentRect, rect );        
     }
 
 // ---------------------------------------------------------------------------
@@ -860,7 +891,11 @@ void CAlfHierarchyModel::DoNodeSiblingOrderChangedL()
     CAlfNode* node = FindNode( nodeId );
     if ( node )
         {
+        AMT_SET_VALUE(iAST_Temp1, node->OrdinalPosition());
+        
         node->SiblingOrderChanged( newPos );
+        
+        AMT_SET_VALUE(iOrdinalChange, node->OrdinalPosition() - AMT_DATA()->iAST_Temp1);
         }
     else
         {
@@ -901,6 +936,8 @@ void CAlfHierarchyModel::DoNodeFlagChangedL()
         {
         USER_INVARIANT();
         }
+
+    AMT_INC_COUNTER_IF(node, iTotalNodeFlagChangedCount );    
     }
 
 // ---------------------------------------------------------------------------
@@ -978,11 +1015,16 @@ void CAlfHierarchyModel::DoNodeLayerExtentChangedL()
     TUint32 nodeId = (TUint32)iStream->ReadUint32L();
     TRect extent = TRect(0,0,0,0);
     ReadRectL(extent, iStream); 
+    TBool isDSA = (TUint32)iStream->ReadUint32L();
     CAlfNodeVisual* node = (CAlfNodeVisual*)FindNode( nodeId );
     if ( node && node->Window() )
         {
         // SetSurfaceExtent is not supported for image visual
         node->Window()->SetSurfaceExtent( extent );
+        if (isDSA)
+            {
+            node->Window()->SetLayerUsesAplhaFlag(KWindowIsDSAHost);
+            }
         }
     else if( node ) // this would mean that node has being orphaneded but not yet deleted
         {
@@ -1082,6 +1124,8 @@ void CAlfHierarchyModel::DoNodeAttributeChangedL()
         {
         USER_INVARIANT(); // attribute change for unexpected node type. new code needed!
         }
+
+    AMT_INC_COUNTER_IF(node, iTotalNodeAttributeChangedCount );    
     }
 // ---------------------------------------------------------------------------
 // DoNodeWindowGroupChainBrokenAfterL

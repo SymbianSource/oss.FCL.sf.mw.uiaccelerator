@@ -79,6 +79,10 @@ public: // effect cache
     virtual TBool IsSemitransparent() const;
     
     virtual void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray) { }
+    
+    TBool AlwaysReadSurfacePixels() const;
+    virtual void SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels);
+    
 protected:
     IMPORT_C CHuiFxLayer();
     IMPORT_C void ConstructL( THuiFxLayerType aType );
@@ -95,6 +99,7 @@ private:
     TBool               iAnimated;
     TBool               iTransformed;
     TBool               iMarginEnabled;
+    TBool               iAlwaysReadSurfacePixels;
     };
 
 #endif /*HUIFXLAYER_*/

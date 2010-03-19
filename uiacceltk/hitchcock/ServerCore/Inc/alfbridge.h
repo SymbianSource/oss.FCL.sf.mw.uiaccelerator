@@ -22,6 +22,9 @@
 
 #include <e32hashtab.h>
 
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h" 
+
 #include "alfscreen.h"
 #include "alfstreamerbridge.h"
 #include "alfdecoderserverclient.h"
@@ -29,6 +32,7 @@
 #include <alf/alfconstants.h>
 
 #include "HuiFxEffect.h"
+#include "huisynchronizationobserver.h"
 #include <alf/AlfTransEffectPlugin.h>
 #include <uiacceltk/HuiDisplay.h>
 
@@ -36,7 +40,10 @@ class CAlfEffectEndTimer;
 class CAlfCommandDebug;
 class CAlfLayoutSwitchEffectCoordinator;
 class RMemReadStream;
-
+class CHuiCanvasVisual;
+class CFullScreenEffectState;
+class CControlEffectState;
+    
 const TInt KAlfBridgeRegionGranularity = 10;
 
 NONSHARABLE_CLASS(CAlfBridge): 
@@ -45,7 +52,7 @@ NONSHARABLE_CLASS(CAlfBridge):
     public MHuiDisplayRefreshObserver, 
     public MHuiBitmapProvider,
     public MAlfGfxEffectObserver,
-    public MHuiRosterObserver
+    public MHuiSynchronizationObserver
     {
 	// Helper class for keeping ongoing effects in order. Kept in iEffectCleanupStack
     private:
@@ -187,7 +194,6 @@ public:
     void HandleGfxStopEvent( TBool aClientRequest );
     
     void EnableSwRenderingL(TBool aEnable = ETrue);
-    void UploadSwRenderingTargetL( CAlfScreen* aScreen );
     TBool PrepareSwRenderingTarget( CAlfScreen* aScreen );
 
     /**
@@ -219,16 +225,29 @@ public:
      * Cancels all effects due to low memory.
      */
     void LowMemoryCancelAllEffects();
+
+    /**
+      * Sets HuiControlGroup as Alf application window group
+      */
+    void SetWindowGroupAsAlfApp(TInt aId);
     
-    // From MHuiRosterObserver
-    void NotifyRosterDrawStart(CHuiDisplay& aDisplay);
-    void NotifyRosterDrawEnd(CHuiDisplay& aDisplay);
+    // From MHuiSynchronizationObserver
+    void Synchronized(TInt aId);
     
+    /*
+     * HandleGfxEndFullScreenTimeout
+     * 
+     * GfxTransEffect API gives EndFullScreen events too late. Thus there is a two stage process for triggering 
+     * the EndFullScreen effect after BeginFullScreen event arrived.
+     * 
+     * For application start effects we give N milliseconds timeout for application to finish drawing after
+     * the first drawing has arrived. If after N milliseconds application has not drawn 75% of the screen, it
+     * gets another N milliseconds. Most cases, the first N milliseconds is enough.
+     */
+    void HandleGfxEndFullScreenTimeout(CFullScreenEffectState* aFullScreenEffectData);
+        
 private:    
     
-    class CFullScreenEffectState;
-    
-    class CControlEffectState;
     
     CAlfBridge( CAlfStreamerBridge** aHost );
     
@@ -280,6 +299,23 @@ private:
      * Handles begin and end fullscreen events
      */
     TBool HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aToLayout, CHuiLayout *aFromLayout);
+    
+    
+    /*
+     * ResolveAfterEffectAppearingApplicationL
+     * 
+     * In case of an exit effect the appearing application is not notifed to alf
+     * by the GfxTransEffect API. In such case it is being resolved from Roster by
+     * taking the application directly under the application that is being moved
+     * to the background (when called by HandleReorderWindow) or being destroyed
+     * (called by DeleteControlGroupL).
+     * 
+     * In some situation Alf may end up with wrong appearing application uid. In such
+     * case the worst that can happen, is that we must wait the frameworks
+     * EndFullScreen event to arrive.
+     */
+    void ResolveAfterEffectAppearingApplicationL(CHuiControlGroup* aGroup);
+
     
 	/**
 	*	FreezeLayoutUntilEffectDestroyedL
@@ -384,10 +420,26 @@ private:
      */
     CHuiLayout* FindLayoutByEffectHandle(TInt aHandle);
     
-    /*
+    /**
      * HasActiveEffect
+	 *
+	 *	Note. The visual might not have effect, but it is child for visual that has effect. 
+	 *	In both cases, this method returns ETrue. Otherwise EFalse.
+	 *
+	 *	@param	aVisual	Visual to be checked for effect participation.
      */
     TBool HasActiveEffect(CHuiVisual* aVisual);
+
+    /**
+     * HasActiveEffect
+	 *
+	 *	Note. The visual might not have effect, but it is child for visual that has effect. 
+	 *	In both cases, this method returns ETrue. Otherwise EFalse.
+	 *
+	 *	@param	aVisual	Visual to be checked for effect participation.
+	 *	@param  aIndex	Index of the effect item in iEffectCleanupStack, if found. Otherwise KErrNotFound
+     */    
+    TBool HasActiveEffect(CHuiVisual* aVisual, TInt& aIndex);
     
    /*
 	*	FindEffectHandle
@@ -627,6 +679,7 @@ private:
             CHuiControlGroup& aGroup);
     
     void VisualizeControlGroupOrderL(
+            CAlfScreen& aScreen,
             CHuiRoster& aRoster, 
             CHuiControlGroup& aGroup);
     
@@ -638,17 +691,18 @@ private:
     TBool LoadFadeEffectsL( CHuiCanvasVisual& aVisual );        
 
     // Fading related utility methods
-    static TBool CanFadeChildren( CHuiCanvasVisual& aParent );
-    static TInt RecursiveChildCount( CHuiCanvasVisual& aParent, TInt aCanvasFlags );
-    static TBool IsFadedByParent( CHuiCanvasVisual& aVisual );
-    static TBool IsNearestParentEffectFade( CHuiCanvasVisual& aVisual );
-    static TBool HasActivePaintedAreas( CHuiCanvasVisual& aVisual, TBool aIncludeChildren );
-    static TBool HasActiveFadedChildren( CHuiCanvasVisual& aVisual );
+    TBool CanFadeChildren( CHuiCanvasVisual& aParent );
+    TInt RecursiveChildCount( CHuiCanvasVisual& aParent, TInt aCanvasFlags );
+    TBool IsFadedByParent( CHuiCanvasVisual& aVisual );
+    TBool IsNearestParentEffectFade( CHuiCanvasVisual& aVisual );
+    TBool HasActivePaintedAreas( CHuiCanvasVisual& aVisual, TBool aIncludeChildren );
+    TBool HasActiveFadedChildren( CHuiCanvasVisual& aVisual );
 
 private:
 
     RPointerArray<CAlfScreen> iAlfScreens;
     void SetCursorTimerL(TUint aTime = 0, CHuiVisual* aCursor = 0);
+    TBool IsAlfOriginatedWindow(CHuiCanvasVisual& aVisual);
 
 NONSHARABLE_CLASS ( TDeadControlGroup )
     {
@@ -715,84 +769,11 @@ public:
     // with visuals in iFullscreenEffectControlGroup
     RArray<TEffectCleanupStruct> iEffectCleanupStack;
     
-    // Effects that have finished by their own, or framework requested to end them
-    RArray<TInt> iFinishedEffects;
-    
     // Same as iEffectCleanupStack, but only the ones that can be now cleaned away.
     // See method RemoveTemporaryPresenterVisuals.
     RArray<TInt> iFinishedCleanupStackEffects;
     
-	// Effects states are used for effects request that arrive before the effected 
-	// window has been created. This is very common with fullscreen effects and 
-	// occational with control effects.
-	//
-	// NOTE: control effects support currently only one "delayed" effect. This is propably
-	// not sufficient for all sitations.
-    NONSHARABLE_CLASS(CEffectState) : public CBase
-        {
-    public:    
-        
-        CEffectState();
-         ~CEffectState();
-         
-    protected:
-	   /**
-		* ResolveFileNameL
-		*
-		* Reads filename from stream and composes it to iEffectName variable.
-		*/
-         void ResolveFileNameL(RMemReadStream& aStream);
-         
-    public:
-         
-         TInt iAction;
-         TInt iHandle;
-            
-         HBufC* iEffectName;
-         // Handle using which client should be informed of completion.
-         TInt iCompletionHandle;
-         // State information
-         TInt iOperation;
-         
-        };
-    
-    NONSHARABLE_CLASS( CControlEffectState ) : public CEffectState
-        {
-    public:
-
-        TUint32 iClientHandle;
-        TUint32 iClientGroupHandle;
-    
-        void ConstructL(TInt aAction, RMemReadStream& aStream);
-        };
-
-    NONSHARABLE_CLASS( CFullScreenEffectState ) : public CEffectState
-        {
-    public:
-       // CFullScreenEffectState();
-       // ~CFullScreenEffectState();
-        
-        void ConstructL(TInt aAction, RMemReadStream& aStream);
-
-        // Information from BeginFullScreen
-        TInt iType;
-        TInt iWg1;
-        TInt iWg2;
-        TInt iToAppId;
-        TInt iFromAppId;
-        TRect iRect;
-        
-        // ETrue if waiting for window group to appear
-        TBool iWaitingWindowGroup;
-        // ETrue if end fullscreen has been performed
-        TBool iEndFullScreen;
-        // ETrue if setup effect container has been done
-        TBool iSetupDone;
-
-        // used for resolving the iCleanupStackItem that holds the frozen app layout underneath the starting application
-        TInt iAppStartScreenshotItemHandle;
-        };
-
+	
     /**
      * Full screen effect state.
      * Own.
@@ -846,6 +827,7 @@ public:
         };
     
     RHashMap<TUint32,THashVisualStruct> iWindowHashArray;
+    CHuiControl* iOrphanStorage; // owned. holds the visuals which are orphaned from their control group
     class TRegisteredEffectsStruct
         {
     public:
@@ -896,6 +878,15 @@ private:
     TBool iForcedSwRendering;
     TBool iLowMemoryMode;
     THuiMemoryLevel iCurrentMemoryLevel;
+    
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    TInt iTempTotalActiveVisualCount;
+    TInt iTempTotalPassiveVisualCount;
+    #endif
+    #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
+    TInt activevisualcount;
+    TInt passivevisualcount;
+    #endif
     };    
 
 #endif // __ALF_BRIDGE_H__

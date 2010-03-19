@@ -46,6 +46,9 @@
 
 #include "HuiFxEffect.h"
 #include "HuiCmdBufferBrush.h"
+#include "huiextension.h"
+
+#include "huiwscanvascommands.h"
 
 /** Flag to convienintly disable/enable canvas render buffer usage if needed */
 /* Turned to EFalse as DFS77 was having booting problems in wk26 */
@@ -93,7 +96,9 @@ CHuiCanvasVisual::CHuiCanvasVisual(MHuiVisualOwner& aOwner)
 void CHuiCanvasVisual::ConstructL()
     {
     CHuiLayout::ConstructL();
-        
+
+    SetFlags(EHuiVisualFlagWserv);
+    
     iCanvasVisualData = new (ELeave) THuiCanvasVisualData;
     iCanvasVisualData->iCommandSetType = ECommandBufferWs;
     iCanvasVisualData->iCanvasFlags = 0;   
@@ -101,13 +106,13 @@ void CHuiCanvasVisual::ConstructL()
     iCanvasVisualData->iParentCanvas = NULL;
     iCanvasVisualData->iBackground = NULL;
     iCanvasVisualData->iCanvasPainter = NULL;
+    iCanvasVisualData->iStoredRenderBuffer = 0;
     
     iCanvasVisualData->iBackground = CHuiCanvasBackground::NewL();
     iCanvasVisualData->iBackground->SetVisual(this);
     
     iCanvasVisualData->iCanvasPainter = CHuiCanvasWsPainter::NewL();
     iCanvasVisualData->iCanvasPainter->SetVisual(this);
-    iCanvasVisualData->iStoredRenderBuffer = 0;
     
     TBool useCanvasRenderBuffer = CHuiStatic::Renderer().Allows(EHuiRenderPluginAllowVisualPBufferSurfaces);    
     iCanvasVisualData->iCanvasPainter->EnableRenderBuffer(useCanvasRenderBuffer); 
@@ -116,26 +121,34 @@ void CHuiCanvasVisual::ConstructL()
     iCanvasVisualData->iLayerExtent = TRect();
     
     // subwindow effects
-    EnableBrushesL(ETrue);
+    //EnableBrushesL(ETrue);
     }
 
 
 CHuiCanvasVisual::~CHuiCanvasVisual()
     {
-    FreeRenderBuffer();
-    if(iCanvasVisualData->iExternalContentVisual)
-    	{
-    	// Allow the external content visual to be drawn normally
-    	iCanvasVisualData->iExternalContentVisual->ClearFlag(EHuiVisualFlagDrawOnlyAsExternalContent);
-    	}
-    	
+   
+    FreeRenderBuffer();	
     if (iCanvasVisualData)
         {
+        if(iCanvasVisualData->iExternalContentVisual)
+            {
+            // Allow the external content visual to be drawn normally
+            iCanvasVisualData->iExternalContentVisual->ClearFlag(EHuiVisualFlagDrawOnlyAsExternalContent);
+            }
         ClearCommandSet();
-        delete iCanvasVisualData->iBackground;
-        iCanvasVisualData->iBackground = NULL;
-        delete iCanvasVisualData->iCanvasPainter;
-    	iCanvasVisualData->iCanvasPainter = NULL;
+        if ( iCanvasVisualData->iBackground )
+            {
+            delete iCanvasVisualData->iBackground;
+            iCanvasVisualData->iBackground = NULL;
+            }
+        if ( iCanvasVisualData->iCanvasPainter )
+            {
+            delete iCanvasVisualData->iCanvasPainter;
+            iCanvasVisualData->iCanvasPainter = NULL;
+            }
+        
+    	
     	iCanvasVisualData->iExternalContentVisual = NULL;
     	
     	// Tell parent that we are destructed
@@ -299,6 +312,31 @@ TBool CHuiCanvasVisual::PrepareDrawL()
     }
     
     
+TBool CHuiCanvasVisual::CanSkipDrawing() const
+    {
+    TBool semiTranparentEffectActive = (Effect() && Effect()->IsSemitransparent());
+    TBool childWindowEffectActive = (Effect() && EffectIsAppliedToChildren());
+    TBool invisible = (iOpacity.Now() <= EPSILON && !semiTranparentEffectActive);
+    TBool effectAppliedToSurfacePixels = (Effect() && (Effect()->EffectFlags() & KHuiFxEnableBackgroundInAllLayers));
+    
+    if( invisible || 
+        (!HasCommandBuffers(ETrue /*include children*/) && 
+         !childWindowEffectActive &&
+         !IsBackgroundDrawingEnabled() && 
+         !IsExternalContentDrawingEnabled()&&
+         !IsExternalContentDrawingEnabled(ETrue /*include children*/) &&
+         !effectAppliedToSurfacePixels
+         
+        ))
+        {
+        return ETrue;
+        }
+    else
+        {
+        return EFalse;
+        }
+    }
+
 void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
     {
     if (Flags() & EHuiVisualFlagDrawOnlyAsExternalContent)
@@ -311,35 +349,25 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
     		}
     	}
     
-    TBool semiTranparentEffectActive = (Effect() && Effect()->IsSemitransparent());
-    TBool childWindowEffectActive = (Effect() && EffectIsAppliedToChildren());
-    TBool invisible = (iOpacity.Now() <= EPSILON && !semiTranparentEffectActive);
-    
-    if( invisible || 
-        (!HasCommandBuffers(ETrue /*include children*/) && 
-         !childWindowEffectActive &&
-         !IsBackgroundDrawingEnabled() && 
-         !IsExternalContentDrawingEnabled()&&
-         !IsExternalContentDrawingEnabled(ETrue /*include children*/)
-         
-        ))
+    // Optimization
+    if (CanSkipDrawing())
         {
-        // This will not be visible due to being completely transparent, or the visual does not actually draw anything
-    
-        // However, the draw should continue, if the effect is possibly manipulating the opacity of the visual. See CHuiFxVisualLayer::Draw.
         return;
         }
 
     if ((IsDelayedEffectSource() || Freezed()))
         {
+        // Select right draw mode
+        THuiCanvasDrawMode drawMode = (Flags() & EHuiVisualFlagOpaqueHint) ? EHuiCanvasDrawModeNormal : EHuiCanvasDrawModeBlend;
+
         if (StoredRenderBuffer())
             {
-            DrawStoredFullScreenRenderBuffer(aGc);
+            DrawStoredFullScreenRenderBuffer(drawMode, aGc);
             return;
             }
         else if (iCanvasVisualData->iStoredRenderBuffer)
             {
-            DrawStoredVisualRenderBuffer();
+            DrawStoredVisualRenderBuffer(drawMode);
             return;
 			}
         }  
@@ -383,26 +411,25 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
         TBool transparent = EFalse; 
         transparent |= (!(Flags() & EHuiVisualFlagOpaqueHint)); // Does not have opaque hint -> always transparent
         transparent |= iOpacity.Now() < 1.0f; // Opacity less than 1.0f -> always transparent
-        
+                
         TBool refreshCache = EFalse;        
         if (EffectIsAppliedToChildren())
             {
             refreshCache |= ChildTreeChanged(EHuiCanvasFlagExcludeFromParentEffect);
+
+            iCanvasVisualData->iPaintedRegion.Clear();
+            CollectRecursivePaintedRegion(iCanvasVisualData->iPaintedRegion, EHuiCanvasFlagExcludeFromParentEffect);
             }
         else
             {
-            refreshCache |= Changed();
-            }
-        
-        // TODO: We could update this somewhere else, not here everytime
-        iCanvasVisualData->iPaintedRegion.Clear();
-        TInt paintedAreaCount = PaintedAreaCount();  
-        for (TInt i=0; i<paintedAreaCount; i++ )
-            {
-            iCanvasVisualData->iPaintedRegion.AddRect( CanvasPaintedArea(i).iPaintedRect.Round() );
+            refreshCache |= Changed();            
+
+            iCanvasVisualData->iPaintedRegion.Clear();
+            CollectPaintedRegion(iCanvasVisualData->iPaintedRegion, 0);
             }
         
         didDrawEffect = Effect()->CachedDraw(aGc, area, refreshCache, !transparent, iCanvasVisualData->iPaintedRegion);
+        
         }
     
     if ( !didDrawEffect )
@@ -490,16 +517,19 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
             }
         }
 
-    if ((IsDelayedEffectSource() || Freezed()))
+    if (IsContentDrawingEnabled() && (IsDelayedEffectSource() || Freezed()))
         {
+        // Select right draw mode
+        THuiCanvasDrawMode drawMode = (Flags() & EHuiVisualFlagOpaqueHint) ? EHuiCanvasDrawModeNormal : EHuiCanvasDrawModeBlend;
+        
         if (StoredRenderBuffer())
             {
-            DrawStoredFullScreenRenderBuffer(aGc);
+            DrawStoredFullScreenRenderBuffer(drawMode, aGc);
 			return;
             }
         else if (iCanvasVisualData->iStoredRenderBuffer)
             {
-            DrawStoredVisualRenderBuffer();
+            DrawStoredVisualRenderBuffer(drawMode);
             return;
             }
         }    
@@ -590,20 +620,26 @@ void CHuiCanvasVisual::DrawCanvasChildren(CHuiGc& aGc, TInt aIncludeCanvasFlags,
     const TInt count = Count();
     for(TInt i = 0; i < count; ++i)
         {
-        // This cast is not really safe, but dynamic cast is slow
-        CHuiCanvasVisual* visual = (CHuiCanvasVisual*) iHuiLayoutPrivateData->iChildren[i];
+        CHuiVisual* visual = iHuiLayoutPrivateData->iChildren[i];
+        
         //Ignore inactive child visuals
         if ((visual->Flags()& EHuiVisualFlagInactive))
             {
             continue;
             }
         
-        if (aIncludeCanvasFlags && !(visual->CanvasFlags()& aIncludeCanvasFlags))
+        TInt canvasFlags = 0;
+        if (aIncludeCanvasFlags || aExcludeCanvasFlags)
+            {
+            canvasFlags = visual->QueryCanvasFlags();
+            }
+        
+        if (aIncludeCanvasFlags && !(canvasFlags & aIncludeCanvasFlags))
             {
             continue;
             }
 
-        if (aExcludeCanvasFlags && (visual->CanvasFlags()& aExcludeCanvasFlags))
+        if (aExcludeCanvasFlags && (canvasFlags & aExcludeCanvasFlags))
             {
             continue;
             }
@@ -649,34 +685,50 @@ TBool CHuiCanvasVisual::Changed() const
    	return hasChanged;
     }
 
-TBool CHuiCanvasVisual::ChildTreeChanged(TInt aExcludeCanvasFlags) const
+// Goes through visual hierarchy and checks if any visual has changed.
+// This method does not modify any visuals. Parameter is not const 
+// because of CanvasVisual method.
+TBool CHuiCanvasVisual::RecursiveChildTreeChanged(CHuiVisual* aVisual, TInt aExcludeCanvasFlags)
     {
-    // CHuiLayout::Changed() does not check children.  
-    // This utility method checks whole child tree below this visual.
     TBool changed = EFalse;
 
     // Check wheter we should include this visual or igonre it.
     if (aExcludeCanvasFlags)
         {
-        if (!(iCanvasVisualData->iCanvasFlags & aExcludeCanvasFlags))
+        if ( !(aVisual->Flags() & EHuiVisualFlagInactive) )
             {
-            changed |= Changed();
+            TInt canvasFlags = aVisual->QueryCanvasFlags();
+                
+            if ( !(canvasFlags & aExcludeCanvasFlags) )
+                {
+                changed |= aVisual->Changed();
+                }
             }        
         }
     
-    const TInt count = Count();
-    for(TInt i = 0; i < count; ++i)
+    if ( !changed )
         {
-        CHuiCanvasVisual* visual = (CHuiCanvasVisual*) iHuiLayoutPrivateData->iChildren[i];
-        changed |= visual->ChildTreeChanged(aExcludeCanvasFlags);        
-        if (changed)
+        const TInt count = aVisual->Count();
+        for(TInt i = 0; i < count; ++i)
             {
-            break;
+            CHuiVisual* visual = &aVisual->Visual(i);
+            changed |= RecursiveChildTreeChanged( visual, aExcludeCanvasFlags );
+            if ( changed )
+                {
+                break;
+                }
             }
         }
-    return changed;
+    return changed;    
     }
 
+TBool CHuiCanvasVisual::ChildTreeChanged(TInt aExcludeCanvasFlags) const
+    {
+    // CHuiLayout::Changed() does not check children.  
+    // This utility method checks whole child tree below this visual.
+    return RecursiveChildTreeChanged(
+        const_cast<CHuiCanvasVisual*>(this), aExcludeCanvasFlags);
+    }
 
 EXPORT_C void CHuiCanvasVisual::ClearChanged()
     {
@@ -747,8 +799,11 @@ EXPORT_C void CHuiCanvasVisual::SetCommandType( TInt aCommandType )
 
 EXPORT_C void CHuiCanvasVisual::ClearCommandSet()
     {
-    iCanvasVisualData->iCanvasPainter->ClearCommandSet();
-    SetChanged();
+    if ( iCanvasVisualData->iCanvasPainter )
+        {
+        iCanvasVisualData->iCanvasPainter->ClearCommandSet();
+        SetChanged();
+        }
     }
 
 #ifdef HUI_DEBUG_TRACK_DRAWING  
@@ -815,6 +870,7 @@ void CHuiCanvasVisual::SetCommandTypeL(TInt aCommandType)
     
    	if (aCommandType == ECommandBufferAlf)
    	   	{
+   	   	ClearFlags(EHuiVisualFlagWserv);
    	   	delete iCanvasVisualData->iCanvasPainter;
    	   	iCanvasVisualData->iCanvasPainter = NULL;
         iCanvasVisualData->iCommandSetType = ECommandBufferAlf;    
@@ -823,6 +879,7 @@ void CHuiCanvasVisual::SetCommandTypeL(TInt aCommandType)
    		}	     
     else if (aCommandType == ECommandBufferWs)
     	{
+    	SetFlags(EHuiVisualFlagWserv);
     	delete iCanvasVisualData->iCanvasPainter;
    	   	iCanvasVisualData->iCanvasPainter = NULL;
         iCanvasVisualData->iCommandSetType = ECommandBufferWs;    
@@ -983,6 +1040,31 @@ TBool CHuiCanvasVisual::IsContentDrawingEnabled() const
     return drawContent;       
     }
 
+// Goes through visual hierarchy and checks if any visual has external content drawing enabled.
+TBool CHuiCanvasVisual::RecursiveIsExternalContentDrawingEnabled(CHuiVisual* aVisual)
+    {
+    TBool drawExternalContent = EFalse;
+    
+    const TInt count = aVisual->Count();
+    for(TInt i = 0; i < count; ++i)
+        {
+        CHuiVisual* visual = &aVisual->Visual(i);
+        drawExternalContent |= visual->QueryExternalContentDrawingEnabled();
+        if ( drawExternalContent )
+            {
+            break;
+            }
+        
+        drawExternalContent |= RecursiveIsExternalContentDrawingEnabled( visual );
+        if ( drawExternalContent )
+            {
+            break;
+            }
+        }
+    
+    return drawExternalContent;    
+    }
+
 TBool CHuiCanvasVisual::IsExternalContentDrawingEnabled(TBool aIncludeChildren) const
     {
     TBool drawExternalContent = EFalse;
@@ -990,13 +1072,10 @@ TBool CHuiCanvasVisual::IsExternalContentDrawingEnabled(TBool aIncludeChildren) 
         {
         drawExternalContent = ETrue;    
         }
-    if (aIncludeChildren)
+    if (aIncludeChildren && !drawExternalContent)
         {
-        for (TInt i=0; !drawExternalContent && i<Count(); i++)
-             {
-             CHuiCanvasVisual* canvasVisual = (CHuiCanvasVisual*) &Visual(i);
-             drawExternalContent |= canvasVisual->IsExternalContentDrawingEnabled(ETrue);
-             }
+        drawExternalContent |= RecursiveIsExternalContentDrawingEnabled(
+            const_cast<CHuiCanvasVisual*>(this));        
         }
     return drawExternalContent;       
     }
@@ -1055,6 +1134,12 @@ EXPORT_C TBool CHuiCanvasVisual::LayerUsesAlphaFlag()
 
 EXPORT_C void CHuiCanvasVisual::SetLayerUsesAlphaFlag(TBool aEnabled)
     {
+    if (aEnabled == KWindowIsDSAHost)
+        {
+        iCanvasVisualData->iCanvasFlags |= EHuiCanvasFlagDisableCanvasContent;        
+        ClearCommandSet();
+        return;    
+        }    
     iCanvasVisualData->iLayerUsesAlphaFlag = aEnabled;
     }
 
@@ -1118,7 +1203,8 @@ EXPORT_C void CHuiCanvasVisual::SetLayerExtent(TRect& aExtent)
         }
     else // background surface was removed
         {
-        EnableTransformationL(EFalse);
+        iCanvasVisualData->iCanvasFlags &= (~EHuiCanvasFlagDisableCanvasContent);    
+        //EnableTransformationL(EFalse);
         }
     }
 
@@ -1154,17 +1240,39 @@ EXPORT_C void CHuiCanvasVisual::StoreRenderBufferL()
         }
     }
 
-void CHuiCanvasVisual::DrawStoredVisualRenderBuffer() const
+void CHuiCanvasVisual::DrawStoredVisualRenderBuffer(TInt aCanvasDrawMode) const
     {
     CHuiCanvasGc& gc = CanvasGc();
+    CHuiCanvasVisual* visual = NULL; 
+    TBool transparent = EffectiveOpacity() < 1.0f;
+    gc.SetDrawMode((THuiCanvasDrawMode)aCanvasDrawMode);
+    if (transparent)
+        {
+        gc.EnableEffectiveOpacity(ETrue);  
+        visual = gc.Visual();
+        gc.SetVisual(*this);
+        gc.SetDrawMode(EHuiCanvasDrawModeBlend);
+        }
     THuiRealPoint dest_point = DisplayRect().iTl;
     CHuiCanvasRenderBuffer *stored = iCanvasVisualData->iStoredRenderBuffer;
+
     gc.DrawImage(*stored, dest_point);
+    if (transparent)
+        {
+        gc.SetVisual(*visual);
+        gc.EnableEffectiveOpacity(EFalse);
+        }
     }
 
-void CHuiCanvasVisual::DrawStoredFullScreenRenderBuffer(CHuiGc& aGc) const
+void CHuiCanvasVisual::DrawStoredFullScreenRenderBuffer(TInt aCanvasDrawMode, CHuiGc& aGc) const
     {
     if (!Display()) return;
+    if (!iHuiLayoutPrivateData->iGc)
+        {
+        CHuiRenderPlugin& renderplugin = CHuiStatic::Renderer();
+		// deleted in CHuiLayout destructor or CHuiCanvasVisual::FreeRenderBuffer when not needed anymore
+        iHuiLayoutPrivateData->iGc = renderplugin.CreateCanvasGcL();
+        }
     CHuiCanvasGc& gc = *iHuiLayoutPrivateData->iGc;
     gc.SetGc(aGc);
     gc.SetDefaults();
@@ -1182,8 +1290,23 @@ void CHuiCanvasVisual::DrawStoredFullScreenRenderBuffer(CHuiGc& aGc) const
     
     THuiRealPoint dest_point = DisplayRect().iTl;
     CHuiCanvasRenderBuffer *stored = StoredRenderBuffer();
-    gc.DrawImage(*stored, dest_point); 
-
+    TBool transparent = EffectiveOpacity() < 1.0f;
+    CHuiCanvasVisual* visual = NULL; 
+	gc.SetDrawMode((THuiCanvasDrawMode)aCanvasDrawMode);
+    if (transparent)
+        {
+        
+        gc.EnableEffectiveOpacity(ETrue);  
+        visual = gc.Visual();
+        gc.SetVisual(*this);
+        gc.SetDrawMode(EHuiCanvasDrawModeBlend);
+        }
+    gc.DrawImage(*stored, dest_point);
+    if (transparent)
+        {
+        gc.SetVisual(*visual);
+        gc.EnableEffectiveOpacity(EFalse);
+        }
     gc.PopTransformationMatrix();
     }
 
@@ -1195,24 +1318,47 @@ EXPORT_C void CHuiCanvasVisual::FreeRenderBuffer()
             {
             delete iCanvasVisualData->iStoredRenderBuffer;
             iCanvasVisualData->iStoredRenderBuffer = NULL;
+            delete iHuiLayoutPrivateData->iGc;
+            iHuiLayoutPrivateData->iGc = NULL;
             }
         }
+    }
+
+// Goes through visual hierarchy and checks if any visual has command buffers
+// or other drawable content.
+TBool CHuiCanvasVisual::RecursiveHasCommandBuffers(CHuiVisual* aVisual)
+    {
+    TBool hasCommandBuffers = EFalse;
+    
+    const TInt count = aVisual->Count();
+    for(TInt i = 0; i < count; ++i)
+        {
+        CHuiVisual* visual = &aVisual->Visual(i);
+        // If visual is a canvas one, then QueryHasDrawableContent returns 
+        // HasCommandBuffers(EFalse)
+        hasCommandBuffers |= visual->QueryHasDrawableContent();
+        if ( hasCommandBuffers )
+            {
+            break;
+            }
+        
+        hasCommandBuffers |= RecursiveHasCommandBuffers( visual );
+        if ( hasCommandBuffers )
+            {
+            break;
+            }
+        }
+    
+    return hasCommandBuffers;    
     }
 
 EXPORT_C TBool CHuiCanvasVisual::HasCommandBuffers(TBool aIncludeChildren) const
     {
     TBool hasCommandBuffers = iCanvasVisualData->iCanvasPainter->HasCommandBuffers();
-    if (aIncludeChildren)
+    if (aIncludeChildren && !hasCommandBuffers)
         {
-        for (TInt i=0; i<Count(); i++)
-            {
-            CHuiCanvasVisual* canvasVisual = (CHuiCanvasVisual*) &Visual(i); // Dynamic cast is too slow for us ;)
-            hasCommandBuffers |= canvasVisual->HasCommandBuffers(aIncludeChildren);
-            if (hasCommandBuffers)
-                {
-                break;
-                }
-            }
+        // Include children branch - just check if there is something to draw.
+        hasCommandBuffers |= RecursiveHasCommandBuffers(const_cast<CHuiCanvasVisual*>(this));
         }
     return hasCommandBuffers;
     }
@@ -1267,4 +1413,74 @@ TInt CHuiCanvasVisual::ChildRect(TInt /*aOrdinal*/, THuiRealRect& aPos)
     return THuiLayoutChildRectLayoutUpdateNeeded;
     }
 
+void CHuiCanvasVisual::VisualExtension(const TUid& aExtensionUid, TAny** aExtensionParams)
+    {
+    if (aExtensionUid == KHuiVisualQueryUid && aExtensionParams && *aExtensionParams)
+        {
+        THuiVisualQueryParams* params = static_cast<THuiVisualQueryParams*>(*aExtensionParams);
+        switch (params->iQueryType)
+            {
+        case THuiVisualQueryParams::EQueryCanvasFlags:
+            params->iValue = CanvasFlags();
+            params->iResult = KErrNone;
+            break;
+        case THuiVisualQueryParams::EQueryExternalContentDrawingEnabled:
+            params->iValue = IsExternalContentDrawingEnabled(EFalse);
+            params->iResult = KErrNone;
+            break;
+        case THuiVisualQueryParams::EQueryHasDrawableContent:
+            params->iValue = HasCommandBuffers(EFalse) || IsBackgroundDrawingEnabled();
+            params->iResult = KErrNone;
+            break;
+        default:
+            break;
+            }
+        }
+    else
+	    {
+		CHuiVisual::VisualExtension(aExtensionUid, aExtensionParams);
+		}
+    }
 
+void CHuiCanvasVisual::CollectPaintedRegion(TRegion& aPaintRegion, TInt aExcludeCanvasFlags) const
+    {
+    // Only our own painted areas.
+    TInt paintedAreaCount = PaintedAreaCount();  
+    for (TInt i=0; i<paintedAreaCount; i++ )
+        {
+        aPaintRegion.AddRect( CanvasPaintedArea(i).iPaintedRect.Round() );
+        }
+    aPaintRegion.Tidy();
+    }
+
+void CHuiCanvasVisual::CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const
+    {
+    // First our own painted areas...
+    CollectPaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
+            
+    // ...then children (and their children).
+    const TInt count = Count();
+    for(TInt i = 0; i < count; ++i)
+        {
+        // Check wheter we should include this child visual or ignore it.
+        if (aExcludeCanvasFlags)
+            {
+            CHuiVisual* visual = (CHuiCanvasVisual*)&Visual(i);
+            if ( !(visual->Flags() & EHuiVisualFlagInactive) )
+                {
+                TInt canvasFlags = visual->QueryCanvasFlags();
+                    
+                if ( !(canvasFlags & aExcludeCanvasFlags) )
+                    {
+                    // If this is marked as Wserv visual, it should be safe to cast.
+                    if (visual->Flags() & EHuiVisualFlagWserv)
+                        {
+                        CHuiCanvasVisual* canvasVisual = (CHuiCanvasVisual*)visual;
+                        canvasVisual->CollectRecursivePaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
+                        }
+                    }
+                }        
+            }
+        }    
+    aRecursivePaintRegion.Tidy();
+    }

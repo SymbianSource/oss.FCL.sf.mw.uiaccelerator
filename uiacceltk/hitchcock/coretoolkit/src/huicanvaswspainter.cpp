@@ -62,10 +62,6 @@ const TBool KHuiCanvasAutomaticRenderBufferUsage = EFalse; // Disbaled until all
 const TInt KHuiCanvasDisableRenderBufferHandleInterval = 100; // Milliseconds 
 const TInt KHuiCanvasEnableRenderBufferHandleInterval = 500;  // Milliseconds
 
-/** Internal constant to identify complex command buffers */
-const TInt KPossiblePerformanceProblemInWindow = 64;
-
-
 /** ETrue - use SelectGcL to select gc implementation, 
     EFalse - use KHuiDefaultCanvasWsGc. */
 const TBool KHuiUseSelectGc = ETrue;
@@ -302,23 +298,13 @@ void CHuiCanvasWsPainter::HandleBufferL(TRect& aDisplayRect, TInt aAction, const
             
             /* If window shape region has been changed, we should clear the window to get rid of old content. 
              * We also set all command buffers to "not drawn" state so that everything will be redrawn.
+             * Actual clearing is done after BeginActionL, because drawing phase will start only after calling it.
              */
-            TBool isFullUpdateRegionCleared = EFalse;
             if(iShapeRegionClearingPending)
                 {
-                #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
-                RDebug::Print(_L(">> CHuiCanvasWsPainter::HandleBufferL - Clearing fullupdateregion"));    
-                #endif
-                // Clear the window update region area
-                TBool doClear = ETrue;
-                iCanvasWsGc->EnableUpdateRegion(iFullUpdateRegion, doClear);
-                iCanvasWsGc->DisableUpdateRegion(); 
-                isFullUpdateRegionCleared = ETrue;
-                
                 // Cause a full redraw for the canvas visual
                 SetAllBuffersChanged(ETrue);    
                 ClearAllBufferStatusFlags(EHuiCanvasBufferStatusDrawn);
-                iShapeRegionClearingPending = EFalse;
                 }
             
             
@@ -327,6 +313,20 @@ void CHuiCanvasWsPainter::HandleBufferL(TRect& aDisplayRect, TInt aAction, const
 
             /* Begin draw. If render buffer is used this sets up the render buffer if needed */
             iCanvasWsGc->BeginActionL(aAction,aDisplayRect,aUser,cachePrepared,iFullUpdateRegion);                   
+
+            TBool isFullUpdateRegionCleared = EFalse;
+            if(iShapeRegionClearingPending)
+                {
+                #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
+                    RDebug::Print(_L(">> CHuiCanvasWsPainter::HandleBufferL - Clearing fullupdateregion"));    
+                #endif
+                // Clear the window update region area
+                TBool doClear = ETrue;
+                iCanvasWsGc->EnableUpdateRegion(iFullUpdateRegion, doClear);
+                iCanvasWsGc->DisableUpdateRegion(); 
+                isFullUpdateRegionCleared = ETrue;
+                iShapeRegionClearingPending = EFalse;
+                }
 
             #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
             if (iCanvasWsGc->IsRenderBufferEnabled())
@@ -2245,12 +2245,56 @@ TBool CHuiCanvasWsPainter::RemoveRedundantBuffers()
     TInt originalBufferCount = iCommandBuffers.Count();
     
     RemoveBuffersWithoutRealDrawing();
-    RemoveBuffersWithOldDisplayRect();
+
+    // Remove buffers only with moved display rect and modify the clip region
+    // of buffers with changed size instead of completely removing all. 
+    RemoveBuffersWithMovedDisplayRect();
+    ModifyBuffersWithChangedDisplayRect();
+    //RemoveBuffersWithOldDisplayRect();
+    
     RemoveBuffersWithEmptyUpdateRegion();
     RemoveBuffersWithOverlappingUpdateRegion();         
     
     didRemoveBuffers = (originalBufferCount != iCommandBuffers.Count());    
     return didRemoveBuffers;
+    }
+
+void CHuiCanvasWsPainter::RemoveBuffersWithMovedDisplayRect()
+    {
+    TInt bufferCount = iCommandBuffers.Count();
+    
+    TRect canvas = iCanvasVisual->DisplayRect().Round();
+    for (TInt cb = bufferCount - 1; cb >= 0; cb--)
+        {
+        CHuiCanvasCommandBuffer* buffer = iCommandBuffers[cb];
+        TRect bufRect = buffer->iOriginalDisplayRect.Round();
+        
+        // If the visual has moved, delete the old buffer
+        if (bufRect.iTl != canvas.iTl)
+            {
+            DestroyBuffer(cb);
+            }
+        }
+    }
+
+void CHuiCanvasWsPainter::ModifyBuffersWithChangedDisplayRect()
+    {
+    TInt bufferCount = iCommandBuffers.Count();
+    TRect canvasRect = iCanvasVisual->DisplayRect().Round();
+    TRegionFix<1> region(canvasRect);
+    
+    // If the buffers have different update region than CanvasVisual, clip
+    // the drawing to canvas visual's & cmdbuffer's updateregions' intersection.
+    for (TInt cb = 0; cb < bufferCount; cb++)
+        {
+        CHuiCanvasCommandBuffer* cmdbuffer = iCommandBuffers[cb];
+        if (cmdbuffer->iOriginalDisplayRect.Round() != canvasRect)
+            {
+            cmdbuffer->iUpdateRegion.Copy(cmdbuffer->iOriginalUpdateRegion);
+            cmdbuffer->iUpdateRegion.Intersect(region);
+            cmdbuffer->iUpdateRegion.Tidy();
+            }
+        }
     }
 
 void CHuiCanvasWsPainter::RemoveBuffersWithoutRealDrawing()
@@ -2488,7 +2532,9 @@ TBool CHuiCanvasWsPainter::IsBufferCompletelyOutisideClippingRegion(const CHuiCa
 
 TInt CHuiCanvasWsPainter::EnableRenderBuffer(TBool aEnable)
     {
-    if (aEnable != iCanvasWsGc->IsRenderBufferEnabled())
+    iEnableRenderBuffer = aEnable;
+    
+    if (iCanvasWsGc && ( aEnable != iCanvasWsGc->IsRenderBufferEnabled() ) )
         {
         if (aEnable)
             {
@@ -2603,6 +2649,11 @@ void CHuiCanvasWsPainter::SelectGcL()
     if ( oldGc && oldGc != iCanvasWsGc )
         {
         oldGc->ClearCache();
+        }
+    if ( iCanvasWsGc )
+        {
+        // Forward 'enable render buffer' setting to new GC.
+        iCanvasWsGc->EnableRenderbuffer( iEnableRenderBuffer );
         }
 
     #ifdef HUI_DEBUG_TRACK_DRAWING

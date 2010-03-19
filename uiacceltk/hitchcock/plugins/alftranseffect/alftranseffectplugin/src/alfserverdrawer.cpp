@@ -1103,10 +1103,6 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
 
     TInt index = 0;
 
-    TInt nodeHandle = KErrNotFound;
-    TInt nodeGroup = KErrNotFound;
-    TInt screenNumber = KErrNotFound;
-      
     IncreaseHandle();
     iTransitionEndObserver->Cancel();
     iFinishFullScreen->Cancel();

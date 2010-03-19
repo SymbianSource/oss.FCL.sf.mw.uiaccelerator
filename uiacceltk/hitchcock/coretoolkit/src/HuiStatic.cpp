@@ -61,6 +61,102 @@ public:
 NONSHARABLE_CLASS(CAppFwProxy): public CBase
     {
 public:
+    class CAlfGuardedSynchCall: public CActive
+        {
+        public:
+        CAlfGuardedSynchCall(const TAlfCommandParams& aParams):CActive(CActive::EPriorityStandard), iPckg(aParams), iPtr(0,0)
+            {
+            CActiveScheduler::Add(this);
+            iStatus = KErrNotFound;
+            }
+
+        static void DoGuardedOpL(const TAlfCommandParams& aInParams, 
+                                  TDes8& aOutParams,
+                                  RNotifier& aNotifier,
+                                  const TDesC8* aInParams2 = 0 // ugly extension, really
+                                  )
+            {
+            CAlfGuardedSynchCall* me = new (ELeave) CAlfGuardedSynchCall(aInParams);
+
+            CleanupStack::PushL(me);
+            User::LeaveIfError(me->iTimer.CreateLocal());
+            me->iRetBuf = aOutParams.AllocL();
+            me->iPtr.Set((TUint8*)me->iRetBuf->Ptr(),0,aOutParams.MaxSize());
+            if (aInParams2)
+                {
+                me->iAltInBuf = aInParams2->AllocL();
+                }
+            CleanupStack::Pop(); // me
+             
+            if (aInParams2)
+                {
+                aNotifier.StartNotifierAndGetResponse(me->iStatus, 
+                                                      TUid::Uid(KAlfAppFwProxyUid), 
+                                                      *me->iAltInBuf, me->iPtr);
+                }
+            else
+                {
+                aNotifier.StartNotifierAndGetResponse(me->iStatus, 
+                                                      TUid::Uid(KAlfAppFwProxyUid), 
+                                                      me->iPckg, me->iPtr);
+                }                        
+            
+            me->iTimer.After(me->iTimerStatus, 100000); // 100ms
+            User::WaitForRequest(me->iStatus, me->iTimerStatus);
+            TBool timedOut = (me->iStatus == KRequestPending);
+            
+            me->iTimer.Cancel(); // Cancel timer anyway
+                        
+            if (!timedOut)
+                {
+                TInt err = me->iStatus.Int();  
+                User::WaitForRequest(me->iTimerStatus);
+                aOutParams.Copy(*me->iRetBuf);    
+                delete me;
+                User::LeaveIfError(err);
+                }
+            else 
+                {
+                me->SetActive(); 
+                User::Leave( KErrTimedOut );
+                }
+            }
+
+        static TInt DoGuardedOp(const TAlfCommandParams& aInParams, 
+                                  TDes8& aOutParams,
+                                  RNotifier& aNotifier)
+            {
+            TInt ret = KErrNone;    
+            TRAP(ret, DoGuardedOpL(aInParams, aOutParams, aNotifier);)
+            return ret;
+            }    
+
+        ~CAlfGuardedSynchCall()
+            {
+            Cancel();
+            delete iRetBuf;
+            delete iAltInBuf;
+            iTimer.Close(); 
+            }
+            
+        void RunL()
+            {           
+            delete this;
+            }
+            
+        void DoCancel()
+            {
+            // Cancel will call User::WaitForRequest for iStatus (if this ao is active)
+            }
+                
+        TPckgC<TAlfCommandParams> iPckg;
+        HBufC8* iRetBuf;
+        HBufC8* iAltInBuf;
+        TPtr8 iPtr;
+        RTimer iTimer;
+        TRequestStatus iTimerStatus;
+        };
+
     class CAlfLayoutListener: public CActive
         {
         public:
@@ -82,7 +178,8 @@ public:
             TAlfCommandParams params={EAlfIsMirrorred,0,0,0};
             TPckgC<TAlfCommandParams> pkg(params);
             TBuf8<1> awkwardApiDummy;
-            iNotif.iNotif.StartNotifierAndGetResponse(iStatus,TUid::Uid(KAlfAppFwProxyUid), pkg, awkwardApiDummy);            }
+            iNotif.iNotif.StartNotifierAndGetResponse(iStatus,TUid::Uid(KAlfAppFwProxyUid), pkg, awkwardApiDummy);            
+            }
     
         void DoCancel()
             {
@@ -111,6 +208,7 @@ public:
         if (!iConnected)
             {
             // perhaps should check also whether eikon server / notifier server exists..
+            // This is currently unsafe (synch) call to a process that may be blocked by window server, keep fingers crossed
             iConnected = (iNotif.Connect() == KErrNone);
             }
         return iConnected;
@@ -121,11 +219,10 @@ public:
         if ( Connect() && iLayoutMirrored == KErrNotFound)
             {
             TRequestStatus status;
-            TAlfCommandParams params={EAlfIsMirrorred,0,0,0};
-            TPckgC<TAlfCommandParams> pkg(params);
-            TBuf8<1> awkwardApiDummy;
-            iNotif.StartNotifierAndGetResponse(status,TUid::Uid(KAlfAppFwProxyUid), pkg, awkwardApiDummy);
-            User::WaitForRequest(status);
+            TAlfCommandParams inParams={EAlfIsMirrorred,0,0,0};
+            TBuf8<1> outParams;
+            TInt ret = CAlfGuardedSynchCall::DoGuardedOp( inParams, outParams , iNotif );
+
             // order updates
             iLayoutUpdateAo = new CAlfLayoutListener(*this);
             if (iLayoutUpdateAo)
@@ -133,7 +230,7 @@ public:
                 TRAP_IGNORE(iLayoutUpdateAo->RunL());
                 }
             
-            iLayoutMirrored = (status.Int() > 0);
+            iLayoutMirrored = ret > 0;
             }
      
         return iLayoutMirrored==KErrNotFound?EFalse:iLayoutMirrored;    
@@ -144,13 +241,9 @@ public:
         TInt ret = 0;
         if ( Connect() )
             {
-            TRequestStatus status;
-            TAlfCommandParams params={EAlfCbaLocation,0,0,0};
-            TPckgC<TAlfCommandParams> pkg(params);
-            TBuf8<1> awkwardApiDummy;
-            iNotif.StartNotifierAndGetResponse(status,TUid::Uid(KAlfAppFwProxyUid), pkg, awkwardApiDummy);
-            User::WaitForRequest(status);
-            ret = status.Int();
+            TAlfCommandParams inParams={EAlfCbaLocation,0,0,0};
+            TBuf8<1> outParams;
+            ret = CAlfGuardedSynchCall::DoGuardedOp( inParams, outParams , iNotif );
             }
         
         return ret;    
@@ -161,13 +254,9 @@ public:
         TRect ret=TRect(0,0,0,0);
         if ( Connect() )
             {
-            TRequestStatus status;
-            TAlfCommandParams params={EAlfLayoutMetricsRect,aType,0,0};
-            TPckgC<TAlfCommandParams> pkg(params);
-            TPckg<TRect> retpkg(ret);
-                        
-            iNotif.StartNotifierAndGetResponse(status,TUid::Uid(KAlfAppFwProxyUid), pkg, retpkg);
-            User::WaitForRequest(status);
+            TAlfCommandParams inParams={EAlfLayoutMetricsRect,aType,0,0};
+            TPckg<TRect> outParams(ret);
+            CAlfGuardedSynchCall::DoGuardedOp( inParams, outParams , iNotif );
             }
         
         return ret;    
@@ -178,14 +267,9 @@ public:
         {
         if ( Connect() )
             {
-            TRequestStatus status;
-            TAlfCommandParams params={EAlfGetCachedColor,aID.iMajor,aID.iMinor,aIndex};
-            TPckgC<TAlfCommandParams> pkg(params);
-            TPckg<TRgb> retpkg(aRgb);
-                    
-            iNotif.StartNotifierAndGetResponse(status,TUid::Uid(KAlfAppFwProxyUid), pkg, retpkg);
-            User::WaitForRequest(status);
-            return status.Int();
+            TAlfCommandParams inParams={EAlfGetCachedColor,aID.iMajor,aID.iMinor,aIndex};
+            TPckg<TRgb> outParams(aRgb);
+            return CAlfGuardedSynchCall::DoGuardedOp( inParams, outParams , iNotif);
             }
     
         return KErrCouldNotConnect;    
@@ -196,15 +280,12 @@ public:
         {
         if ( Connect() )
             {
-            TRequestStatus status;
-            TAlfCommandParams2 params={EAlfGetSkinBitmap,aID.iMajor,aID.iMinor,aBitmapId,aMaskId,aFileName, aSize, aScaleMode};
-            TPckgC<TAlfCommandParams2> pkg(params);
+            TAlfCommandParams fakeParams={0,0,0,0};    
+            TAlfCommandParams2 inParams={EAlfGetSkinBitmap,aID.iMajor,aID.iMinor,aBitmapId,aMaskId,aFileName, aSize, aScaleMode};
+            TPckgC<TAlfCommandParams2> inBuf(inParams);
             TInt2 handles = {0,0};
-            TPckg<TInt2> retpkg(handles);
-                    
-            iNotif.StartNotifierAndGetResponse(status,TUid::Uid(KAlfAppFwProxyUid), pkg, retpkg);
-            User::WaitForRequest(status);
-            User::LeaveIfError(status.Int());
+            TPckg<TInt2> outParams(handles);
+            CAlfGuardedSynchCall::DoGuardedOpL( fakeParams, outParams , iNotif, &inBuf );
             if (!handles.iInt1)
                 {
                 User::Leave(KErrNotFound); 
@@ -221,15 +302,10 @@ public:
         {
         if ( Connect() )
             {
-            TRequestStatus status;
-            TAlfCommandParams params={EAlfGetSkinBackgroundBitmap,aID.iMajor,aID.iMinor,0};
-            TPckgC<TAlfCommandParams> pkg(params);
+            TAlfCommandParams inParams={EAlfGetSkinBackgroundBitmap,aID.iMajor,aID.iMinor,0};
             TInt handle = 0;
-            TPckg<TInt> retpkg(handle);
-                    
-            iNotif.StartNotifierAndGetResponse(status,TUid::Uid(KAlfAppFwProxyUid), pkg, retpkg);
-            User::WaitForRequest(status);
-            User::LeaveIfError(status.Int());
+            TPckg<TInt> outParams(handle);
+            CAlfGuardedSynchCall::DoGuardedOpL( inParams, outParams , iNotif );
             User::LeaveIfError(aBitmap->Duplicate(handle));
             }
         }
@@ -238,26 +314,12 @@ public:
         {
         if ( Connect() )
             {
-            TRequestStatus status;
-            TAlfCommandParams params={EGetCachedSkinItemData,aID.iMajor,aID.iMinor,aType};
-            TPckgC<TAlfCommandParams> pkg(params);
-            TPckg<TAlfCachedSkinItemArray> retpkg(aArray);
-                    
-            iNotif.StartNotifierAndGetResponse(status,TUid::Uid(KAlfAppFwProxyUid), pkg, retpkg);
-            User::WaitForRequest(status);
-            User::LeaveIfError(status.Int());
+            TAlfCommandParams inParams={EGetCachedSkinItemData,aID.iMajor,aID.iMinor,aType};
+            TPckg<TAlfCachedSkinItemArray> outParams(aArray);
+            CAlfGuardedSynchCall::DoGuardedOpL( inParams, outParams , iNotif );
             }
         }
         
-    void GetListOfWindowGroupsL(TRequestStatus& aStatus, TPtr8& aPtr)
-        {
-        if ( Connect() )
-            {
-            TAlfCommandParams params={EGetListOfWindowGroups,0,0,0};
-            TPckgC<TAlfCommandParams> pkg(params);
-            iNotif.StartNotifierAndGetResponse(aStatus,TUid::Uid(KAlfAppFwProxyUid), pkg, aPtr);
-            }        
-        }    
     public: 
         TBool iLayoutMirrored;
         RNotifier iNotif;

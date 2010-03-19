@@ -300,6 +300,8 @@ void CHuiVg10Gc::CreateVgObjectsL()
     iArcPath = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 
                             2, 7, VG_PATH_CAPABILITY_APPEND_TO);
     iPaint = vgCreatePaint();
+    iPaintColor = 0;
+    vgSetColor(iPaint, iPaintColor);
     iGradientPaint = vgCreatePaint();
     iBlendMode = VG_BLEND_SRC_OVER;
 
@@ -707,6 +709,42 @@ void CHuiVg10Gc::SetDimmingFog(const TRgb& /*aColor*/, TReal32 /*aAmount*/) __SO
     // Fog not supported
     }
 
+void CHuiVg10Gc::Clear(const TRect& aRect)
+    {
+    HUI_VG_INVARIANT();
+    
+    UpdateClientMatrix();
+
+    THuiRealRect transformed = aRect;
+    iMatrixStack->Current().Multiply(transformed.iTl);
+    iMatrixStack->Current().Multiply(transformed.iBr);
+        
+    // Normalize the rectangle
+    if (transformed.iTl.iX > transformed.iBr.iX)
+        {
+        TReal32 tmp = transformed.iTl.iX;
+        transformed.iTl.iX = transformed.iBr.iX;
+        transformed.iBr.iX = tmp;
+        }
+    if (transformed.iTl.iY > transformed.iBr.iY)
+        {
+        TReal32 tmp = transformed.iTl.iY;
+        transformed.iTl.iY = transformed.iBr.iY;
+        transformed.iBr.iY = tmp;
+        }            
+    VGfloat scale = 1.0f / 255.0f;
+    VGfloat color[] = 
+        {
+        PenColor().Red()   * scale,
+        PenColor().Green() * scale,
+        PenColor().Blue()  * scale,
+        PenAlpha() * scale
+        };
+
+    vgSetfv(VG_CLEAR_COLOR, 4, color);
+    vgClear(transformed.iTl.iX, transformed.iTl.iY, transformed.Width(), transformed.Height());
+    HUI_VG_INVARIANT();
+    }
 
 void CHuiVg10Gc::Clear()
     {
@@ -941,7 +979,12 @@ void CHuiVg10Gc::UpdateColor(TReal32 /*aAlphaFactor*/) __SOFTFP
 #endif
     
     // Update the color of the current paint
-    vgSetColor(iPaint, color);
+    // if required
+    if (iPaintColor != color)
+        {
+        vgSetColor(iPaint, color);
+        iPaintColor = color;
+        }
     
     // Detect white fully opaque color
     if (color == 0xffffffff)
@@ -1050,7 +1093,7 @@ void CHuiVg10Gc::DrawCroppedTexture(const MHuiSegmentedTexture& aTexture, const 
     vgTranslate(-srcX, -srcY);
 
 #ifdef __NVG
-    if ( isExtended && texture.IsNvgContent())
+    if ( isExtended )
         {
         // Determine the size to which we want to draw the NVG icon paths
         TSize contentSize( HUI_ROUND_FLOAT_TO_INT(aDestRect.Width()),
@@ -1163,7 +1206,7 @@ void CHuiVg10Gc::DrawTexture(const MHuiSegmentedTexture& aTexture,
     const CHuiVg10Texture& texture = static_cast<const CHuiVg10Texture&>( aTexture );
     TBool isExtended = texture.IsExtended();
     
-    if (isExtended && texture.IsNvgContent())
+    if (isExtended)
         {
         UpdateMatrix(VG_MATRIX_PATH_USER_TO_SURFACE);
         TSize contentSize(0, 0);

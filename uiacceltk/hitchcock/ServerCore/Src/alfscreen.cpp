@@ -48,6 +48,7 @@ _LIT8(KAlfWindowFloatingSpriteContainerControlTag, "FSPRITE");
 _LIT8(KAlfFullScreenEffectContainerControlTag, "EFFECT");
 //_LIT8(KAlfWindowGroupTemporaryRemoveControlTag, "WGTEMP");
 
+const TInt KAlfNumberOfFixedControlGroups = 2;
 
 // ======== MEMBER FUNCTIONS ========
 
@@ -163,8 +164,17 @@ void CAlfScreen::CommonConstructL( MHuiDisplayRefreshObserver& aObserver, CHuiEn
     _LIT(KRDSupport, "c:\\resource\\errrd" );
     if (CHuiStatic::FsSession().Handle() && BaflUtils::FileExists( CHuiStatic::FsSession(), KRDSupport ))
         {
+        iFpsControlGroup = &aHuiEnv.NewControlGroupL(0xDEADBEEF + 20 + iScreenNum); // TODO
+    	
+    	CHuiControl* fpsCntrl = new (ELeave) CHuiControl(aHuiEnv);	    
+	    CleanupStack::PushL(fpsCntrl);
+	    fpsCntrl->ConstructL();
+	    fpsCntrl->SetRole(EAlfFpsIndicatorContainer);
+	    iFpsControlGroup->AppendL(fpsCntrl);
+	    CleanupStack::Pop(fpsCntrl);
+        
         // FPS Counter with hitchcock drawing
-        iFPSText = CHuiTextVisual::AddNewL(*effectCntrl, effectLayout);
+        iFPSText = CHuiTextVisual::AddNewL(*fpsCntrl, NULL);
         iFPSText->SetColor(KRgbBlue);
         iFPSText->SetFlag(EHuiVisualFlagManualLayout);
         iFPSText->SetPos(THuiRealPoint(300,20)); // could be adjusted
@@ -194,6 +204,8 @@ CAlfScreen::~CAlfScreen()
 	// this deletes also control and layout
 	delete iFloatingSpriteControlGroup;
 	
+	delete iFpsControlGroup;
+	
 	delete iDisplay;
 	iControlGroups.Close();
 	
@@ -222,3 +234,12 @@ TBool CAlfScreen::IsVisualTreeVisibilityChanged()
     return iVisualTreeVisibilityChanged;    
     }
      
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 
+TInt CAlfScreen::FixedControlGroupCount() const
+    {
+    return !iFpsControlGroup ? 
+        KAlfNumberOfFixedControlGroups :
+        KAlfNumberOfFixedControlGroups + 1;
+    }

@@ -51,7 +51,7 @@ enum THuiFxReferencePoint
     EReferencePointExtRectBottom,
     EReferencePointExtRectLeft,
     EReferencePointExtRectRight,
-   
+    EReferencePointDisplayHeightMinusVisualTop
     };
 
 class MHuiFxParameter

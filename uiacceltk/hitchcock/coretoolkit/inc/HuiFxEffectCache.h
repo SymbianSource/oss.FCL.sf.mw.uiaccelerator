@@ -62,6 +62,7 @@ private:
         };
     
     MHuiFxEffectCacheNode *Find(MHuiFxEffectCacheNode *aNode);
+    MHuiFxEffectCacheNode *FindDuplicate(MHuiFxEffectCacheNode *aNode);
     static bool Compare(MHuiFxEffectCacheNode *aNode1, MHuiFxEffectCacheNode *aNode2);
     void Remove(RPointerArray<MHuiFxEffectCacheNode> &aEffects, MHuiFxEffectCacheNode *aNode);
     void Remove(RHashMap<TInt, MHuiFxEffectCacheNode*> &aMap, MHuiFxEffectCacheNode *aNode);
@@ -85,7 +86,7 @@ class CHuiFxEngine;
 class CHuiFxEffectCacheEffectNode : public CBase, public MHuiFxEffectCacheNode
 {
 public:
-     IMPORT_C CHuiFxEffectCacheEffectNode(const TDesC &aFileName, CHuiFxEffect *&aEffect, MHuiEffectable *aVisual, TRect *extRect, CHuiFxEngine *aEngine) 
+     CHuiFxEffectCacheEffectNode(const TDesC &aFileName, CHuiFxEffect *&aEffect, MHuiEffectable *aVisual, TRect *extRect, CHuiFxEngine *aEngine) 
 	: iFileName(aFileName.AllocL()), iEffect(aEffect), iVisual(aVisual), iExtRect(extRect), iEffectCached(0), iEngine(aEngine), iRefCount(0), iParser(0) { }
      IMPORT_C ~CHuiFxEffectCacheEffectNode();
      void SetEffectEndObserver( MAlfGfxEffectObserver* aEffectEndObserver, TInt aHandle );

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Nokia Corporation and/or its subsidiary(-ies). 
+* Copyright (c) 2006-2008 Nokia Corporation and/or its subsidiary(-ies). 
 * All rights reserved.
 * This component and the accompanying materials are made available
 * under the terms of "Eclipse Public License v1.0"
@@ -374,6 +374,12 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
          * @return Previous command
          */
         inline TInt PreviousCommand(){ return iPreviousCommand; } 
+      
+        /**
+         * Synchronize.
+         * @param aId id to pass forward.
+         */
+        void Synchronize(TInt aId);
         
     public: // From CActive
 

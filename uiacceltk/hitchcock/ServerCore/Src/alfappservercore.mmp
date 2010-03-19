@@ -82,7 +82,10 @@ SOURCE                  alfstreamerbridge.cpp
 SOURCE                  alfnodes.cpp
 SOURCE                  alfbridge.cpp
 SOURCE                  alfscreen.cpp
+SOURCE                  alfeffectutils.cpp
 #endif
+
+SOURCE themerepositorylistener.cpp
 
 USERINCLUDE             ../Inc
 USERINCLUDE				../../coretoolkit/inc
@@ -130,4 +133,3 @@ LIBRARY                 bafl.lib
 #ifdef HUI_DEBUG_TRACK_DRAWING
 LIBRARY					alfcommanddebug.lib
 #endif
-SOURCE themerepositorylistener.cpp

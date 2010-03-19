@@ -195,7 +195,8 @@ enum THuiVisualFlags
     EHuiVisualFlagShouldBeUnderOpaqueHint = 0x20000000,
     
     EHuiVisualFlagShouldBeShown = 0x40000000,
-    
+    // visual that is used only by wserv
+    EHuiVisualFlagWserv = 0x80000000,
     EHuiVisualFlagLast = 0xFFFFFFFF
     };
 
@@ -1443,6 +1444,24 @@ public: // Internal utilities
         {
         iLoadingEffect = aLoading;
         };
+
+    /**
+     * Queries canvas flags of the visual, returns result
+     * @internal
+     */    
+    TInt QueryCanvasFlags();
+
+    /**
+     * Checks if external content drawing is enabled for this visual, returns result
+     * @internal
+     */    
+    TBool QueryExternalContentDrawingEnabled();
+    
+    /**
+     * Checks if visual has something to draw, returns result
+     * @internal
+     */    
+    TBool QueryHasDrawableContent();
     
 protected:
 

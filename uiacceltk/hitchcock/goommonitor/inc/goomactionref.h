@@ -49,7 +49,7 @@ public:
     TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMode, TInt aRamEstimate, CGOomRunPlugin& aRunPlugin, TUint aWgIndexOfTargetApp);
 
     //constructor for AppClose actions
-    TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMode, TInt aRamEstimate, TInt aWgId, TUint aWgIndex);
+    TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMode, TInt aRamEstimate, TInt aWgId, TUint aWgIndex, TInt aCloseTimeout = 0, TInt aWaitAfterClose = 0);
     
     TActionType Type() const;
     TUint Priority() const;
@@ -59,6 +59,8 @@ public:
     TInt WgId() const;
     TInt WgIndex() const;
     CGOomRunPlugin& RunPlugin();
+    TInt CloseTimeout() const;
+    TInt WaitAfterClose() const;
 
 private: //data
     
@@ -69,6 +71,8 @@ private: //data
     TInt iWgId; //For AppClose
     TInt iWgIndex;
     CGOomRunPlugin* iRunPlugin; //For Plugins. Not owned
+    TInt iCloseTimeout; //For AppClose
+    TInt iWaitAfterClose; //For AppClose
     };
 
 #endif /*GOOMACTIONREF_H_*/

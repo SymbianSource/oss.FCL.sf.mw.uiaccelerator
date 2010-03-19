@@ -101,3 +101,5 @@ PRJ_EXPORTS
 
 ../inc/alf/alfcompositionclient.h	MW_LAYER_PLATFORM_EXPORT_PATH(alf/alfcompositionclient.h)
 ../inc/alf/alfcompositionutility.h	MW_LAYER_PLATFORM_EXPORT_PATH(alf/alfcompositionutility.h)
+
+../inc/alf/alfdrawer.h     MW_LAYER_PLATFORM_EXPORT_PATH(alf/alfdrawer.h)

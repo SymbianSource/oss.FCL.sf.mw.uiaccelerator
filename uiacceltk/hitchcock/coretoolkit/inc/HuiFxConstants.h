@@ -146,6 +146,7 @@ _LIT(KLitVisualTop, "visual.top" ); // top y coordinate
 _LIT(KLitVisualBottom, "visual.bottom" ); // bottom y coordinate
 _LIT(KLitVisualLeft, "visual.left" ); // left x coordinate
 _LIT(KLitVisualRight, "visual.right" ); // right x coordinate
+_LIT(KLitDisplayHeightMinusVisualTop, "visual.top.reversed");
 
 _LIT(KLitDisplayWidth, "screen.width" );
 _LIT(KLitDisplayHeight, "screen.height" );

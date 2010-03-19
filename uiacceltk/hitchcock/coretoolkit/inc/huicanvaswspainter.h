@@ -196,6 +196,9 @@ private:
     void DestroyBuffer(TInt aIndex);
     void UpdateBufferUpdateRegions(TPoint aPos);
     
+    void RemoveBuffersWithMovedDisplayRect();
+    void ModifyBuffersWithChangedDisplayRect();
+    
 public:    
     void EnableRenderBufferIfNeeded(TBool aEnable);
 private:
@@ -379,6 +382,9 @@ private:
 #ifdef HUI_DEBUG_TRACK_DRAWING
     CAlfCommandDebug* iCommandDebugger;
 #endif
+    
+    // Boolean flag indicating if render buffer ought to be used.
+    TBool iEnableRenderBuffer;
   };
     
 #endif  // __HUICANVASWSPAINTER_H__

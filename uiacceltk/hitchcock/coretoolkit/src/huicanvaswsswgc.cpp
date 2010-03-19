@@ -1325,8 +1325,8 @@ TRect CHuiCanvasWsSwGc::AdjustCoordinates(TRect aRect)
 	
 TDisplayMode CHuiCanvasWsSwGc::SelectDisplayMode()
     {
-    TDisplayMode mode = EColor16MA;
-        
+    TDisplayMode mode = EColor16MAP;
+    
     // Note 64K mode cannot be used until separate mask is supported. It might be
     // possible to generate according to dirty region ?
     
@@ -1476,6 +1476,8 @@ void CHuiCanvasWsSwGc::EnableUpdateRegion(const TRegion& aUpdateRegion, TBool aC
         {
         return;
         }
+    
+    iBitGc->Reset();
     
     if (aClear)
         {

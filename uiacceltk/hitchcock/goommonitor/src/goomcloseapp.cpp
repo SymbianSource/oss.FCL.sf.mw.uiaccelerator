@@ -24,8 +24,6 @@
 #include "goomappclosewatcher.h"
 #include "goomactionref.h"
 
-const TInt KGOomMaxAppExitTime = 1000000;
-const TInt KGOomMaxAppAfterKillWaitTime = 1000000;
 
 CGOomCloseApp* CGOomCloseApp::NewL(MGOomActionObserver& aStateChangeObserver, RWsSession& aWs)
     {
@@ -51,10 +49,10 @@ void CGOomCloseApp::FreeMemory(TInt)
     
     // Start a timer and the thread watcher 
     iAppCloseTimer->SetState(CGOomAppCloseTimer::EGOomAppClosing);
-    iAppCloseTimer->After(KGOomMaxAppExitTime);
+    iAppCloseTimer->After(iCloseTimeout * 1000);
     iAppCloseWatcher->Start(iCurrentTask);
     // Tell the app to close
-    TRACES1("CGOomCloseApp::FreeMemory: Closing app with window group id %d",iWgId);
+    TRACES2("CGOomCloseApp::FreeMemory: Closing app with window group id %d Timeout = %d",iWgId, iCloseTimeout);
     iCurrentTask.EndTask();
     }
 
@@ -81,12 +79,16 @@ void CGOomCloseApp::CloseAppEvent()
     iAppCloserRunning = EFalse;
     
     if (iAppCloseTimer)
-        iAppCloseTimer->Cancel();
+        {
+            iAppCloseTimer->Cancel();
+            iAppCloseTimer->SetState(CGOomAppCloseTimer::EGOomAppKilled);
+            iAppCloseTimer->After(iWaitAfterClose * 1000);
+        }
+    
     if (iAppCloseWatcher)
         iAppCloseWatcher->Cancel(); 
     
-    iAppCloseTimer->SetState(CGOomAppCloseTimer::EGOomAppKilled);
-    iAppCloseTimer->After(KGOomMaxAppAfterKillWaitTime);
+    
     //MemoryFreed(KErrNone);
     }
 
@@ -95,6 +97,8 @@ void CGOomCloseApp::Reconfigure(const TActionRef& aRef)
     FUNC_LOG;
 
     iWgId = aRef.WgId();    
+    iCloseTimeout = aRef.CloseTimeout();
+    iWaitAfterClose = aRef.WaitAfterClose();
     }
 
 void CGOomCloseApp::ConstructL()
@@ -128,7 +132,7 @@ void CGOomCloseApp::KillTask()
     iAppCloserRunning = EFalse;
     
     iAppCloseTimer->SetState(CGOomAppCloseTimer::EGOomAppKilled);
-    iAppCloseTimer->After(KGOomMaxAppAfterKillWaitTime);
+    iAppCloseTimer->After(iWaitAfterClose * 1000);
     //MemoryFreed(KErrNone);
     }
 

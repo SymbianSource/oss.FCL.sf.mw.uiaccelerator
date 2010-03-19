@@ -1193,7 +1193,19 @@ EXPORT_C CHuiCanvasGc::TClipRectVisibility CHuiCanvasGc::EnableDelayedClippingIf
                 // Could copy only needed rects to avoid excessive clipping
                 iDelayedClipRegion.Copy(iClippingRegion);
                 break;
-                }                                
+                }
+
+		    // both points lie outside - but the line may still intersect the region, 
+            // so represent the line as a rect and try an intersection test...
+            TRect lineBoundingRect(start, end);
+            lineBoundingRect.Normalize();
+            lineBoundingRect.iBr += TPoint(1, 1);
+            if (IsClipped(lineBoundingRect, iClippingRegion) != EFullyOutside)
+                {
+                iDelayedClipRegion.Copy(iClippingRegion);
+                vis1 = EPartialOverlap;
+                break;
+                }                    
             }                    
         }        
     if (vis1 == EFullyOutside && vis2 == EFullyOutside)
@@ -1211,6 +1223,13 @@ EXPORT_C CHuiCanvasGc::TClipRectVisibility CHuiCanvasGc::EnableDelayedClippingIf
     
 EXPORT_C TBool CHuiCanvasGc::ClipNext()
     {
+    if (iDelayedClipVisibility == EFullyOutside)
+        {
+        // If drawing would fall completely outside the clipping region, we are done. 
+        return EFalse;
+        }
+
+    const TBool clipOneByOne = iDelayedClipRegion.Count() > MaxNumberOfClipRects();
     if (iDelayedClipVisibility != EFullyOutside && 
         iDelayedClipRegion.Count() && 
         iDelayedClipCount < iDelayedClipRegion.Count())        
@@ -1224,7 +1243,7 @@ EXPORT_C TBool CHuiCanvasGc::ClipNext()
       	iGc->PushClip();
         iDelayedClipRectPushed = ETrue;
         
-        if (MaxNumberOfClipRects() == 1)
+        if (clipOneByOne)
             {
             iGc->Clip(iDelayedClipRegion[iDelayedClipCount]);                            
             }
@@ -1234,18 +1253,21 @@ EXPORT_C TBool CHuiCanvasGc::ClipNext()
             }                            
         }    
 
-    iDelayedClipCount += MaxNumberOfClipRects();
-    
-    if (iDelayedClipVisibility == EFullyOutside)
+    TBool continueDrawing = EFalse;
+    if (clipOneByOne)
         {
-        // If drawing would fall completely outside the clipping region, we are done. 
-        return EFalse;
+        // Clip one by one.            
+        iDelayedClipCount++;
+        continueDrawing = iDelayedClipCount <= iDelayedClipRegion.Count();
         }
     else
         {
-        // Check how many times we must do the operation in case rederer does not support many clip rects at once 
-        return (iDelayedClipCount <= iDelayedClipRegion.Count() || iDelayedClipCount == MaxNumberOfClipRects());
+        // Drawing once is sufficient - all clipping can be done.
+        continueDrawing = !iDelayedClipCount;
+        iDelayedClipCount++;
         }
+
+    return continueDrawing;    
     }
 
 EXPORT_C void CHuiCanvasGc::DisableDelayedClippingIfNeeded()

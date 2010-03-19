@@ -167,7 +167,10 @@ void CHuiCmdBufferBrush::ClearBackground(CHuiGc &aGc, TRect aRectangle) const
 
     CHuiCanvasRenderBuffer* renderbuffer = NULL;
     renderbuffer = iVisual->Env().CanvasTextureCache().FindCachedRenderBuffer(*iVisual);
-    iCanvasGc.ClearRenderBuffer(*renderbuffer, aRectangle /*TRect(0,0,iVisual->DisplayRect().Size().iWidth, iVisual->DisplayRect().Size().iHeight)*/);
+    if (renderbuffer)
+        {
+        iCanvasGc.ClearRenderBuffer(*renderbuffer, aRectangle /*TRect(0,0,iVisual->DisplayRect().Size().iWidth, iVisual->DisplayRect().Size().iHeight)*/);
+        }
     }
 void CHuiCmdBufferBrush::DrawDrawingCommands(TInt aAction, CHuiGc &aGc, TRect aClippingRectangle, 
                                              TPtrC8 aCommands, CHuiCanvasCommandBuffer *buf, const TRegion &reg) const

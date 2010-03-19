@@ -278,7 +278,7 @@ void CHuiFxEffectParser::ParseNodeL( CMDXMLNode* aNode, CHuiFxLayer* aLayer)
 #ifdef _HUI_FX_PARSER_LOGGING
             __ALFFXLOGSTRING("CHuiFxEffectParser::ParseNodeL - ENodeTypeUnknown");
 #endif
-            FAIL(KErrGeneral, _L("Unknown node type"));
+            __ALFFXLOGSTRING1("CHuiFxEffectParser::ParseNodeL : WARNING - Node tag <%S> is not supported.", &(aNode->NodeName()));
             break;
             }
             
@@ -1074,6 +1074,10 @@ THuiFxReferencePoint CHuiFxEffectParser::GetReferencePointL( CMDXMLNode* aNode, 
     else if ( paramRef.Compare( KLitDisplayHeight ) == 0 )
         {
         ref = EReferencePointDisplayHeight;
+        }
+    else if ( paramRef.Compare( KLitDisplayHeightMinusVisualTop ) == 0 )
+        {
+        ref = EReferencePointDisplayHeightMinusVisualTop;
         }
     else if ( paramRef.Compare( KLitDisplayTop ) == 0 )
         {

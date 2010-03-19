@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Nokia Corporation and/or its subsidiary(-ies). 
+* Copyright (c) 2006-2008 Nokia Corporation and/or its subsidiary(-ies). 
 * All rights reserved.
 * This component and the accompanying materials are made available
 * under the terms of "Eclipse Public License v1.0"
@@ -71,7 +71,15 @@ CAlfRenderStage::~CAlfRenderStage()
 	delete iWsGraphicsContext;
 	delete iGoomSession;
 	
-	// Used just as a temporary holding place, do not delete!
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    if (Dll::Tls()!=NULL) 
+        {
+        delete AMT_CONTROL();
+        Dll::FreeTls();
+        }
+    #endif
+
+    // Used just as a temporary holding place, do not delete!
 	iWindowDrawingNode = NULL;	
 	}
 
@@ -109,6 +117,15 @@ void CAlfRenderStage::ConstructL(MWsGraphicDrawerEnvironment* aEnv, MWsScreen* a
       compcntrl->AlfBridgeCallback(MAlfBridge::ESetWindowTreeObserver,(MAlfCompositionAgnosticWindowTreeObserver*)this);  
       }
 
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF    
+    // Setup TLS and open global module testing chunk and mutex
+    if (Dll::Tls()==NULL) // create only for the first render stage!
+        {
+        User::LeaveIfError(Dll::SetTls(new(ELeave) CAlfModuleTestDataControl()));
+        User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects());
+        }
+    #endif         
+    
     __ALFLOGSTRING("CAlfRenderStage: ready to rock");
     }
 
@@ -140,6 +157,8 @@ TAny* CAlfRenderStage::ResolveObjectInterface(TUint aTypeId)
 			
     	case MWsDrawAnnotationObserver::EWsObjectInterfaceId:
     	    return static_cast<MWsDrawAnnotationObserver*>(this);
+        case KAlfSynchronizationInterfaceUid:
+            return static_cast<MAlfSynchronizationInterface*>(this);
     	default:
     	    return CWsRenderStage::ResolveObjectInterface(aTypeId);
 		}
@@ -162,6 +181,22 @@ void CAlfRenderStage::Begin(const TRegion* aRegion )
 	iUpdateRegion = aRegion;
 	iNext->Begin(aRegion);
 	}
+
+// ---------------------------------------------------------------------------
+// Synchronize
+// ---------------------------------------------------------------------------
+//
+TInt CAlfRenderStage::Synchronize(TInt& aId)
+    {
+    if ( iAlfSendBuffer )
+        {
+        ++iSyncId;
+        aId = iSyncId;
+        iAlfSendBuffer->Synchronize(iSyncId);
+        return KErrNone;
+        }
+    return KErrGeneral;
+    }
 
 // ---------------------------------------------------------------------------
 // End
@@ -330,17 +365,46 @@ void CAlfRenderStage::DoDrawTextCursor(
     drawRegion.AddRect( aExtent );
     TRegionFix<1> clipRegion;
     clipRegion.AddRect( aClipRect );
-            
+
+    TRgb penColor = TRgb(0x555555); 
+    TRgb brushColor = TRgb(0x555555); 
+    TRgb dotColor = TRgb(0xBBBBBB); 
+    
     WindowRedrawStart( aWindowTreeNode, drawRegion );
     iWsGraphicsContext->Reset();
     iWsGraphicsContext->SetDrawMode( MWsGraphicsContext::EDrawModePEN );
     iWsGraphicsContext->SetBrushStyle( MWsGraphicsContext::ESolidBrush );
     iWsGraphicsContext->SetPenStyle( MWsGraphicsContext::ESolidPen );
-    iWsGraphicsContext->SetBrushColor( KRgbBlack ); // color from interface is white, so temporirily putting black
-    //const TRect clipRect = cursor->ClipRect();
-    //const TRect cursorRect = cursor->Rect();
-    iWsGraphicsContext->SetClippingRegion( clipRegion );
+    iWsGraphicsContext->SetBrushColor( brushColor ); 
+    iWsGraphicsContext->SetPenColor( penColor );
+    iWsGraphicsContext->SetClippingRegion( clipRegion );    
     iWsGraphicsContext->DrawRect( aCursorRect );    
+
+    // Draw pattern to cursor so that it is visible in any color backgrounds.
+    iWsGraphicsContext->SetPenColor( dotColor );    
+    TPoint start = aCursorRect.iTl;
+    TPoint end = TPoint(aCursorRect.iTl.iX, aCursorRect.iBr.iY);
+    
+    for (TInt i=0; i<aCursorRect.Width();i++)
+        {    
+        TPoint point = start;
+        for (TInt j=0; j<aCursorRect.Height();j++)
+            {
+            if ((i % 2))
+                {
+                if (j % 2)
+                    iWsGraphicsContext->Plot(point);            
+                }
+            else
+                {
+                if (!(j % 2))
+                    iWsGraphicsContext->Plot(point);                        
+                }                
+            point.iY++;
+            }
+        start.iX++;
+        }
+        
     WindowRedrawEnd( aWindowTreeNode );
     }
 
@@ -420,7 +484,8 @@ void CAlfRenderStage::NodeCreated(const MWsWindowTreeNode& aWindowTreeNode, MWsW
             if( iScreenNumber == 0 )
 		        {          
                 if ( secureId != 0x10207218 && // Capserver / AKA goom
-                     secureId != 0x10204c27 )  // Policy server 
+                     secureId != 0x10204c27 && // Policy server
+                     secureId != 0x2000f85a )  // IAD application updater
                     {
                     // Todo: Must actually check whether the configuration uses goom
                     // would create drastic performance hit in a system that does not need
@@ -525,6 +590,10 @@ void CAlfRenderStage::NodeCreated(const MWsWindowTreeNode& aWindowTreeNode, MWsW
         }
 #endif    
 	iAlfSendBuffer->CommitL();
+	
+    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
+    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
+    AMT_INC_COUNTER(iRsWindowGroupNodeCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -565,6 +634,9 @@ void CAlfRenderStage::NodeReleased(const MWsWindowTreeNode& aWindowTreeNode)
 	    __ALFLOGSTRING("CAlfRenderStage::NodeReleased - WARNING: Node not found!!");
 	    }
 
+    AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
+    AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
+    AMT_DEC_COUNTER(iRsWindowGroupNodeCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -582,6 +654,8 @@ void CAlfRenderStage::NodeActivated(const MWsWindowTreeNode& aWindowTreeNode)
 
 	iAlfSendBuffer->CommitL();
     __ALFLOGSTRING("CAlfRenderStage::NodeActivated <<");
+   
+    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeActivatedCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -618,6 +692,9 @@ void CAlfRenderStage::NodeExtentChanged(const MWsWindowTreeNode& aWindowTreeNode
             );    
         }
 	iAlfSendBuffer->CommitL();
+
+    AMT_INC_COUNTER( iRsNodeExtentChangedCount );
+    AMT_SET_VALUE( iRsLatestNodeExtentRect, aRect );
     }
 
 // ---------------------------------------------------------------------------
@@ -650,6 +727,8 @@ void CAlfRenderStage::FlagChanged(const MWsWindowTreeNode& aWindowTreeNode, TInt
             aNewValue,
             &aWindowTreeNode   );
 	iAlfSendBuffer->CommitL();
+
+    AMT_INC_COUNTER( iRsTotalNodeFlagChangedCount );
     }
 
 // ---------------------------------------------------------------------------
@@ -712,7 +791,9 @@ void CAlfRenderStage::AttributeChanged(const MWsWindowTreeNode& aWindowTreeNode,
                 }
             }
         iAlfSendBuffer->CommitL();
-        } 
+        
+        AMT_INC_COUNTER( iRsTotalNodeAttributeChangedCount );
+        }    
     }
 
 // ---------------------------------------------------------------------------

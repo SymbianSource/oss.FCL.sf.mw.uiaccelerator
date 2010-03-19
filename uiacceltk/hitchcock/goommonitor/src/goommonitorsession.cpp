@@ -59,6 +59,15 @@ EXPORT_C TInt RGOomMonitorSession::RequestFreeMemory(TInt aBytesRequested)
     return KErrNone;    
     }
 
+EXPORT_C void RGOomMonitorSession::MemoryAllocationsComplete()
+    {
+    FUNC_LOG;
+    if (IsConnected())
+        {
+        SendReceive(EGOomMonitorMemoryAllocationsComplete);
+        }
+    }
+
 EXPORT_C TInt RGOomMonitorSession::RequestOptionalRam(TInt aBytesRequested, TInt aMinimumBytesNeeded, TInt aPluginId, TInt& aBytesAvailable)
     {
     FUNC_LOG;
@@ -128,7 +137,7 @@ EXPORT_C void RGOomMonitorSession::ThisAppIsNotExiting(TInt aWgId)
         }
     }
 
-
+//TODO should this be asynchronous - can be called from a goom plugin, which is called from goom - deadlock ?
 EXPORT_C void RGOomMonitorSession::SetGOomPriority(TGOomPriority aPriority)
     {
     FUNC_LOG;

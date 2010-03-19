@@ -12,7 +12,7 @@
 * Contributors:
 *
 * Description:   Build information file for project alfappserver
-*  Version     : %version: tr1sido#128.1.7 %
+*  Version     : %version: tr1sido#128.1.9 %
 *
 */
 
@@ -88,6 +88,7 @@ PRJ_MMPFILES
 ../plugins/alftranseffect/alftfxserverplugin/group/AlfTfxSrvPlugin.mmp
 ../plugins/alftranseffect/alfgfxtransadapter/group/gfxtransenginetfx.mmp
 ../plugins/alfoogmplugin/group/alfoogmplugin.mmp
+../plugins/alfcrpplugin/group/alfcrpplugin.mmp
 
 // background animation host+reference plugin
 ../backgroundanim/group/bganimhost.mmp
@@ -111,10 +112,7 @@ PRJ_MMPFILES
 // waves plugin is not part of foundation content (differentiating SW)
 #include "../backgroundanim/wavesplugin/group/bld.inf"
 
-// yber hack, to be remover right after W02 build is out
-#ifndef FF_MEETING_REQUEST_UI
 #include "../plugins/mmfmediaclientplugin/group/bld.inf"
-#endif
 #endif
 
 PRJ_TESTMMPFILES

@@ -31,6 +31,7 @@
 #include "uiacceltk/HuiTextureHandle.h"
 #include "HuiVg10RenderPlugin.h"
 
+struct THuiTexturePartialBitmapUploadParams;
 #ifdef __NVG
     #include <AknIconHeader.h>
     class CNvgEngine;
@@ -236,6 +237,11 @@ private:
      *  Make sure the shadow texture is of the proper dimensions.
      */
     void UpdateShadowSizeL(const TSize& aSize);
+
+    /**
+     * Partial bitmap upload.
+     */
+    void PartialBitmapUpload(THuiTexturePartialBitmapUploadParams* aParams);
     
     /** The render plugin that created this texture. */
     CHuiVg10RenderPlugin& iRenderPlugin;

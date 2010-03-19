@@ -65,6 +65,8 @@ public:
 
     virtual void SwapBuffers();
 
+    virtual void Finish();
+
     virtual void BindTexture(TInt aTextureUnit,
                              const MHuiSegmentedTexture& aTexture,
                              TInt aSegment);

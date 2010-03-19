@@ -94,3 +94,8 @@ void CGOomRunPlugin::ConstructL(CGOomRunPluginConfig& aPluginConfig)
 
     iPluginWaiter = CGOomPluginWaiter::NewL(waitDuration, *this);
     }
+
+TUint CGOomRunPlugin::Id()
+    {
+    return iPluginId;
+    }

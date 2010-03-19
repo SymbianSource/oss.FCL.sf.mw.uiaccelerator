@@ -238,6 +238,12 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
         {
         iRoot->EnableMargin(EFalse);
         }
+
+    // Check if surface pixels are to be used for this effect in all layers.
+    if (EffectFlags() & KHuiFxEnableBackgroundInAllLayers)
+        {
+        iRoot->SetAlwaysReadSurfacePixels(ETrue);
+        }
     
     iRoot->SetTargetRect(targetArea);
     iRoot->SetSourceRect(targetArea);        
@@ -257,8 +263,15 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
         // Background has not been disabled with a effect specific flag
         TBool enableBackground = IsAppliedToBackground() && (!aOpaque || iRoot->IsMarginEnabled()) && !(EffectFlags() & KHuiFxDisableBackground);
         
+        if (EffectFlags() & KHuiFxEnableBackgroundInAllLayers)
+            {
+            enableBackground = ETrue;
+            }
+        
+        TBool useFrozenBackground = (EffectFlags() & KHuiFxFrozenBackground);
+        
         // Check if cache is up-to date or does it need to be refreshed
-        TBool cachedRenderTargetNeedsRefresh = (iRoot->Changed() || aRefreshCachedRenderTarget || enableBackground);
+        TBool cachedRenderTargetNeedsRefresh = (iRoot->Changed() || aRefreshCachedRenderTarget || (enableBackground && !useFrozenBackground));
 
         // Try to apply also margins, we cannot just use aDisplayRect directly
         TRect targetRect = iRoot->VisualRect();

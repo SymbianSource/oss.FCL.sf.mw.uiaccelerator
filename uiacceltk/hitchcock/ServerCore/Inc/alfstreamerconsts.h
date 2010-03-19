@@ -37,7 +37,8 @@ enum
     EDsNotifyNativeWindowData,
     EAlfBridgerBlindSend,
     EAlfSetScreenRotation, 
-    EAlfGetNativeWindowHandles
+    EAlfGetNativeWindowHandles,
+    EAlfSynchronize
     };
 
 enum TAlfCompOps{

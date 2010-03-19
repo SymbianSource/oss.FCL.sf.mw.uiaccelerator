@@ -104,7 +104,7 @@ public:
     
     void SetFirstSprite();
     
-    CAlfNode* OrphonMe();
+    CAlfNode* OrphanMe();
     
     CAlfNode* FindPreviousChild();
     

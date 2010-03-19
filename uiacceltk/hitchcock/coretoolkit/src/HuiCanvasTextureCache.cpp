@@ -285,6 +285,8 @@ void CHuiCanvasTextImage::Reset()
 
 CHuiCanvasTextImage::~CHuiCanvasTextImage()
     {
+    delete iText;
+    iText = NULL;
     }
 
 TBool CHuiCanvasTextImage::UseColorModulation() const
@@ -1099,8 +1101,6 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
     TBool volatileBitmapOrMask = ETrue;
 #endif
 
-    TBool originalMaskUsed = ETrue;
-
 
     TInt bitmapHandle = aImage.iBitmapHandle;
     TInt maskHandle = aImage.iMaskHandle;
@@ -1199,7 +1199,6 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
                 
                 mask = invertedMask;
                 CleanupStack::PushL(mask);    
-                originalMaskUsed = EFalse;
                 }
             
             // Upload expects mask to begin always at TPoint(0,0), so if mask
@@ -1218,7 +1217,6 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
                     }
                 mask = movedMask;
                 CleanupStack::PushL(mask);                            
-                originalMaskUsed = EFalse;
                 }
 #ifdef __NVG
             }
@@ -2191,6 +2189,7 @@ const CHuiCanvasGraphicImage* CHuiCanvasTextureCache::FindCachedImageL(
     iSearchedGraphicImageEntry->iBitmapTouchCount = KHuiInitialBitmapTouchCount;
     iSearchedGraphicImageEntry->iMaskTouchCount = KHuiInitialBitmapTouchCount;
     iSearchedGraphicImageEntry->iGcParams = aCachedImageParams.iGcParams;
+    iSearchedGraphicImageEntry->iCache = this;
     
     cachedEntry = iCachedImages.FindInOrder(iSearchedGraphicImageEntry, ImageOrderFunc);
     if (cachedEntry == KErrNotFound)
@@ -2219,6 +2218,7 @@ const CHuiCanvasGraphicImage* CHuiCanvasTextureCache::CreateCombinedCachedImageL
     iSearchedGraphicImageEntry->Reset();
     iSearchedGraphicImageEntry->iGcParams = aGcParams;
     iSearchedGraphicImageEntry->iImageSize = aImageSize;
+    iSearchedGraphicImageEntry->iCache = this;
     
     
     for (TInt i=0; i<aCachedImageParams.Count();i++)
@@ -2294,13 +2294,14 @@ const CHuiCanvasGraphicImage* CHuiCanvasTextureCache::CreateCachedImageL(
     iSearchedGraphicImageEntry->iBitmapTouchCount = KHuiInitialBitmapTouchCount;
     iSearchedGraphicImageEntry->iMaskTouchCount = KHuiInitialBitmapTouchCount;
     iSearchedGraphicImageEntry->iGcParams = aCachedImageParams.iGcParams;
+    iSearchedGraphicImageEntry->iCache = this;
     
     cachedEntry = iCachedImages.FindInOrder(iSearchedGraphicImageEntry, ImageOrderFunc);
     if (cachedEntry == KErrNotFound)
         {
         // Create new entry object
         CHuiCanvasGraphicImage* newEntry = new (ELeave) CHuiCanvasGraphicImage; 
-        CleanupStack::PushL(newEntry);                    
+        CleanupStack::PushL(newEntry);
         
         newEntry->CopyAttributes(*iSearchedGraphicImageEntry);
         
@@ -2311,7 +2312,7 @@ const CHuiCanvasGraphicImage* CHuiCanvasTextureCache::CreateCachedImageL(
         User::LeaveIfError(iCachedImages.InsertInOrder(newEntry, ImageOrderFunc));
         cachedEntry = iCachedImages.FindInOrder(newEntry, ImageOrderFunc);
         CleanupStack::Pop(newEntry);
-        needUpdate = ETrue;            
+        needUpdate = ETrue;
         }
     else
         {

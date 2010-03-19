@@ -47,6 +47,8 @@
 #include "huicanvastexturecache.h"
 #include "HuiFxEngine.h"
 
+#include "huisynchronizationobserver.h"
+
 #define HUI_HIRES_TIMER
 
 
@@ -1069,6 +1071,8 @@ void CHuiEnv::AdvanceTime(TReal32 aElapsedTime)
             }
         }
 
+    DoSynchronize();
+        
     iCurrentDisplay = NULL; // informs the egosystem that the drawing is done.
     CHuiStatic::ReportNewFrame();
     
@@ -1762,3 +1766,64 @@ EXPORT_C THuiMemoryLevel CHuiEnv::MemoryLevel()
     {
     return iMemoryLevel;
     }
+
+EXPORT_C void CHuiEnv::Synchronize(TInt aId, MHuiSynchronizationObserver* aObserver)
+    {
+    iSynchObserver = aObserver;
+    iSynchId = aId;
+    
+    if ( aObserver )
+        {
+        ContinueRefresh();
+        }
+    }
+
+void CHuiEnv::DoSynchronize()
+    {
+    if ( !iSynchObserver )
+        {
+        return;
+        }
+
+    // Synchronize commands before signalling through P&S
+    for(TInt i = 0; i < iDisplays.Count(); ++i)
+        {          
+        if ( ( iDisplays[i]->DisplayType() != CHuiDisplay::EDisplayOffScreenBuffer ) 
+             && ( iDisplays[i]->ScreenBufferObserver() == NULL ) )
+            {
+            MakeCurrent(*iDisplays[i]);
+            iDisplays[i]->RenderSurface().Finish();
+            }
+        }
+
+    iSynchObserver->Synchronized( iSynchId );
+    iSynchObserver = NULL;
+    }
+
+void CHuiEnv::RemoveTheControlGroup(TInt aId)
+    {
+    TInt i;
+
+    for(i = 0; i < iLoadedGroups.Count(); ++i)
+        {
+        if(iLoadedGroups[i]->ResourceId() == aId)
+            {
+            // This is control group to delete.
+            CHuiControlGroup* group = iLoadedGroups[i];
+            CancelCommands(group);
+
+            for (TInt ii = iDisplays.Count()-1; ii>=0; ii--)
+                {
+                TInt index = iDisplays[ii]->Roster().Find(group);
+                if (index != KErrNotFound)
+                    {
+                    iDisplays[ii]->Roster().Hide(iDisplays[ii]->Roster().ControlGroup(index));
+                    }
+                }
+            
+            iLoadedGroups.Remove(i);
+            
+            }
+        }
+    }
+

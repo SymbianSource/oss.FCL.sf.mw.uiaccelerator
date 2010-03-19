@@ -399,10 +399,13 @@ public: // From CHuiVisual
 
 public:    
     IMPORT_C void StoreRenderBufferL();
-    void DrawStoredVisualRenderBuffer() const;
-    void DrawStoredFullScreenRenderBuffer(CHuiGc& aGc) const;
+    void DrawStoredVisualRenderBuffer(TInt aCanvasDrawMode) const;
+    void DrawStoredFullScreenRenderBuffer(TInt aCanvasDrawMode, CHuiGc& aGc) const;
     IMPORT_C void FreeRenderBuffer();
-        
+
+protected:
+    virtual void VisualExtension(const TUid& aExtensionUid, TAny** aExtensionParams);
+
 private:
        
     THuiCanvasPaintedArea CanvasPaintedArea(TInt aIndex) const;
@@ -411,6 +414,15 @@ private:
     void DrawCanvasChildren(CHuiGc& aGc, TInt aIncludeCanvasFlags, TInt aExcludeCanvasFlags) const;
     TBool ChildTreeChanged(TInt aExcludeCanvasFlags) const;
     
+    static TBool RecursiveChildTreeChanged(CHuiVisual* aVisual, TInt aExcludeCanvasFlags);
+    static TBool RecursiveIsExternalContentDrawingEnabled(CHuiVisual* aVisual);
+    static TBool RecursiveHasCommandBuffers(CHuiVisual* aVisual);
+    
+    void CollectPaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const;
+    void CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const;
+    
+    TBool CanSkipDrawing() const;
+
 private: 
 
     struct THuiCanvasVisualData;

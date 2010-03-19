@@ -42,6 +42,9 @@ enum TAlfControlGroupRole
 
     /** Group for showing effects */
     EAlfFullScreenEffectContainer,
+    
+    /** Group for FPS indicator */
+    EAlfFpsIndicatorContainer
     };
 
 NONSHARABLE_CLASS( TAlfControlGroupEntry )  
@@ -107,6 +110,11 @@ NONSHARABLE_CLASS(CAlfScreen) : public CBase
          */
         TBool IsVisualTreeVisibilityChanged();
 
+        /**
+         * Returns amount of fixed control groups.
+         */
+        TInt FixedControlGroupCount() const;
+        
 	public:
 	        	   
 	    RArray<TAlfControlGroupEntry> iControlGroups;
@@ -115,6 +123,7 @@ NONSHARABLE_CLASS(CAlfScreen) : public CBase
 	   	CHuiDisplay* iDisplay; 
 	    CHuiControlGroup* iFloatingSpriteControlGroup; 
 	    CHuiControlGroup* iFullscreenEffectControlGroup; 
+	    CHuiControlGroup* iFpsControlGroup;
 	    
 	    TBool iVisualTreeVisibilityChanged;
 	    TInt iScreenNum;

@@ -196,6 +196,7 @@ public: // internal utilities
     void SetAlfWindowGroupId(TInt aWgId);
     void NotifyLowMemory(TInt aAmountOfFreeMemRequested);
     TInt ForceSwRendering(TBool aEnabled);
+    void SetAlfAppWindowGroup( TInt aID );
     
 private:
 

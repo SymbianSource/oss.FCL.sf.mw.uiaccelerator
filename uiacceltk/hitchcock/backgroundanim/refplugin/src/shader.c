@@ -46,7 +46,11 @@ GLuint LoadAndCompileShader(char* path, char* shadername, GLenum type)
     fseek (file, 0, SEEK_END);
     len = ftell (file);
     fseek(file, 0, SEEK_SET);
-
+    if (len<0)
+        {
+        fclose(file);
+        return 0;
+        }
     shaderdata = (char*)malloc(len+1);
     if (!shaderdata)
         {

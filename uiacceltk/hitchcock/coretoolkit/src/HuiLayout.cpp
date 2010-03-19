@@ -56,8 +56,7 @@ EXPORT_C void CHuiLayout::ConstructL()
     {
     CHuiVisual::ConstructL();
     iHuiLayoutPrivateData = new (ELeave) THuiLayoutPrivateData;
-    CHuiRenderPlugin& renderplugin = CHuiStatic::Renderer();
-    iHuiLayoutPrivateData->iGc = renderplugin.CreateCanvasGcL();
+    iHuiLayoutPrivateData->iGc = NULL;
     }
 
 
@@ -74,6 +73,7 @@ EXPORT_C CHuiLayout::~CHuiLayout()
 	        }
 	    iHuiLayoutPrivateData->iChildren.Reset();
 	    delete iHuiLayoutPrivateData->iGc;
+	    iHuiLayoutPrivateData->iGc = NULL;
 	    delete iHuiLayoutPrivateData;
     	}
     }
@@ -311,12 +311,8 @@ EXPORT_C void CHuiLayout::UpdateChildrenLayout(TInt aTransitionTime)
     TInt count = Count();
     for(TInt i = 0; i < count; ++i)
         {
-        //Ignore inactive child visuals
-        if ( iHuiLayoutPrivateData->iChildren[i]->Flags() & EHuiVisualFlagInactive )
-        	{
-        	continue;
-        	}
-        UpdateChildLayout(i, aTransitionTime);
+        // size and positio changes must go also to inactive visuals
+        UpdateChildLayout(i, aTransitionTime); 
         }
 
     CHuiVisual::UpdateChildrenLayout(aTransitionTime);
@@ -687,7 +683,7 @@ EXPORT_C void CHuiLayout::ClearChanged()
     TInt count = Count();
     for(TInt i = 0; i < count; ++i)
         {
-        if (Flags() & EHuiVisualFlagInactive)
+        if (iHuiLayoutPrivateData->iChildren[i]->Flags() & EHuiVisualFlagInactive)
             {
             // No need to clear inactive children
             continue;
@@ -1120,6 +1116,13 @@ EXPORT_C void CHuiLayout::SetPos(const THuiRealPoint& aPos, TInt aTransitionTime
 void CHuiLayout::DrawStoredBitmap(CHuiGc &aGc) const
     {
     if (!Display()) return;
+    
+    if (!iHuiLayoutPrivateData->iGc)
+        {
+        CHuiRenderPlugin& renderplugin = CHuiStatic::Renderer();
+		// deleted in destructor or CHuiCanvasVisual::FreeRenderBuffer when not needed anymore
+        iHuiLayoutPrivateData->iGc = renderplugin.CreateCanvasGcL(); 
+        }
     CHuiCanvasGc& gc = *iHuiLayoutPrivateData->iGc;
     gc.SetGc(aGc);
     gc.SetDefaults();

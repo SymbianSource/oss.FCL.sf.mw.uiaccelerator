@@ -185,6 +185,9 @@ EGLSurface CHuiVg10RenderSurface::CreateSurface(EGLConfig aConfig)
     EGLint attriblist[] = 
         {
         EGL_VG_ALPHA_FORMAT, EGL_VG_ALPHA_FORMAT_PRE,
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+        EGL_RENDER_BUFFER, EGL_SINGLE_BUFFER,
+#endif
         EGL_NONE
         };
     attriblistPtr = &attriblist[0];
@@ -296,6 +299,10 @@ void CHuiVg10RenderSurface::SwapBuffers()
     eglSwapBuffers(iEglDisplay, iEglSurface);
     }
 
+void CHuiVg10RenderSurface::Finish()
+    {
+    vgFinish();
+    }
 
 void CHuiVg10RenderSurface::BindTexture(TInt /*aTextureUnit*/,
                                         const MHuiSegmentedTexture& aTexture,

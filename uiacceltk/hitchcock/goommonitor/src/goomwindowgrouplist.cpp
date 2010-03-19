@@ -31,6 +31,8 @@
 _LIT(KDummyWgName, "20");
 const TInt KPreallocatedSpaceForAppList = 50;
 
+const TInt KAllowedMemUsageForApps = 50000;     //Allow upto 50K usage by app when killing apps
+
 const TUint KGOomTicksPerSecond = 1000;
 
 typedef EGLBoolean (*NOK_resource_profiling)(EGLDisplay, EGLint, EGLint*, EGLint, EGLint*);
@@ -78,7 +80,8 @@ void CGOomWindowGroupList::RefreshL()
     EGLint* prof_data;
     TInt i(0);
     RArray<TUint64> processIds;
-    //RArray<TUint> privMemUsed;
+    RArray<TUint> privMemUsed;
+    RArray<TUint64> systemProcessIds;
         
     EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
@@ -100,15 +103,14 @@ void CGOomWindowGroupList::RefreshL()
                                  &data_count);
     
     /* Iterate over the returned data */
+    TUint64 process_id;  
     while (i < data_count)
         {
         TRACES2("RefreshL EGL_NOK_resource_profiling - index: %d data: %x", i, prof_data[i]);
-            
         switch (prof_data[i++])
             {   
             case EGL_PROF_PROCESS_ID_NOK:
                 {
-                TUint64 process_id;
                 if (sizeof(EGLNativeProcessIdTypeNOK) == 8)
                     {
                     process_id = TUint64(prof_data[i]);
@@ -120,17 +122,29 @@ void CGOomWindowGroupList::RefreshL()
                     process_id = prof_data[i];
                     i++;
                     }
-                processIds.Append(process_id);
                 break;
                 }
             case EGL_PROF_PROCESS_USED_PRIVATE_MEMORY_NOK:
                 {
-                //TUint mem = prof_data[i];
-                //privMemUsed.Append(mem);
+                TUint mem = prof_data[i];
+                privMemUsed.Append(mem);
+
+                TRACES1("Memory Usage by app is %d", mem);
+                if(mem > KAllowedMemUsageForApps)
+                    processIds.Append(process_id);
+                
                 i++;
                 break;
                 }
             case EGL_PROF_PROCESS_USED_SHARED_MEMORY_NOK:
+                {
+                TUint mem = prof_data[i];
+                TRACES1("Shared Memory Usage by app is %d", mem);
+                if(mem > KAllowedMemUsageForApps)
+                    processIds.Append(process_id);
+                i++;
+                break;
+                }
             case EGL_PROF_USED_MEMORY_NOK:
             case EGL_PROF_TOTAL_MEMORY_NOK:
             default:
@@ -227,18 +241,49 @@ void CGOomWindowGroupList::RefreshL()
                 {
                 found = 1;
                 process.Close();
-                TRACES2("RefreshL Process id %x, wgindex %d, using gfx memory. Added to list", psecid, index);
+                TRACES3("RefreshL Process id %x, wgid %d, using gfx memory %d. Added to list", psecid, iWgIds[index].iId, privMemUsed[i]);
                 break;
                 }
             process.Close();
             }
-      
+        
         if(!found)
             {
             iWgIds.Remove(index);
             continue;
             }
       
+        //check if it is system app
+        if(iWgName->IsSystem() /*|| iWgName->Hidden()*/)
+            {
+            TRACES3("System/Hidden app found %x, ISystem %d, IsHidden %d",secureId, iWgName->IsSystem()?1:0, iWgName->Hidden()?1:0);  
+            systemProcessIds.Append(secureId);
+            }
+      
+        }
+       
+    processIds.Close();
+    privMemUsed.Close();      
+    
+    //check if any system apps are included
+    index = iWgIds.Count();
+    while (index--)
+        {
+        TBool skipped = EFalse;
+        for(i = 0; i < systemProcessIds.Count(); i++)
+            {
+            if(AppId(index,ETrue) == systemProcessIds[i])
+                {
+                TRACES2("WgId %d belongs to system app %x. Removing from Kill List",iWgIds[index].iId, systemProcessIds[i]);
+                iWgIds.Remove(index);
+                skipped = ETrue;
+                break;
+                }
+            }
+        
+        if(skipped)
+            continue;
+        
         // See if there is a tick count entry for each window in the list
         TGOomWindowGroupProperties* wgProperties = iWgToPropertiesMapping.Find(iWgIds[index].iId);
         
@@ -250,9 +295,8 @@ void CGOomWindowGroupList::RefreshL()
             iWgToPropertiesMapping.InsertL(iWgIds[index].iId, wgProperties);
             }
         }
-       
-    processIds.Close();
-    //privMemUsed.Close();       
+    
+    systemProcessIds.Close();
     
     }
 
@@ -467,8 +511,6 @@ CGOomWindowGroupList::~CGOomWindowGroupList()
 void CGOomWindowGroupList::SetPriorityBusy(TInt aWgId)
     {
     FUNC_LOG;
-
-    //Refresh();
     
     TInt parentId;
     TRAPD(err, parentId = FindParentIdL(aWgId));
@@ -476,15 +518,15 @@ void CGOomWindowGroupList::SetPriorityBusy(TInt aWgId)
         {
         parentId = aWgId;
         }
-    
+        
     TRACES2("CGOomWindowGroupList::SetPriorityBusy aWgId = %d, parentId = %d", aWgId, parentId);
-    
+        
     TGOomWindowGroupProperties* wgProperties = iWgToPropertiesMapping.Find(parentId);
     if (wgProperties)
         {
         wgProperties->iDynamicPriority = EGOomPriorityBusy;
         }
-    
+        
     // If we can't find the window group then ignore it
     }
 
@@ -533,6 +575,7 @@ TInt CGOomWindowGroupList::FindParentIdL(TInt aWgId)
 
 TBool CGOomWindowGroupList::IsBusy(TInt aWgIndex)
     {
+    FUNC_LOG;
     if (aWgIndex < 0 || aWgIndex >= iWgIds.Count())
         {
         return EFalse;
@@ -576,8 +619,6 @@ void CGOomWindowGroupList::SetPriorityNormal(TInt aWgId)
     {
     FUNC_LOG;
 
-    //Refresh();
-    
     TInt parentId;
     TRAPD(err, parentId = FindParentIdL(aWgId));
     if (err)
@@ -598,8 +639,6 @@ void CGOomWindowGroupList::SetPriorityNormal(TInt aWgId)
 void CGOomWindowGroupList::SetPriorityHigh(TInt aWgId)
     {
     FUNC_LOG;
-
-    //Refresh();
 
     TInt parentId;
     TRAPD(err, parentId = FindParentIdL(aWgId));
@@ -638,4 +677,42 @@ TInt CGOomWindowGroupList::GetIndexFromAppId(TUint aAppId) const
         indexInGroupList = KAppNotInWindowGroupList;
 
     return indexInGroupList;
+    }
+
+// Find the specificed application in the window group list and return the index
+TInt CGOomWindowGroupList::GetIndexFromWgId(TInt aWgId) const
+    {
+    FUNC_LOG;
+
+    TInt indexInGroupList = Count();
+    TBool appFoundInWindowGroupList = EFalse;
+    
+    while (indexInGroupList--)
+        {
+        if (iWgIds[indexInGroupList].iId == aWgId)
+            {
+            appFoundInWindowGroupList = ETrue;
+            break;
+            }
+        }
+    
+    if (!appFoundInWindowGroupList)
+        indexInGroupList = KAppNotInWindowGroupList;
+
+    return indexInGroupList;
+    }
+
+void CGOomWindowGroupList::GetAllWgIdsMatchingAppId(TInt aWgId, RArray<TInt> & WgIdList) const
+    {
+    TInt32 appId = AppIdfromWgId(aWgId, ETrue);
+    TInt indexInGroupList = Count();
+    WgIdList.Reset();
+    
+    while (indexInGroupList--)
+        {
+        if (AppIdfromWgId(iWgIds[indexInGroupList].iId, ETrue) == appId)
+            {
+            WgIdList.Append(iWgIds[indexInGroupList].iId);
+            }
+        }
     }

@@ -30,6 +30,8 @@
 #include "uiacceltk/HuiUtil.h"
 #include "uiacceltk/HuiPanic.h"
 
+#include "huiextension.h"
+
 // temporary hack until the openvg headers are fixed..
 #ifndef OPENVG_VERSION_1_0_1
     #warning using temporary hack to define OPENVG_VERSION_1_0_1, see TSW: SKYA-7QQB8
@@ -878,7 +880,17 @@ void CHuiVg10Texture::SetupSegmentsL(const TSize& aLogicalSize,
     
 void CHuiVg10Texture::TextureExtension(const TUid& aExtensionUid, TAny** aExtensionParameters)
     {
-	CHuiTexture::TextureExtension(aExtensionUid, aExtensionParameters);    	
+    if ( aExtensionUid == KHuiTexturePartialBitmapUploadUid && 
+         aExtensionParameters && *aExtensionParameters )
+        {
+        THuiTexturePartialBitmapUploadParams* params = 
+            static_cast<THuiTexturePartialBitmapUploadParams*>(*aExtensionParameters);
+        PartialBitmapUpload(params);
+        }
+    else
+        {
+	    CHuiTexture::TextureExtension(aExtensionUid, aExtensionParameters);    	
+	    }
     }
 
 void CHuiVg10Texture::EnableShadow(TBool aEnable)
@@ -1003,6 +1015,70 @@ void CHuiVg10Texture::GenerateShadowL()
     HUI_VG_INVARIANT();
     }
 
+void CHuiVg10Texture::PartialBitmapUpload(THuiTexturePartialBitmapUploadParams* aParams)
+    {
+    if ( !aParams->iBitmap || !aParams->iBitmap->Handle() ||
+         aParams->iBitmap->DisplayMode() != EColor16MAP )
+        {
+        // Only specific format supported.
+        aParams->iErrorCode = KErrArgument;
+        return;
+        }
+        
+    if ( SegmentCount() != 1 || ((VGImage)SegmentName(0)) == VG_INVALID_HANDLE || 
+         Size() != aParams->iBitmap->SizeInPixels() )
+        {
+        // You must perform initial upload using normal methods.
+        aParams->iErrorCode = KErrNotReady;
+        return;
+        }
+    
+    //TRect segmentRect(SegmentSize(0));
+    TRect segmentRect(Size());
+    TRect rect(aParams->iRect);
+    rect.Intersection(segmentRect);
+    
+    if ( rect != aParams->iRect )
+        {
+        // Rect must be fully within segment rect
+        aParams->iErrorCode = KErrArgument;
+        return;        
+        }
+
+    aParams->iErrorCode = KErrNone;
+    
+    if ( rect.IsEmpty() )
+        {
+        // Nothing to upload.
+        return;
+        }
+
+    PushEGLContext();
+    aParams->iBitmap->BeginDataAccess();
+
+    const TInt scanLineLength = CFbsBitmap::ScanLineLength(
+        aParams->iBitmap->SizeInPixels().iWidth, EColor16MAP);
+    const TInt bytesPerPixel = 4;
+    
+    TUint8* dataAddress = (TUint8*)aParams->iBitmap->DataAddress();
+    dataAddress += rect.iTl.iX * bytesPerPixel;
+    dataAddress += rect.iTl.iY * scanLineLength;
+        
+    vgImageSubData(
+        (VGImage)SegmentName(0), // image
+        dataAddress,             // data
+        scanLineLength,          // dataStride
+        VG_sARGB_8888_PRE,       // dataFormat
+        rect.iTl.iX,             // x
+        rect.iTl.iY,             // y
+        rect.Width(),            // width
+        rect.Height()            // height
+        );
+    
+    aParams->iBitmap->EndDataAccess( ETrue );
+    PopEGLContext();
+    }
+
 #ifdef __NVG
 HBufC8* CHuiVg10Texture::ReadNVGDataL(const CFbsBitmap& aBitmap)
     {
@@ -1082,7 +1158,7 @@ void CHuiVg10Texture::SegmentUploadNvgL(const CFbsBitmap& aBitmap, const CFbsBit
         image = CreateRenderedImage(&nvgEngine, dataBuf, Size());
         
         // New functionality for checking the mask
-        if (header.GetBitmapId() != maskHeader.GetBitmapId() &&
+        if (header.GetBitmapId() != maskHeader.GetBitmapId() && maskDataBuf &&
             CompareNvgData(dataBuf, maskDataBuf) != 0)
             {
             VGImage maskImg = VG_INVALID_HANDLE;
@@ -1436,14 +1512,13 @@ void CHuiVg10Texture::SetNvgParamsFromIconHeader(CNvgEngine& aNvgEngine, HBufC8*
 TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisplay, EGLSurface aSurface, EGLContext aContext)
     {
     HUI_VG_INVARIANT();
-    // If the icon is also a current EGL surface, the getImageSubData
-    // won't succeed and return "image in use" -error..
-    if ( eglMakeCurrent( aDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT ) == EGL_FALSE )
-        {
-        HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL NO_Surface could not be made current, eglErr: %04x"), eglGetError());
-        return aSize;
-        }
-    
+    #ifdef __WINSCW__
+        if ( eglMakeCurrent( aDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT ) == EGL_FALSE )
+           {
+           HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL NO_Surface could not be made current, eglErr: %04x"), eglGetError());
+           return aSize;
+           }
+    #endif      
 #ifndef __WINS__ // Should possibly query the supported mode instead?
     VGImageFormat imageInternalFormat = VG_sARGB_8888_PRE;
 #else
@@ -1470,7 +1545,7 @@ TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisp
     TReal R = 1.0;
     TInt HaN = Ha;
     
-    const TInt lastColumn = aSize.iHeight - 1;
+    const TInt lastColumn = aSize.iWidth - 1;
     for (TInt curRow = 0; curRow < lValidMargin; curRow++)
         {
         const TInt y = (aSize.iHeight - 1) - curRow; // h - 1 is the last line
@@ -1492,14 +1567,14 @@ TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisp
         }
     delete buf;
     HUI_VG_INVARIANT();
-    
+    #ifdef __WINSCW__    
     // Make the PBuffer surface current again 
-    if ( eglMakeCurrent(aDisplay, aSurface, aSurface, aContext) == EGL_FALSE )
-        {
-        HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL aSurface could not be made current, eglErr: %04x"), eglGetError());
-        return aSize;
-        }
-    
+     if ( eglMakeCurrent(aDisplay, aSurface, aSurface, aContext) == EGL_FALSE )
+         {
+         HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL aSurface could not be made current, eglErr: %04x"), eglGetError());
+         return aSize;
+         }
+    #endif     
     // If icon size has to be changed, clear out old area for new DrawNVG round!
     if(aSize.iHeight > HaN)
         {

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2008 Nokia Corporation and/or its subsidiary(-ies). 
+* Copyright (c) 2006-2008 Nokia Corporation and/or its subsidiary(-ies). 
 * All rights reserved.
 * This component and the accompanying materials are made available
 * under the terms of "Eclipse Public License v1.0"
@@ -19,6 +19,9 @@
 
 #ifndef __ALFRENDERSTAGE_H__
 #define __ALFRENDERSTAGE_H__
+
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h"
 
 #include <graphics/wsrenderstage.h>
 #include <graphics/wscursor.h>
@@ -55,7 +58,8 @@ class CAlfRenderStage :
     public MWsTextCursor,
     public MAlfCompositionAgnosticWindowTreeObserver,
     public MAlfHintObserver,
-    public MWsDrawAnnotationObserver
+    public MWsDrawAnnotationObserver,
+    public MAlfSynchronizationInterface
         {
 public:
 
@@ -145,6 +149,10 @@ public: // from MAlfCompositionWsWindowTreeObserver
 	void WindowGroupChained(const MWsWindowTreeNode& aParent, const MWsWindowTreeNode& aChild);
 	void WindowGroupChainBrokenAfter(const MWsWindowTreeNode& aWindowGroupNode);
 	void FadeAllChildren(const MWsWindowTreeNode& aWindowTreeNode, TBool aFaded);
+	
+public: // from MAlfSynchronizationInterface
+    	
+	TInt Synchronize(TInt& aId);
 	
 public: // from MWsDrawAnnotationObserver
 	void WindowRedrawStart(const MWsWindowTreeNode& aWindowTreeNode, const TRegion& aRegion);
@@ -295,7 +303,9 @@ private:
         };
     // Sprite flash setting for iSpriteRedraw
     TSpriteFlash iSpriteRedrawFlash;
-    
+
+    // Synchronization identifier.
+    TInt iSyncId;
 	};
 
 #endif //__ALFRENDERSTAGE_H__
