@@ -560,7 +560,7 @@ public:
      *
      * @param aIndex  Index of the display array.     
      */
-    IMPORT_C CHuiDisplay& CHuiEnv::Display(TInt aIndex) const;
+    IMPORT_C CHuiDisplay& Display(TInt aIndex) const;
 
     /**
      * Notifies everyone of a change in the environment's skin. Called by the

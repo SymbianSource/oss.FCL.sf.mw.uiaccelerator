@@ -921,8 +921,8 @@ public:
      * @return Drop shadow handler. NULL if drop shadow is disabled.
      */
     IMPORT_C CAlfDropShadow* DropShadowHandler() const;
-    IMPORT_C void CAlfVisual::SetEffectL( const TDesC& aEffectFile );
-    IMPORT_C void CAlfVisual::SetGroupEffectL( const TDesC& aEffectFile, TInt aGroupHandle );
+    IMPORT_C void SetEffectL( const TDesC& aEffectFile );
+    IMPORT_C void SetGroupEffectL( const TDesC& aEffectFile, TInt aGroupHandle );
 
 protected:
 

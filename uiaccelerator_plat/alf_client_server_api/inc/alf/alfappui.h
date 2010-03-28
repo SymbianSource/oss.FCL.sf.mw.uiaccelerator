@@ -102,7 +102,7 @@ public: // new methods
 
     void RemoveTvDisplayOnSharedWindow( CHuiDisplay& aDisplay );
     
-    CHuiDisplay* CAlfAppUi::FindTvDisplayOnSharedWindow();
+    CHuiDisplay* FindTvDisplayOnSharedWindow();
     
     CAlfSrvSettingsHandler& SettingsHandler();
     

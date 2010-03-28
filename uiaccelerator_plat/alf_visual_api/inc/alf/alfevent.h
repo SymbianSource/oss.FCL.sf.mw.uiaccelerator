@@ -177,7 +177,7 @@ public:
      *
      * @return EFalse iff the event is not a scroller event
      */     
-    IMPORT_C TBool TAlfEvent::IsScrollerEvent() const;
+    IMPORT_C TBool IsScrollerEvent() const;
 
     /**
      * Access an ALF scroller event object. 

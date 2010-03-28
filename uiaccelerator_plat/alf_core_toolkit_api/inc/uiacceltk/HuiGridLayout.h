@@ -471,7 +471,7 @@ private:
      * @param aInnerPadPos the calculated position if inner padding is applied
      * @param aOuterPadPos the calculated position if outer padding is applied
      */
-    TReal32 CHuiGridLayout::ProportionalInnerOuterPadding(  
+    TReal32 ProportionalInnerOuterPadding(  
         THuiGridDimension aDim,
         TReal32 aInnerPadPos,
         TReal32 aOuterPadPos) const;

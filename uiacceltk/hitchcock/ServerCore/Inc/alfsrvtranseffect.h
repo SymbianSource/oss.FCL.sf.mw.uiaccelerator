@@ -53,7 +53,7 @@ public:
      *
      * @return Effect system boolean state.
      */
-    TBool CAlfSrvTransEffect::IsEnabled();
+    TBool IsEnabled();
     
     /**
      * Starts a new phase in the effect.
