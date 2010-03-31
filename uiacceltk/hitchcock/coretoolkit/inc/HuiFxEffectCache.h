@@ -88,7 +88,7 @@ class CHuiFxEffectCacheEffectNode : public CBase, public MHuiFxEffectCacheNode
 {
 public:
      CHuiFxEffectCacheEffectNode(const TDesC &aFileName, CHuiFxEffect *&aEffect, MHuiEffectable *aVisual, TRect *extRect, CHuiFxEngine *aEngine) 
-	: iFileName(aFileName.AllocL()), iEffect(aEffect), iVisual(aVisual), iExtRect(extRect), iEffectCached(0), iEngine(aEngine), iRefCount(0), iParser(0) { }
+	: iFileName(aFileName.AllocL()), iEffect(aEffect), iVisual(aVisual), iExtRect(extRect), iEffectCached(0), iEngine(aEngine), iRefCount(0), iParser(0), iGroup(KErrNotFound) { }
      IMPORT_C ~CHuiFxEffectCacheEffectNode();
      void SetEffectEndObserver( MAlfGfxEffectObserver* aEffectEndObserver, TInt aHandle );
      void SetEffectFlags( TInt aFlags );

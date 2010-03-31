@@ -1592,4 +1592,8 @@ EXPORTS
 	?SetShape@CHuiCanvasVisual@@QAEXABVTPoint@@ABVTRegion@@@Z @ 1591 NONAME ; void CHuiCanvasVisual::SetShape(class TPoint const &, class TRegion const &)
 	?CommandBufferCoverage@CHuiCanvasVisual@@QAE?AVTRect@@H@Z @ 1592 NONAME ; class TRect CHuiCanvasVisual::CommandBufferCoverage(int)
 	?CopyScreenToBitmapL@CHuiDisplay@@QAEXPAVCFbsBitmap@@@Z @ 1593 NONAME ; void CHuiDisplay::CopyScreenToBitmapL(class CFbsBitmap *)
+	?SecureId@CHuiControlGroup@@QAEHXZ @ 1594 NONAME ; int CHuiControlGroup::SecureId(void)
+	?SetSecureId@CHuiControlGroup@@QAEXH@Z @ 1595 NONAME ; void CHuiControlGroup::SetSecureId(int)
+	?HasTransParentClear@CHuiCanvasVisual@@QBEHXZ @ 1596 NONAME ; int CHuiCanvasVisual::HasTransParentClear(void) const
+	?AddEffectToGroup@CHuiFxEngine@@QAEHH@Z @ 1597 NONAME ; int CHuiFxEngine::AddEffectToGroup(int)
 

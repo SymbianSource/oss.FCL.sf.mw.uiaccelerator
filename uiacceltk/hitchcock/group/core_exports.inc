@@ -3,7 +3,7 @@
 *  Name        : core_exports.inc
 *  Part of     : Alfred UI Toolkit
 *  Description : Exported header files.
-*  Version     : %version: tr1sido#8.1.31 %
+*  Version     : %version: tr1sido#8.1.34 %
 *
 *  Copyright © 2006-2007 Nokia.  All rights reserved.
 *  This material, including documentation and any related computer
@@ -19,7 +19,7 @@
 
 PRJ_EXPORTS
 
-
+#ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
 // Effect definitions are considered as differentiating SW and thus not available for foundation.
 #ifndef ALF_USE_OPENWF_COMPOSITION
 
@@ -33,7 +33,8 @@ PRJ_EXPORTS
 
 // for EMULATOR UREL
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_add_page.fxml
-../coretoolkit/data/activeidle_viewswitch_bg_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_bg_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_anim_to_image.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_bg_anim_to_image.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_image_to_image.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_bg_image_to_image.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_editmode.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_close_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_widgetmanager.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_close_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_left.fxml /epoc32/release/winscw/urel/z/resource/effects/activeidle_viewswitch_left.fxml
@@ -85,6 +86,10 @@ PRJ_EXPORTS
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_cascade_disappear.fxml
 ../coretoolkit/data/optionsmenu_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_disappear.fxml
+../coretoolkit/data/photos_fullscreen_close.fxml /epoc32/release/winscw/urel/z/resource/effects/photos_fullscreen_close.fxml
+../coretoolkit/data/photos_fullscreen_open.fxml /epoc32/release/winscw/urel/z/resource/effects/photos_fullscreen_open.fxml
+../coretoolkit/data/photos_gridview_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/photos_gridview_disappear.fxml
+../coretoolkit/data/photos_gridview_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/photos_gridview_appear.fxml
 ../coretoolkit/data/popup_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/popup_appear.fxml
 ../coretoolkit/data/popup_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/popup_disappear.fxml
 ../coretoolkit/data/popup_disappear_screenshot.fxml /epoc32/release/winscw/urel/z/resource/effects/popup_disappear_screenshot.fxml
@@ -117,7 +122,8 @@ PRJ_EXPORTS
 
 // for EMULATOR UDEB
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_add_page.fxml
-../coretoolkit/data/activeidle_viewswitch_bg_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_bg_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_anim_to_image.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_bg_anim_to_image.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_image_to_image.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_bg_image_to_image.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_editmode.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_close_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_widgetmanager.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_close_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_left.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_left.fxml
@@ -169,6 +175,10 @@ PRJ_EXPORTS
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_cascade_disappear.fxml
 ../coretoolkit/data/optionsmenu_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_disappear.fxml
+../coretoolkit/data/photos_gridview_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/photos_gridview_appear.fxml
+../coretoolkit/data/photos_gridview_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/photos_gridview_disappear.fxml
+../coretoolkit/data/photos_fullscreen_close.fxml /epoc32/release/winscw/udeb/z/resource/effects/photos_fullscreen_close.fxml
+../coretoolkit/data/photos_fullscreen_open.fxml /epoc32/release/winscw/udeb/z/resource/effects/photos_fullscreen_open.fxml
 ../coretoolkit/data/popup_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/popup_appear.fxml
 ../coretoolkit/data/popup_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/popup_disappear.fxml
 ../coretoolkit/data/popup_disappear_screenshot.fxml /epoc32/release/winscw/udeb/z/resource/effects/popup_disappear_screenshot.fxml
@@ -201,7 +211,8 @@ PRJ_EXPORTS
 
 // For ROM
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_add_page.fxml
-../coretoolkit/data/activeidle_viewswitch_bg_appear.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_bg_appear.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_anim_to_image.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_bg_anim_to_image.fxml
+../coretoolkit/data/activeidle_viewswitch_bg_image_to_image.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_bg_image_to_image.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_editmode.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_close_editmode.fxml
 ../coretoolkit/data/activeidle_viewswitch_close_widgetmanager.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_close_widgetmanager.fxml
 ../coretoolkit/data/activeidle_viewswitch_left.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_left.fxml
@@ -253,6 +264,10 @@ PRJ_EXPORTS
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/data/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/data/z/resource/effects/optionsmenu_cascade_disappear.fxml
 ../coretoolkit/data/optionsmenu_disappear.fxml /epoc32/data/z/resource/effects/optionsmenu_disappear.fxml
+../coretoolkit/data/photos_gridview_appear.fxml /epoc32/data/z/resource/effects/photos_gridview_appear.fxml
+../coretoolkit/data/photos_gridview_disappear.fxml /epoc32/data/z/resource/effects/photos_gridview_disappear.fxml
+../coretoolkit/data/photos_fullscreen_close.fxml /epoc32/data/z/resource/effects/photos_fullscreen_close.fxml
+../coretoolkit/data/photos_fullscreen_open.fxml /epoc32/data/z/resource/effects/photos_fullscreen_open.fxml
 ../coretoolkit/data/popup_appear.fxml /epoc32/data/z/resource/effects/popup_appear.fxml
 ../coretoolkit/data/popup_disappear.fxml /epoc32/data/z/resource/effects/popup_disappear.fxml
 ../coretoolkit/data/popup_disappear_screenshot.fxml /epoc32/data/z/resource/effects/popup_disappear_screenshot.fxml
@@ -286,4 +301,4 @@ PRJ_EXPORTS
 
 // Effect definitions are considered as differentiating SW and thus not available for foundation.
 #endif // ifndef ALF_USE_OPENWF_COMPOSITION
-
+#endif // #ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS

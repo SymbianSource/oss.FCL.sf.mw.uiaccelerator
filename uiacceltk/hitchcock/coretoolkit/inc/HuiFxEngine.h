@@ -126,10 +126,10 @@ public:
 	 * time.
 	 */
 	IMPORT_C void BeginGroupEffect(TInt aGroup);
-
     
     IMPORT_C TInt ActiveGroupEffect();
     
+    IMPORT_C TBool AddEffectToGroup(TInt aGroup);
     /*
 	 * StartGroupEffect
 	 *
@@ -147,6 +147,14 @@ public:
     
     IMPORT_C void SetMemoryLevel(THuiMemoryLevel aLevel);
     
+	/**
+	 * Group effects wait until each effect has been drawn once. 
+	 *
+	 * Group effects are set into motion by NotifyEffectReady, when all effects in
+	 * the group have been drawn at least once.
+	 */
+    void NotifyEffectReady(TInt aGroupId);
+    
 protected:
     IMPORT_C void AddEffectL(CHuiFxEffect* aEffect);
     IMPORT_C void RemoveEffect(CHuiFxEffect* aEffect);
@@ -157,6 +165,7 @@ protected:
 private:
     
     TBool FxmlUsesInput1(CHuiFxEffect& aEffect);
+    TInt FindEffectGroup(TInt aGroup);
     
 private:
     // Render buffer management --- native implementations
@@ -189,7 +198,22 @@ private:
     TRect                        iExtRect;
     CHuiFxEffectCache *iCache;
     TInt iLowGraphicsMemoryMode;
-    RArray<TInt> iActiveEffectGroups;
+    
+    NONSHARABLE_STRUCT(TEffectGroupStruct)
+        {
+    public:
+            
+        TEffectGroupStruct(TInt aGroup) : iGroup(aGroup), iWaiting(0), iEndCalled(EFalse){};
+
+        TInt iGroup;
+        TInt iWaiting;
+        TBool iEndCalled;
+        };
+    
+	/**
+	 * Only one simultanious effect group is supported
+	 */
+    RArray<TEffectGroupStruct> iActiveEffectGroups;
     };
 
 #endif /*HUIFXENGINE_H_*/

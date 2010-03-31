@@ -161,9 +161,13 @@ void CAlfStreamerServer::ConstructL()
 // NewSessionL
 // ---------------------------------------------------------------------------
 //   
-CSession2* CAlfStreamerServer::NewSessionL(const TVersion& /*aVersion*/,const RMessage2& /*aMessage*/) const
+CSession2* CAlfStreamerServer::NewSessionL(const TVersion& /*aVersion*/,const RMessage2& aMessage) const
     {
-	CSession2* newSession = new(ELeave) CAlfStreamerServerSession();
+    RThread t;    
+    aMessage.Client(t);
+    CleanupClosePushL(t);
+	CSession2* newSession = new(ELeave) CAlfStreamerServerSession(t.Id());
+    CleanupStack::PopAndDestroy();
     iSessions++;
     
     return newSession;   
@@ -188,9 +192,13 @@ CAlfStreamerServerSession* CAlfStreamerServer::WservSession(TInt aScreenNumber)
 // HandleClientExit
 // ---------------------------------------------------------------------------
 //   
-void CAlfStreamerServer::HandleClientExit(const CSession2* /*aClient*/)
+void CAlfStreamerServer::HandleClientExit(const CAlfStreamerServerSession* aClient)
     {
     iSessions--;
+    if (WindowMgr())
+        {
+        WindowMgr()->HandleClientExit(aClient->ThreadId());
+        }
     if (!iSessions)
         {
         // CActiveScheduler::Stop(); // TODO: lets not die, if client dies.
@@ -539,7 +547,7 @@ void CAlfStreamerServer::HandleCompositionEventL(CAlfStreamerServerSession* aSes
         }
     
     if ( aOp == KAlfCompositionLowOnGraphicsMemory ||  aOp == KAlfCompositionGoodOnGraphicsMemory 
-		|| aOp == KAlfCompositionTargetHidden ||aOp == KAlfCompositionTargetVisible)
+		|| aOp == KAlfCompositionTargetHidden ||aOp == KAlfCompositionTargetVisible  || aOp == KAlfCompositionLayoutSwitchComplete)
         {
         aMessage.Complete(KErrNone);
         QueueRequestAllSessionsL(KNullDesC8(), aOp, ETrue);    
@@ -688,7 +696,7 @@ void CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aM
 // constructor
 // ---------------------------------------------------------------------------
 //   
-CAlfStreamerServerSession::CAlfStreamerServerSession() : iScreenNumber(KErrNotFound)
+CAlfStreamerServerSession::CAlfStreamerServerSession(const TThreadId& aThreadId) : iScreenNumber(KErrNotFound), iThreadId(aThreadId)
     {
     }
 
@@ -968,6 +976,7 @@ void CAlfStreamerServerSession::HandleCompositionOpL(TInt aOp, const RMessage2& 
     case KAlfCompositionTargetHidden:
     case KAlfCompositionTargetVisible:
     case KAlfCompositionTargetCreated:
+    case KAlfCompositionLayoutSwitchComplete:
         {
         aServer->HandleCompositionEventL(this, aOp, aMessage);
         break;

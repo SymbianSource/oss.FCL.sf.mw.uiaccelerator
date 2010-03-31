@@ -366,9 +366,9 @@ void CAlfRenderStage::DoDrawTextCursor(
     TRegionFix<1> clipRegion;
     clipRegion.AddRect( aClipRect );
 
-    TRgb penColor = TRgb(0x555555); 
-    TRgb brushColor = TRgb(0x555555); 
-    TRgb dotColor = TRgb(0xBBBBBB); 
+    TRgb penColor = TRgb(0x000000);
+    TRgb brushColor = TRgb(0x000000);
+    TRgb dotColor =  TRgb(0xFFFFFF);
     
     WindowRedrawStart( aWindowTreeNode, drawRegion );
     iWsGraphicsContext->Reset();
@@ -593,7 +593,9 @@ void CAlfRenderStage::NodeCreated(const MWsWindowTreeNode& aWindowTreeNode, MWsW
 	
     AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
     AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
-    AMT_INC_COUNTER(iRsTotalNodeCount ); 
+    AMT_INC_COUNTER(iRsTotalNodeCount );
+    
+    AMT_MAP_RENDER_STAGE_NODE_CREATED();
     }
 
 // ---------------------------------------------------------------------------
@@ -636,7 +638,14 @@ void CAlfRenderStage::NodeReleased(const MWsWindowTreeNode& aWindowTreeNode)
 
     AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
     AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
-    AMT_DEC_COUNTER(iRsTotalNodeCount ); 
+    AMT_DEC_COUNTER(iRsTotalNodeCount );
+    
+    AMT_MAP_INC_VALUE_IF( ( MWsWindowTreeNode::EWinTreeNodeClient == nodeType && aWindowTreeNode.Window() ),
+                          iIntMap, aWindowTreeNode.Window()->Handle(),
+                          EAlfModuleTestTypeRenderStageReleaseWindow );
+    AMT_MAP_INC_VALUE_IF( ( MWsWindowTreeNode::EWinTreeNodeGroup == nodeType && aWindowTreeNode.WindowGroup() ),
+                          iIntMap, aWindowTreeNode.WindowGroup()->Identifier(),
+                          EAlfModuleTestTypeRenderStageReleaseWindowGroup );    
     }
 
 // ---------------------------------------------------------------------------
@@ -655,7 +664,11 @@ void CAlfRenderStage::NodeActivated(const MWsWindowTreeNode& aWindowTreeNode)
 	iAlfSendBuffer->CommitL();
     __ALFLOGSTRING("CAlfRenderStage::NodeActivated <<");
    
-    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeActivatedCount ); 
+    AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeActivatedCount );
+    
+    AMT_MAP_SET_VALUE_IF( nodeType == MWsWindowTreeNode::EWinTreeNodeClient, 
+                          iBoolMap, aWindowTreeNode.Window()->Handle(), ETrue, 
+                          EAlfModuleTestTypeRenderStageActiveWindow );
     }
 
 // ---------------------------------------------------------------------------
@@ -695,12 +708,13 @@ void CAlfRenderStage::NodeExtentChanged(const MWsWindowTreeNode& aWindowTreeNode
 
     AMT_INC_COUNTER( iRsNodeExtentChangedCount );
     AMT_SET_VALUE( iRsLatestNodeExtentRect, aRect );
+    
     AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() ),
-                          iSizeMap, aWindowTreeNode.Window()->Handle(), 
-                          aRect.Size(), EAlfModuleTestTypeRenderStageChangeSize );
+                          iSizeMap, aWindowTreeNode.Window()->Handle(),
+                          aRect.Size(), EAlfModuleTestTypeRenderStageChangeWindowSize );
     AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() ),
-                          iPositionMap, aWindowTreeNode.Window()->Handle(), 
-                          aRect.iTl, EAlfModuleTestTypeRenderStageChangePosition );
+                          iPositionMap, aWindowTreeNode.Window()->Handle(),
+                          aRect.iTl, EAlfModuleTestTypeRenderStageChangeWindowPosition );
     }
 
 // ---------------------------------------------------------------------------
@@ -717,7 +731,7 @@ void CAlfRenderStage::SiblingOrderChanged(const MWsWindowTreeNode& aWindowTreeNo
         &aWindowTreeNode );
 
     iAlfSendBuffer->CommitL();
-        }
+    }
 
 // ---------------------------------------------------------------------------
 // FlagChanged
@@ -735,9 +749,12 @@ void CAlfRenderStage::FlagChanged(const MWsWindowTreeNode& aWindowTreeNode, TInt
 	iAlfSendBuffer->CommitL();
 
     AMT_INC_COUNTER( iRsTotalNodeFlagChangedCount );
-    AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.Window() ),
-                          iIntMap, aWindowTreeNode.Window()->Handle(), 
-                          EAlfModuleTestTypeRenderStageChangeFlag );
+    
+    AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() && MWsWindowTreeObserver::EVisible == aFlag ),
+                          iBoolMap, 
+                          aWindowTreeNode.Window()->Handle(),
+                          aNewValue,
+                          EAlfModuleTestTypeRenderStageChangeWindowVisibility );
     }
 
 // ---------------------------------------------------------------------------
@@ -837,7 +854,9 @@ void CAlfRenderStage::AttributeChanged(const MWsWindowTreeNode& aWindowTreeNode,
         iAlfSendBuffer->CommitL();
         
         AMT_INC_COUNTER( iRsTotalNodeAttributeChangedCount );
-        }    
+        }
+    
+    AMT_MAP_RENDER_STAGE_TEXT_CURSOR_CHANGE();
     }
 
 // ---------------------------------------------------------------------------

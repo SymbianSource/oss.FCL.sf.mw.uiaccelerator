@@ -31,7 +31,7 @@ NONSHARABLE_CLASS( CAlfRosterFreezeEndTimer ):public CTimer
         virtual ~CAlfRosterFreezeEndTimer();
 
     public: // New functions
-        void Start( TTimeIntervalMicroSeconds32 aPeriod );
+        void Start( TTimeIntervalMicroSeconds32 aPeriod, TCallBack aCallBack  );
         
     protected:  // Functions from base classes
         void DoCancel();
@@ -45,7 +45,7 @@ NONSHARABLE_CLASS( CAlfRosterFreezeEndTimer ):public CTimer
         CAlfBridge& iBridge;
  	public:
 	   	TInt iSafeCounter;
-                
+        TCallBack iCallBack;        
     };
 
 
@@ -84,6 +84,25 @@ NONSHARABLE_CLASS( CAlfEffectEndTimer ):public CTimer
 //
 NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MAlfGfxEffectObserver
     {
+    public:
+        enum TEvent
+            {
+            EEventLayoutSwitch,
+            EEventBlankOn,
+            EEventBlankOff,
+            EEventLowMemory
+            };
+    
+        enum TState
+            {
+            EStateIdle,
+            EStateFreezeFx,
+            EStateBlankFx,
+            EStateThemeFx
+            };
+
+        typedef TState (*TStateFunction)(TEvent aEvent);
+
     public:  // Constructors and destructor
         CAlfLayoutSwitchEffectCoordinator( CAlfBridge& aBridge );
         virtual ~CAlfLayoutSwitchEffectCoordinator();
@@ -92,9 +111,25 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         void AlfGfxEffectEndCallBack( TInt aHandle );
     
     public:
+        void Blank(TBool aEnabled);
+        void LowMemoryEvent();
         void BeginLayoutSwitch();
-        void Cancel();
-        TBool LayoutSwitchEffectsExist();
+        
+        void Event(TEvent aEvent);
+        void Transition(TState aNewState, TState aPreviousState);
+
+    private:
+        TState NextIdleState(TEvent aEvent);
+        TState NextFreezeState(TEvent aEvent);
+        TState NextBlankState(TEvent aEvent);
+        TState NextThemeState(TEvent aEvent);
+
+        void FreezeFinished();
+
+    public:            
+        TBool IsThemeEffectEnabled() const;
+        TBool LayoutSwitchEffectsExist() const;
+
 		void EnableSafeCounter(TBool aEnable)
 			{
 			if (iRosterFreezeEndTimer)
@@ -109,9 +144,14 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
 					}
 				}
 			}        
+    
     private:
         AknTransEffect::TContext NextLayoutSwitchContext();
         void SetLayoutSwitchEffect(AknTransEffect::TContext aContext);
+        
+        void FreezeRoster(TBool aFrozen);
+        
+        static TInt DoFreezeFinished(TAny* aAny);
         
     private: // Data
         
@@ -119,6 +159,10 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         AknTransEffect::TContext iLayoutSwitchEffectContext;
         TThreadPriority iOriginalPriority;
         CAlfRosterFreezeEndTimer* iRosterFreezeEndTimer;
+        TBool iBlankEnabled;
+        
+        TState iCurrentState;
+        TBool iLayoutSwitchNotCompleted;
 	};
 
 // ---------------------------------------------------------
@@ -175,10 +219,6 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         
         void ConstructL(TInt aAction, RMemReadStream& aStream);
         
-        TBool InitDelayedEffectL(CAlfBridge* aBridge, TSize aDisplaySize);
-        
-        void NotifyDrawingTimeout();
-
         // Information from BeginFullScreen
         TInt iType;
         TInt iToWg;

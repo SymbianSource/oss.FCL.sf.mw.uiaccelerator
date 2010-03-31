@@ -66,6 +66,7 @@ EXPORT_C void CHuiFxEngine::ConstructL(THuiFxEngineType aEngineType)
 #endif
 #endif
     CHuiStatic::Env().AddMemoryLevelObserver(this);
+    iActiveEffectGroups.Reserve(2);
     }
 
 EXPORT_C TBool CHuiFxEngine::FxmlUsesInput1(const TDesC &aFileName)
@@ -302,6 +303,7 @@ EXPORT_C void CHuiFxEngine::AdvanceTime(TReal32 aElapsedTime)
 // the effect will be removed, and will no longer be part of iActiveEffects set.
 // We must check if the effect is still in our list, but the indices change
 // if something is removed from the middle of the list
+    TInt skipGroup = KErrNotFound;
     for ( i = iActiveEffects.Count() - 1; i >= 0; i-- )
         {
         CHuiFxEffect* effect = iActiveEffects[i];
@@ -309,10 +311,24 @@ EXPORT_C void CHuiFxEngine::AdvanceTime(TReal32 aElapsedTime)
             {
             refreshRequired = ETrue;
             }
-        if ( i < iActiveEffects.Count() && effect == iActiveEffects[i] && !(effect->EffectFlags() & KHuiFxWaitGroupSyncronization))
+        TInt flags = effect->EffectFlags();
+        if ( !(flags & KHuiFxWaitGroupSyncronization) 
+                && (skipGroup == KErrNotFound || skipGroup != effect->GroupId()))
             {
             // The effect is still in its place, it did not go away yet
+            TBool waitingGroupBefore = flags & KHuiFxWaitGroupToStartSyncronized;
             effect->AdvanceTime(aElapsedTime);
+            
+            if (waitingGroupBefore)
+                {
+                flags = effect->EffectFlags();
+                if (!(flags & KHuiFxReadyAndWaitingGroupToStartSyncronized) && !(flags & KHuiFxWaitGroupToStartSyncronized))
+                    {
+                    // effects in this group are all ready to start drawing. Skip this group in AdvanceTime, 
+					// that they can start syncronized on the next round
+                    skipGroup = effect->GroupId();
+                    }
+                }
             }
         }
     
@@ -626,48 +642,123 @@ void CHuiFxEngine::ClearCache()
     
     ASSERT(iBuffersInCache == 0);    
     }
-	
+
+TInt CHuiFxEngine::FindEffectGroup(TInt aGroup)
+    {
+    for (TInt i=0 ; i < iActiveEffectGroups.Count();i++)
+        {
+        if (iActiveEffectGroups[i].iGroup == aGroup)
+            {
+            return i; 
+            }
+        }
+    return KErrNotFound;
+    }
+
 EXPORT_C void CHuiFxEngine::BeginGroupEffect(TInt aGroup)
 	{
-	TInt index = iActiveEffectGroups.Find(aGroup);
+	// Multiple grouped effects at the same time are not supported. 
+    // Same visual might participate different groups, which will mess up the effect
+    if (iActiveEffectGroups.Count()>0)
+        {
+        // delete previous groups
+        while(iActiveEffectGroups.Count())
+            {
+            TInt groupId = iActiveEffectGroups[0].iGroup;
+            for ( TInt i = iActiveEffects.Count() - 1; i >= 0; i-- )
+                {
+                if (iActiveEffects[i]->GroupId() == groupId)
+                    {
+                    iActiveEffects[i]->ClearEffectFlag(KHuiFxReadyAndWaitingGroupToStartSyncronized);
+                    iActiveEffects[i]->ClearEffectFlag(KHuiFxWaitGroupToStartSyncronized);
+                    iActiveEffects[i]->ClearEffectFlag(KHuiFxWaitGroupSyncronization);
+                    }
+                
+                }
+            iActiveEffectGroups.Remove(0);
+            }
+        }
+	
+	TInt index = FindEffectGroup(aGroup);
+	
 	if (index == KErrNotFound)
 		{
-		iActiveEffectGroups.Append(aGroup);
-		}
-	else
-		{
-		// group already exists
+        const TEffectGroupStruct item(aGroup);
+		iActiveEffectGroups.Append(item);
 		}
 	}
 
+// This will add effect to this group. Do not call this function more than once for single effect 
 EXPORT_C TInt CHuiFxEngine::ActiveGroupEffect()
 	{
-	if (iActiveEffectGroups.Count() > 0)
-		{
-		return iActiveEffectGroups[iActiveEffectGroups.Count()-1];
-		}
-	else
-		{
-		return KErrNotFound;
-		}
+	TInt index = iActiveEffectGroups.Count();
+	if (index == 0)
+	    {
+        return KErrNotFound;
+	    }
+	while(--index >= 0)
+        {
+		// group is alive until all its effects have been drawn once. .iEndCalled is to prevent
+		// another effect entering into this group
+        const TEffectGroupStruct& item = iActiveEffectGroups[index];
+        if (!item.iEndCalled) 
+            { 
+			return iActiveEffectGroups[index].iGroup;
+            }
+        }
+    return KErrNotFound;
 	}
+
+EXPORT_C TBool CHuiFxEngine::AddEffectToGroup(TInt aGroup)
+    {
+    TInt index = FindEffectGroup(aGroup);
+    if (index != KErrNotFound)
+        {
+        // keep count of effects in this group. All must draw atleast once, before
+        // syncronized group effect may start
+        iActiveEffectGroups[index].iWaiting++;
+        return ETrue;
+        }
+    return EFalse;
+    }
 
 EXPORT_C void CHuiFxEngine::StartGroupEffect(TInt aGroup)
 	{
-	TInt index = iActiveEffectGroups.Find(aGroup);
+	TInt index = FindEffectGroup(aGroup);
 	if (index != KErrNotFound)
 		{
-		iActiveEffectGroups.Remove(index);
-	
+		iActiveEffectGroups[index].iEndCalled = ETrue; // this group will not take any more participants
 		for ( TInt i = iActiveEffects.Count() - 1; i >= 0; i-- )
 			{
 			CHuiFxEffect* effect = iActiveEffects[i];
 			TInt flags = effect->EffectFlags();
 			if ((flags & KHuiFxWaitGroupSyncronization) && (effect->GroupId() == aGroup))
 				{
-				flags &= ~KHuiFxWaitGroupSyncronization;
-				effect->SetEffectFlags(flags);
+                effect->ClearEffectFlag(KHuiFxWaitGroupSyncronization);
+                effect->SetEffectFlag(KHuiFxWaitGroupToStartSyncronized);
 				}
 			}
 		}
 	}
+
+void CHuiFxEngine::NotifyEffectReady(TInt aGroupId)
+    {
+    TInt index = FindEffectGroup(aGroupId);
+    if (index != KErrNotFound)
+        {
+        if (--iActiveEffectGroups[iActiveEffectGroups.Count()-1].iWaiting == 0)
+            {
+            // set in motion all effects in this group
+	        iActiveEffectGroups.Remove(index);
+            for ( TInt i = iActiveEffects.Count() - 1; i >= 0; i-- )
+                {
+                CHuiFxEffect* effect = iActiveEffects[i];
+                TInt flags = effect->EffectFlags();
+                if ((flags & KHuiFxReadyAndWaitingGroupToStartSyncronized) && (effect->GroupId() == aGroupId))
+                    {
+                    effect->ClearEffectFlag(KHuiFxReadyAndWaitingGroupToStartSyncronized);
+                    }
+                }
+            }
+        }
+    }

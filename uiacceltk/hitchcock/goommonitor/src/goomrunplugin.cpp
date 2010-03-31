@@ -52,7 +52,10 @@ void CGOomRunPlugin::FreeMemory(TInt aBytesRequested)
     iFreeMemoryCalled = ETrue;
 
     // Wait for the required time before we signal completion.
-    iPluginWaiter->Start();
+    if(iPluginWaiter)
+        {
+        iPluginWaiter->Start();
+        }
     }
 
 // Call the memory good function on the plugin but...
@@ -86,13 +89,15 @@ void CGOomRunPlugin::ConstructL(CGOomRunPluginConfig& aPluginConfig)
 
     TInt waitDuration = CMemoryMonitor::GlobalConfig().iDefaultWaitAfterPlugin;
 
-    if (aPluginConfig.WaitAfterPluginDefined())
+    if(aPluginConfig.iSyncMode == ECheckRam)
         {
-        // If the wait duration for this plugin is overridden then use the overridden value
-        waitDuration = aPluginConfig.WaitAfterPlugin();
+        if (aPluginConfig.WaitAfterPluginDefined())
+            {
+            // If the wait duration for this plugin is overridden then use the overridden value
+            waitDuration = aPluginConfig.WaitAfterPlugin();
+            }
+         iPluginWaiter = CGOomPluginWaiter::NewL(waitDuration, *this);
         }
-
-    iPluginWaiter = CGOomPluginWaiter::NewL(waitDuration, *this);
     }
 
 TUint CGOomRunPlugin::Id()

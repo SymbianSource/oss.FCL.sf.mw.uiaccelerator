@@ -468,8 +468,10 @@ NONSHARABLE_CLASS(CAlfEventFetcher): public CActive
                 if(iWindowGc->Construct() == KErrNone)
                     {
                     iWindowGc->Activate(*iWindow);
+                    iWindow->BeginRedraw();
                     iWindowGc->SetBrushColor(0xffffffff);
                     iWindowGc->Clear();
+                    iWindow->EndRedraw();
                     iWindowGc->Deactivate();
                     }                
                 }
@@ -1476,36 +1478,15 @@ void CAlfAppUi::DoBlankScreen(const RMessage2& aMessage)
         User::Leave(KErrPermissionDenied);    
         }
     
-	if (iData->iBridgeObj->LayoutSwitchEffectCoordinator())
-		{
-		iData->iBridgeObj->LayoutSwitchEffectCoordinator()->EnableSafeCounter(EFalse); // let capserver rule  
-		}
+//	if (iData->iBridgeObj->LayoutSwitchEffectCoordinator())
+//		{
+//		iData->iBridgeObj->LayoutSwitchEffectCoordinator()->EnableSafeCounter(EFalse); // let capserver rule  
+//		}
   
     TBool pause = aMessage.Int0();
-    if ( pause && 
-        CAknTransitionUtils::TransitionsEnabled(AknTransEffect::ELayoutswitchTransitionsOff ) && 
-        iData->iBridgeObj->LayoutSwitchEffectCoordinator() && 
-        iData->iBridgeObj->LayoutSwitchEffectCoordinator()->LayoutSwitchEffectsExist() 
-        )
-        { // don't pause if effects are there, releasing the blanker needs to be allowed still
-        __ALFLOGSTRING("CAlfAppUi::DoBlankScreen << - Effects on");
-	    return;
-        }        
     
-    if (pause != iData->iHuiEnv->iPauseDrawing)
-        {
-        iData->iHuiEnv->iPauseDrawing = pause;
-        __ALFLOGSTRING1("CAlfAppUi::DoBlankScreen pausing %d",pause);
-        TRAP_IGNORE(iData->iHuiEnv->Display(0).Roster().FreezeVisibleContentL(pause));
-		if (!pause)
-            { // make sure that toolkit will traverse through scene
-            iData->iHuiEnv->StartRefresh(1);
-            }    
-		else
-		    {
-            iData->iBridgeObj->LayoutSwitchEffectCoordinator()->Cancel();
-		    }
-        }
+    iData->iBridgeObj->LayoutSwitchEffectCoordinator()->Blank(pause);
+    
     __ALFLOGSTRING("CAlfAppUi::DoBlankScreen <<");
     // let the session complete message  
     }

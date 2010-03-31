@@ -199,6 +199,7 @@ public:
     void AlfGfxEffectEndCallBack( TInt aHandle );
    
     TInt FindClientWindowGroupId( TInt aScreenNumber, CHuiControlGroup& aControlGroup );
+    TInt FindWindowGroupNodeId( TInt aScreenNumber, CHuiControlGroup& aControlGroup ) const;
     
     void RemoveAllTemporaryPresenterVisuals();
 
@@ -210,6 +211,7 @@ public:
     
     void EnableSwRenderingL(TBool aEnable = ETrue);
     TBool PrepareSwRenderingTarget( CAlfScreen* aScreen );
+    void InitializeSwRenderingTarget(CFbsBitmap* aBitmap);
 
     /**
      * Sets memory level.
@@ -237,9 +239,9 @@ public:
     void DoUpdateMemoryLevel();
     
     /**
-     * Cancels all effects due to low memory.
+     * Modify all effects due to low memory.
      */
-    void LowMemoryCancelAllEffects();
+    void OnLowMemoryModifyAllEffects();
 
     /**
      * Gets size & rotation.
@@ -265,20 +267,31 @@ public:
     void Synchronized(TInt aId);
     
     /*
-     * HandleGfxEndFullScreenTimeout
+     * GfxTriggerEndFullScreen
      * 
      * GfxTransEffect API gives EndFullScreen events too late. Thus there is a two stage process for triggering 
      * the EndFullScreen effect after BeginFullScreen event arrived.
      * 
-     * For application start effects we give N milliseconds timeout for application to finish drawing after
-     * the first drawing has arrived. If after N milliseconds application has not drawn 75% of the screen, it
-     * gets another N milliseconds. Most cases, the first N milliseconds is enough.
      */
-    void HandleGfxEndFullScreenTimeout(CFullScreenEffectState* aFullScreenEffectData);
+    void GfxTriggerEndFullScreen(CFullScreenEffectState* aFullScreenEffectData);
+    
+   /*
+	*	GfxTriggerEffectWhenFullScreenDrawn
+	*
+	*	Goes through the given CHuiControl (group which is supposed to show the effect). 
+	*   Triggers the effect, if  drawing buffers in group cover the whole screen in the 
+	*   current orientation.
+	*
+	*	@param	aToGroup	Group to be analyzed
+	*/
+    TBool GfxTriggerEffectWhenFullScreenDrawn(CHuiControlGroup* aToGroup = NULL);
     
 	// Experimental
     TBool IsFullScreenDrawn( TInt aOrientation);
 	
+    void LayoutSwitchStart();
+    void LayoutSwitchComplete();
+    
 private:    
     
     
@@ -329,7 +342,17 @@ private:
     
     // component effect handling
     void HandleGfxControlEffectsL( TAlfBridgerData data );
-    
+
+   /**
+	*	StoreLayoutIfRequiredByEffectL
+	*
+	*   @param aNeededStoredLayout	Returns ETrue, if storing is required. Otherwise EFalse.
+    *
+	*	@return ETrue	If storing was required and could be done.
+    *					OR storing was not required. 
+	*/    
+    TBool StoreLayoutIfRequiredByEffectL(CHuiLayout* aLayout, CFullScreenEffectState& aEvent, TBool& aNeededStoredLayout);
+
     /**
      * Handles begin and end fullscreen events
      */
@@ -537,6 +560,8 @@ private:
 	void HandleSetNodeTracking( TAlfBridgerData& aData );
 	
 	void HandleSetFadeEffectL( TAlfBridgerData& aData );
+	
+	void HandleMoveWindowToNewGroupL( TAlfBridgerData& aData );
 
     void HandleSetLayoutSwitchEffectL();
 	
@@ -771,10 +796,12 @@ private:
             TRect& aFullscreen,
             CAlfScreen* aScreen,
             TBool& aSubtreeVisible, 
-            TBool& aHasVisualsWithLayers,
             TBool aChildCanBeOpaque,
             TInt aOrientation);
 
+    
+    void MarkAllLayersHiddenRecursive(CHuiLayout* aLayout);
+    
 NONSHARABLE_CLASS ( TDeadControlGroup )
     {
 public:
@@ -946,6 +973,11 @@ private:
     mutable RRegionBuf<KAlfBridgeRegionGranularity> iTempRegion;
     TBool iBgSurfaceFound;
     TBool iInLowMemMode;
+    TBool iLayoutSwitchInProgress;
+
+    TBool iHomeScreenWallpaperWindowFound;
+    TBool iBgAnimHidden;
+    
     CAlfLayoutSwitchEffectCoordinator* iLayoutSwitchEffectCoordinator;
     TInt iAlfSecureId; 	    
     TBool iSwRenderingEnabled;
@@ -953,6 +985,9 @@ private:
     TBool iForcedSwRendering;
     TBool iLowMemoryMode;
     THuiMemoryLevel iCurrentMemoryLevel;
+    
+    TInt iIdForEAlfDSSynchronizeOp;
+    TInt iIdForLayoutSwitchFrameSync;
     
     #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
     TInt activevisualcount;

@@ -557,8 +557,8 @@ void CHuiCanvasWsHwGc::WsDrawRoundRectL(TPoint aPoint, TRect& aRect)
         else if (iWsBrushStyle == MWsGraphicsContext::EPatternedBrush)
             {
             iCanvasGc->SetPolygonDrawMode( EHuiFillEvenOdd );
-            iCanvasGc->SetPenColor(iWsPenColor);                    
-            iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));       
+            iCanvasGc->SetPenColor(iWsBrushColor);                    
+            iCanvasGc->SetOpacity(TReal32(iWsBrushColor.Alpha() / 255.f));       
             UseBrushPattern();
             iCanvasGc->SetDrawMode(SelectCanvasDrawMode(iWsDrawMode));        
             iCanvasGc->DrawRoundRect( THuiRealRect(aRect), THuiRealSize( aPoint.iX*2, aPoint.iY*2 ));
@@ -731,8 +731,8 @@ void CHuiCanvasWsHwGc::WsDrawEllipseL(TRect& aRect)
         else if (iWsBrushStyle == MWsGraphicsContext::EPatternedBrush)
             {
             iCanvasGc->SetPolygonDrawMode( EHuiFillEvenOdd );
-            iCanvasGc->SetPenColor(iWsPenColor);                    
-            iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));       
+            iCanvasGc->SetPenColor(iWsBrushColor);                    
+            iCanvasGc->SetOpacity(TReal32(iWsBrushColor.Alpha() / 255.f));       
             UseBrushPattern();
             iCanvasGc->SetDrawMode(SelectCanvasDrawMode(iWsDrawMode));        
             iCanvasGc->DrawEllipse(destRect);
@@ -881,8 +881,8 @@ void CHuiCanvasWsHwGc::WsDrawRectL(TRect& aRect)
         else if (iWsBrushStyle == MWsGraphicsContext::EPatternedBrush)
             {
             iCanvasGc->SetPolygonDrawMode( EHuiFillEvenOdd );
-            iCanvasGc->SetPenColor(iWsPenColor);                    
-            iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));       
+            iCanvasGc->SetPenColor(iWsBrushColor);                    
+            iCanvasGc->SetOpacity(TReal32(iWsBrushColor.Alpha() / 255.f));       
             UseBrushPattern();
             iCanvasGc->SetDrawMode(SelectCanvasDrawMode(iWsDrawMode));        
             iCanvasGc->DrawRects(rects);

@@ -24,4 +24,6 @@
 PRJ_EXPORTS
 ../hitchcock/sis/uiaccelerator_stub.sis    /epoc32/release/armv5/urel/uiaccelerator_stub.sis
 ../../rom/alfred.iby   CORE_MW_LAYER_IBY_EXPORT_PATH(alfred.iby)
+#ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
 ../../rom/alftranseffectplugin.iby   CORE_MW_LAYER_IBY_EXPORT_PATH(alftranseffectplugin.iby)
+#endif // #ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS

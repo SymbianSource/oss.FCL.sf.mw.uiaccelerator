@@ -94,6 +94,7 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
                 if (err)
                     {
                     // completes the message if that was left to pending
+                    TRACES1("Error in RequestFreeMemory %d", err);
                     CloseAppsFinished(0, EFalse);
                     }
                 }

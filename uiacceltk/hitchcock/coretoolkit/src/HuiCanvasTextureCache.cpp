@@ -1932,7 +1932,18 @@ TInt TextOrderFunc(const CHuiCanvasTextImage& aFirst, const CHuiCanvasTextImage&
         {
         // For PC-lint
         }
-
+    if (aFirst.iTextBoxMaxSize.iHeight < aSecond.iTextBoxMaxSize.iHeight)
+           {
+           return -1; // less than
+           }
+       else if (aFirst.iTextBoxMaxSize.iHeight > aSecond.iTextBoxMaxSize.iHeight)
+           {
+           return 1; // more than  
+           }
+       else
+           {
+           // For PC-lint
+           }
     // Text content
     TInt textcompare = KErrNotFound;
     if ( aFirst.iFindTextPtr )
@@ -2089,7 +2100,7 @@ TInt RenderBufferOrderFunc(const CHuiCanvasRenderBufferImage& aFirst, const CHui
 CHuiCanvasTextureCache::CHuiCanvasTextureCache()
     {
     SetMemoryLevel(EHuiMemoryLevelNormal);
-    CHuiStatic::Env().AddLowMemoryObserver(this);
+    CHuiStatic::Env().AddMemoryLevelObserver(this);
     }
 
 // ---------------------------------------------------------------------------
@@ -2098,7 +2109,7 @@ CHuiCanvasTextureCache::CHuiCanvasTextureCache()
 //
 CHuiCanvasTextureCache::~CHuiCanvasTextureCache()
     {
-    CHuiStatic::Env().RemoveLowMemoryObserver(this);
+    CHuiStatic::Env().RemoveMemoryLevelObserver(this);
     iCachedTexts.ResetAndDestroy();
     iCachedImages.ResetAndDestroy();        
     iRecycledTextures.ResetAndDestroy();

@@ -1345,4 +1345,5 @@ EXPORTS
 	_ZN10CAlfDrawerD2Ev @ 1344 NONAME
 	_ZN16RAlfDirectClient11BlankScreenEi @ 1345 NONAME
 	_ZN10CAlfDrawer26FallbackCopyScreenToBitmapER15CWsScreenDeviceP10CFbsBitmapRK5TRect @ 1346 NONAME
+	_ZN17AlfDrawerInternal18CopyScreenToBitmapEP25MAlfDrawerScreenInterfaceP10CFbsBitmapRK5TRect @ 1347 NONAME
 

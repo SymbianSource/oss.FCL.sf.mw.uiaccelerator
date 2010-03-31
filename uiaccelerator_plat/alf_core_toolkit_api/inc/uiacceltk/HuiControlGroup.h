@@ -203,6 +203,9 @@ public:
      */
     IMPORT_C void SetSessionId(TInt aSessionId);
 
+    IMPORT_C void SetSecureId(TInt aSecureId);
+    IMPORT_C TInt SecureId();
+
 private:
 
     /* Private methods */
@@ -235,6 +238,8 @@ private:
 
     /** Session id */
     TInt iSessionId;
+    
+    TInt iSecureId;
 
 public:
 

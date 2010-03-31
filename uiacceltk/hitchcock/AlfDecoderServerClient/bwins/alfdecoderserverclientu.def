@@ -41,4 +41,6 @@ EXPORTS
 	??1CAlfCompositionCntrlClient@@UAE@XZ @ 40 NONAME ; CAlfCompositionCntrlClient::~CAlfCompositionCntrlClient(void)
 	?SetSourceRect@CAlfCompositionSource@@UAEHABVTRect@@@Z @ 41 NONAME ; int CAlfCompositionSource::SetSourceRect(class TRect const &)
 	?GetListOfInactiveWindowGroupsWSurfaces@RAlfBridgerClient@@QAEHPAV?$RArray@H@@@Z @ 42 NONAME ; int RAlfBridgerClient::GetListOfInactiveWindowGroupsWSurfaces(class RArray<int> *)
+	?NewL@CAlfCompositionPixelSource@@SAPAV1@AAVMAlfBufferProvider@@HPAVRWindow@@@Z @ 43  NONAME ; class CAlfCompositionPixelSource * CAlfCompositionPixelSource::NewL(class MAlfBufferProvider &, int, class RWindow *)
+	?ActivateSyncL@CAlfCompositionPixelSource@@QAEXXZ @ 44  NONAME ; void CAlfCompositionPixelSource::ActivateSyncL(void)
 

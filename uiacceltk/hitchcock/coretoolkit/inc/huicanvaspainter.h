@@ -49,6 +49,7 @@ enum THuiCanvasBufferStatusFlags
     
     /** Flag to say wheter buffer really contains somethign that really draws something */
     EHuiCanvasBufferContainsDrawing = 0x8000,
+    EHuiCanvasBufferContainsTransparentClear = 0x10000,
     /** All flags, can be used for clearing all flags */
     EHuiCanvasBufferStatusAll = 0xFFFFFFFF
     };

@@ -638,6 +638,12 @@ TBool CHuiDisplay::Refresh()
         return EFalse;
         }
     
+    if (!iForegroundTextureTransparency && iForegroundTexture)
+        {
+        // When we can blit foreground texture, we shouldn't need any textures in skin side.
+        iEnv.Skin().ReleaseCachedTextures();
+        }
+    
     TBool useDirtyRects = (RenderSurface().Flags() & MHuiRenderSurface::EFlagUseDirtyRects) 
     					  == MHuiRenderSurface::EFlagUseDirtyRects;
  	
@@ -851,7 +857,7 @@ TBool CHuiDisplay::Refresh()
         iGc->PushClip();
         iGc->Clip(dirtyRect);        
         
-        if ( iForegroundBitmapGc )
+        if ( iForegroundBitmapGc && !RosterImpl().IsVisibleContentFrozen() )
             {
             // If we are in SW rendering mode, then SW bitmap may be blended.
             // However, it's possible that nothing is drawn below, so clear
@@ -1628,6 +1634,12 @@ EXPORT_C CHuiTexture* CHuiDisplay::ForegroundTexture() const
 EXPORT_C void CHuiDisplay::SetForegroundTextureOptions(TBool aTransparency)
     {
     iForegroundTextureTransparency = aTransparency;
+
+    if (!iForegroundTextureTransparency && iForegroundTexture)
+        {
+        // When we can blit foreground texture, we shouldn't need any textures in skin side.
+        iEnv.Skin().ReleaseCachedTextures();
+        }
     }
 
 void CHuiDisplay::UpdateForegroundTexture(const TRect& aRect)
@@ -1657,7 +1669,7 @@ void CHuiDisplay::DoUpdateForegroundTextureL(const TRect& aRect)
 
 void CHuiDisplay::DrawForegroundTexture()
     {
-    if (iForegroundTexture)
+    if (iForegroundTexture && !RosterImpl().IsVisibleContentFrozen() )
         {
         THuiQuality originalQuality = iGc->Quality();
         if ( originalQuality != EHuiQualityFast )

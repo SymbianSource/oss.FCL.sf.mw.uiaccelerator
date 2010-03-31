@@ -308,4 +308,5 @@ EXPORTS
 	?FindWgForAppUid@CAlfStreamerBridge@@QAEHVTUid@@@Z @ 307 NONAME ; int CAlfStreamerBridge::FindWgForAppUid(class TUid)
 	?FindAppUidForWgId@CAlfStreamerBridge@@QAE?AVTUid@@H@Z @ 308 NONAME ; class TUid CAlfStreamerBridge::FindAppUidForWgId(int)
 	?SetLayerUsesAplhaFlag@CAlfWindow@@QAEXH@Z @ 309 NONAME ; void CAlfWindow::SetLayerUsesAplhaFlag(int)
+	?ClientAboutToExit@CAlfWindowFxPlugin@@UAEXVTThreadId@@@Z @ 310 NONAME ; void CAlfWindowFxPlugin::ClientAboutToExit(class TThreadId)
 

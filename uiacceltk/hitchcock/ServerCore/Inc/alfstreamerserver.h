@@ -35,7 +35,7 @@ public:
     static TInt LaunchServer(TThreadId& aThreadId, CAlfStreamerBridge* aBridge );
     static void NewLC(CAlfStreamerBridge* aBridge);
 	~CAlfStreamerServer();
-    void HandleClientExit(const CSession2* aClient);
+    void HandleClientExit(const CAlfStreamerServerSession* aClient);
     CAlfWindowManager* WindowMgr() 
         {
         return iWindowMgr;
@@ -146,7 +146,7 @@ public:
 NONSHARABLE_CLASS(CAlfStreamerServerSession): public CSession2
     {
 public:
-    CAlfStreamerServerSession();
+    CAlfStreamerServerSession(const TThreadId& aThreadId);
     ~CAlfStreamerServerSession();
     void ServiceL(const RMessage2& aMessage);
     void HandleCompositionOpL(TInt aOp, const RMessage2& aMessage, CAlfStreamerServer* aServer);
@@ -162,6 +162,10 @@ public:
     TSurfaceId& ExtentSurfaceId();
     TInt& AlfToken(){ return iAlfToken; }
     TBool IsBgAnimSession(){return iIsBgAnimSession;}
+    TThreadId ThreadId() const
+		{
+		return iThreadId;
+		} 
     
 private:
     RArray<TInt> iLoadedPlugins;
@@ -179,6 +183,7 @@ private:
     TSurfaceId iExtentSurfaceId;
     TInt iAlfToken;
     TBool iIsBgAnimSession;
+    TThreadId iThreadId;
     };
 
 #endif

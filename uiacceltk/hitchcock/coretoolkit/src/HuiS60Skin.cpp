@@ -32,7 +32,7 @@
 #include <AknUtils.h>
 
 #include "huiskinbackroundlayout.h"
-
+#include "huiextension.h"
 
 struct TBackgroundTexture
     {
@@ -188,12 +188,19 @@ void CHuiS60Skin::FreeAllBackgroundTextureResources()
 
 EXPORT_C void CHuiS60Skin::SkinContentChanged()
     {
-    FreeAllBackgroundTextureResources();
+    
     }
 
 EXPORT_C void CHuiS60Skin::SkinConfigurationChanged(
     const TAknsSkinStatusConfigurationChangeReason aReason )
     {
+    if (aReason == EAknsSkinStatusConfigurationDeployed)
+        {
+        FreeAllBackgroundTextureResources();
+        Env().NotifySkinChangedL();
+        Env().TextStyleManager().NotifyDisplaySizeChangedL();
+        ReloadBgTexturesL();
+        }
     
     }
 
@@ -250,11 +257,8 @@ EXPORT_C void CHuiS60Skin::ReleaseTexture(TInt aSkinTextureResource)
 EXPORT_C void CHuiS60Skin::NotifyDisplaySizeChangedL()
     {
     // The background is now different.
-    SkinContentChanged(); // to delete old contents
+     SkinConfigurationChanged(EAknsSkinStatusConfigurationDeployed);
     
-    Env().NotifySkinChangedL();
-    Env().TextStyleManager().NotifyDisplaySizeChangedL();
-    ReloadBgTexturesL();
     }
 
 
@@ -292,7 +296,14 @@ EXPORT_C void CHuiS60Skin::RestoreTextureContentL(CHuiTexture& aTexture)
 
 EXPORT_C void CHuiS60Skin::SkinExtension(const TUid& aExtensionUid, TAny** aExtensionParameters)
     {
-    CHuiSkin::SkinExtension(aExtensionUid,aExtensionParameters);
+    if (aExtensionUid == KHuiSkinReleaseCachedTextures)
+        {
+        FreeAllBackgroundTextureResources();
+        }
+    else
+        {        
+        CHuiSkin::SkinExtension(aExtensionUid, aExtensionParameters);
+        }
     }
     
 EXPORT_C THuiSkinOrientation CHuiS60Skin::Orientation() const
@@ -509,7 +520,7 @@ EXPORT_C CHuiTexture* CHuiS60Skin::BackgroundTexture(const TAknsItemID& aID)
         bgTexture = ((TPrivData*)(iSpare))->iBackgrounds[index];
         if (bgTexture.iID == aID)
             {
-            if(!bgTexture.iBackgroundTexture && !bgTexture.iBackgroundTexture->HasContent())
+            if(!bgTexture.iBackgroundTexture || !bgTexture.iBackgroundTexture->HasContent())
                 {
                 delete bgTexture.iBackgroundTexture;
                 bgTexture.iBackgroundTexture = NULL;

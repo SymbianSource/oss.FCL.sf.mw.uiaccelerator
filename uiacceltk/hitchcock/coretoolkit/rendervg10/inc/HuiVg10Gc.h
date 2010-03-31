@@ -495,7 +495,7 @@ private:
                                 TReal32 aRightBorderWidth, 
                                 TReal32 aTopBorderHeight,
                                 TReal32 aBottomBorderHeight, 
-                                const THuiImage* aImage);
+                                const THuiImage* aImage) __SOFTFP;
     
     
     void CreateVgObjectsL();

@@ -73,6 +73,8 @@ enum TAlfCompOps{
     KAlfCompositionTargetHiddenBGAnim,
     KAlfCompositionTargetVisibleBGAnim,
     
+    KAlfCompositionLayoutSwitchComplete
+    
     };
 
 struct TAlfNativeWindowData

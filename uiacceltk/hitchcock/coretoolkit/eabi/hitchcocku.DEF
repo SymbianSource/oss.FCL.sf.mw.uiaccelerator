@@ -1993,4 +1993,8 @@ EXPORTS
 	_ZNK16CHuiCanvasVisual14HasCustomShapeEv @ 1992 NONAME
 	_ZN16CHuiCanvasVisual21CommandBufferCoverageEi @ 1993 NONAME
 	_ZN11CHuiDisplay19CopyScreenToBitmapLEP10CFbsBitmap @ 1994 NONAME
+	_ZN16CHuiControlGroup11SetSecureIdEi @ 1995 NONAME
+	_ZN16CHuiControlGroup8SecureIdEv @ 1996 NONAME
+	_ZNK16CHuiCanvasVisual19HasTransParentClearEv @ 1997 NONAME
+	_ZN12CHuiFxEngine16AddEffectToGroupEi @ 1998 NONAME
 

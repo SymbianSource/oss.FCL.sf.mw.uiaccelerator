@@ -230,6 +230,15 @@ EXPORT_C void CHuiControlGroup::SetAcceptInput(TBool aAcceptInput)
     iAcceptInput = aAcceptInput;
     }
 
+EXPORT_C void CHuiControlGroup::SetSecureId(TInt aSecureId)
+    {
+    iSecureId = aSecureId;
+    }
+EXPORT_C TInt CHuiControlGroup::SecureId()
+    {
+    return iSecureId;
+    }
+
 
 TBool CHuiControlGroup::Changed() const
     {

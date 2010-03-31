@@ -925,6 +925,12 @@ void CHuiCanvasWsPainter::DoHandleBufferStringL(TInt aIndex, TRect& /*aDisplayRe
             case EAlfClearRect:
                 {
                 commandBuffer->SetStatusFlags(EHuiCanvasBufferContainsDrawing);
+                TRgb transpclearcolor(KRgbWhite);
+                transpclearcolor.SetAlpha(0);
+                if (iBrushColor == transpclearcolor)
+                    {
+                    commandBuffer->SetStatusFlags(EHuiCanvasBufferContainsTransparentClear);                    
+                    }
                 WsClearRectL();
                 break;
                 }
@@ -1892,6 +1898,7 @@ void CHuiCanvasWsPainter::WsResetL()
 	#ifdef __ALF_SYMBIAN_RWINDOW_CLEARING_BUG_WORKAROUND__
 	iTestBrushColor.SetInternal(0);
 	#endif	
+	iBrushColor.SetInternal(0);
     }
 
 void CHuiCanvasWsPainter::WsSetBrushColorL()
@@ -1903,6 +1910,7 @@ void CHuiCanvasWsPainter::WsSetBrushColorL()
 	#ifdef __ALF_SYMBIAN_RWINDOW_CLEARING_BUG_WORKAROUND__
 	iTestBrushColor = color;    	  	                            	
 	#endif
+	iBrushColor = color;
     }
 
 void CHuiCanvasWsPainter::WsSetBrushOriginL()

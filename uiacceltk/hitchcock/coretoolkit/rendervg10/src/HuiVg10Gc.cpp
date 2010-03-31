@@ -1872,7 +1872,7 @@ void CHuiVg10Gc::DrawBorderFixedCorners(const TRect& aOuterRect,
                                         TReal32 aRightBorderWidth, 
                                         TReal32 aTopBorderHeight,
                                         TReal32 aBottomBorderHeight, 
-                                        const THuiImage* aImage)
+                                        const THuiImage* aImage) __SOFTFP
     {
     // If there is no image, draw a solid border
     if (!aImage || !aImage->HasTexture())

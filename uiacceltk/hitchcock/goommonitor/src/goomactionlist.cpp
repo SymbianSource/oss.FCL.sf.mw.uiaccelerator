@@ -324,7 +324,7 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
 
     if (iFreeingMemory)
             {
-            TRACES("OOMWATCHER:CGOomActionList::FreeMemory Memory is currently being freed, do not start any more actions");
+            TRACES("GOOMWATCHER:CGOomActionList::FreeMemory Memory is currently being freed, do not start any more actions");
             return;
             }
     
@@ -339,6 +339,8 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
 
     TInt memoryEstimate = iMonitor.GetFreeMemory(); // The amount of free memory we expect to be free after the currently initiated operations
 
+    TRACES2("GOOMWATCHER:CGOomActionList::FreeMemory Memory currentActionIndex %d iActionrefsCount %d", iCurrentActionIndex, iActionRefs.Count());
+    
     while (iCurrentActionIndex < iActionRefs.Count())
         {
         if(iActionRefs[iCurrentActionIndex].Priority() > aMaxPriority)
@@ -360,6 +362,8 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
             
             TInt32 fgApp = wgName->AppUid().iUid;
             TInt32 appId = iMonitor.GetWindowGroupList()->AppIdfromWgId(ref.WgId(), ETrue);
+            
+            CleanupStack::PopAndDestroy();
             if(appId == fgApp)
                 {
                 TRACES1("Foreground App wgid %x, spared by GOOM", appId);
@@ -404,11 +408,18 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
             // Also check if we estimate that we have already freed enough memory (assuming that the sync mode is "estimate"
             {
             // Return from the loop - we will be called back (in CGOomActionList::StateChanged()) when the running actions complete
+            iCurrentActionIndex++;
             TRACES("CGOomActionList::FreeMemory: Exiting run action loop");
             return;
             }
         // ... otherwise continue running actions, don't wait for any existing ones to complete
         iCurrentActionIndex++;
+        
+        if (iCurrentActionIndex >= iActionRefs.Count())
+            {
+            StateChanged();
+            return;
+            }
         }
 
 
@@ -610,7 +621,6 @@ void CGOomActionList::StateChanged()
             {            
             TRACES2("CGOomActionList::StateChanged: Finished Action %d out of %d",iCurrentActionIndex, iActionRefs.Count());
             
-            iCurrentActionIndex++;
             
             if (iCurrentActionIndex >= iActionRefs.Count())
                 {

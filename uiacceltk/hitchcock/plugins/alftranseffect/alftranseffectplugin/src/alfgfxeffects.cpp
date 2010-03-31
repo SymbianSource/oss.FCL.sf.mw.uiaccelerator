@@ -250,6 +250,13 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
 #endif    
                 
                 uid1 = TUid::Uid( inStream.ReadInt32L() );
+                // hack to keep disapear viewswitch transitions popping on top of everything
+				// TODO: Remove when HS complies
+                if ((uid1.iUid == 0x102750F1 || uid1.iUid == 0x102750F2 ) && action == 4)
+                    {
+                    action = 5;
+                    }
+                
                 TInt windowGroup = inStream.ReadInt32L();
                 TInt windowHandle = inStream.ReadInt32L();
                 TBool nLayered = inStream.ReadInt32L();
@@ -983,4 +990,15 @@ void CAlfGfxEffects::PrintRequestInfo(TInt aOperation, TInt aAction )
     delete buffer; 
     }
 #endif
+
+void CAlfGfxEffects::ClientAboutToExit(TThreadId aClientId)
+    {
+    if (iPolicyHandler)
+        {
+        iPolicyHandler->RemoveClient( aClientId );
+        }   
+    }
+
+
+
 //  End of File  

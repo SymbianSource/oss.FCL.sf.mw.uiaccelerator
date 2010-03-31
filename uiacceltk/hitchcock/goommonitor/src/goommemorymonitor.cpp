@@ -231,7 +231,7 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
         iMemAllocationsGrowing->Stop();
         iMemAllocationsGoingDown->Continue();
-        if(iTrigger == EGOomTriggerNone)
+        if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood() && !iSynchTimer->IsActive() )
             StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
         }
 #endif
@@ -251,9 +251,11 @@ void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
 
     // Refresh the low and good memory thresholds as they may have changed due to the new foreground application
     RefreshThresholds(aForegroundAppUid);
-    // Not very elegant, now we poll on each window group change
-    // Should have better trigger e.g. from window server 
-	StartFreeSomeRamL(iCurrentTarget, EGOomTriggerFocusChanged);
+    
+    if(iCurrentTarget)
+        {
+        StartFreeSomeRamL(iCurrentTarget, EGOomTriggerFocusChanged);
+        }
      }
 
 void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOomTrigger aTrigger) // The maximum priority of action to run
@@ -379,8 +381,8 @@ void CMemoryMonitor::RefreshThresholds(TInt aForegroundAppUid)
     // Calculate the desired good threshold, this could be the globally configured value...
     iGoodThreshold = CMemoryMonitor::GlobalConfig().iGoodRamThreshold;
     iLowThreshold = CMemoryMonitor::GlobalConfig().iLowRamThreshold;
-    if(iCurrentTarget < iLowThreshold)
-        iCurrentTarget = iLowThreshold;
+    //if(iCurrentTarget < iLowThreshold)
+    //    iCurrentTarget = iLowThreshold;
         
     TRACES2("CMemoryMonitor::RefreshThresholds: Global Good Threshold = %d, Global Low Threshold = %d", iGoodThreshold, iLowThreshold);
 

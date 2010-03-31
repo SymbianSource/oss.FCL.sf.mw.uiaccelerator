@@ -27,7 +27,7 @@ threshold values are used.
 -->
 	<app_specific_thresholds>
 
-  <app uid="101F857A" low_ram_threshold="5000" good_ram_threshold="26000" skip_plugin="2002B3AE"></app> <!-- Camera --> 
+  <app uid="101F857A" low_ram_threshold="1000" good_ram_threshold="30000" skip_plugin="2002B3AE"></app> <!-- Camera --> 
   <app uid="200159B2" low_ram_threshold="5000" good_ram_threshold="10000" skip_plugin="2002B3AE"></app> <!-- MPlayer -->
   <app uid="102824CD" low_ram_threshold="5000" good_ram_threshold="10000" skip_plugin="2002B3AE"></app> <!-- Embedded mplayer -->
   <app uid="200009EE" low_ram_threshold="3637" good_ram_threshold="10000" target_free_on_startup="15000"></app> <!-- Photos -->

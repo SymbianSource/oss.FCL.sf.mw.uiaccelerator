@@ -214,9 +214,13 @@ void CAlfNode::GetAllChildrenInGroup( RPointerArray<CAlfNode>& aNodes, TUint32 a
 	if ( iParent->iType != MWsWindowTreeNode::EWinTreeNodeRoot)
 		{
 		CAlfNode* parentGroupNode = iModel->FindNode( aParentId );
+		aNodes.Append(parentGroupNode); 
 		for (CAlfNode::TIter iter( parentGroupNode ); iter.Current() != NULL;  iter.Next()) 
 			{ 
-			aNodes.Append(iter.Current()); 
+			if (iter.Current() != parentGroupNode )
+			    {
+			    aNodes.Append(iter.Current());
+			    }
 			}
 		}
 	else
@@ -1716,20 +1720,21 @@ void CAlfNodeWindow::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream* aSt
     ResolveParent( iNodeWindowConstructionStruct.iParentId, iId );
     CreateWindowL( iNodeWindowConstructionStruct.iWindowGroupHandle, iNodeWindowConstructionStruct.iWindowHandle, iNodeWindowConstructionStruct.iParentId );
     UpdateOrdinalPosition();
+    
+    AMT_MAP_STREAMER_NODE_WINDOW_CONSTRUCT();
 	}
 
 // ---------------------------------------------------------------------------
 // MoveToWindowGroup
-// !!!! THIS METHOD HAS NOT BEEN TESTED AT ALL!!!!!! EXPECT TROUBLE!!!!
 // ---------------------------------------------------------------------------
 //
 void CAlfNodeWindow::MoveToWindowGroup( TUint32 aNewGroupId )
 	{
-	__ALFLOGSTRING("CAlfNodeWindow::MoveToWindowGroup, THIS METHOD IS UNTESTED. EXPECT TROUBLE!");
+	__ALFLOGSTRING3("CAlfNodeWindow::MoveToWindowGroup moving nodeID 0x%x from group 0x%x to 0x%x",iId, iParent->iId, aNewGroupId );
 	CAlfNodeGroup* newGroup = (CAlfNodeGroup*)iModel->FindNode( aNewGroupId );
 	if ( newGroup )
 		{
-		// collect my children in my old group
+		// collect my children in my old group (inclucing me)
 		RPointerArray<CAlfNode> myChildNodes;
 		GetAllChildrenInGroup( myChildNodes, iId );
 			    
@@ -1743,20 +1748,22 @@ void CAlfNodeWindow::MoveToWindowGroup( TUint32 aNewGroupId )
 			{
 			previous->iSibling = iSibling; // there was the a previous child. update the link to my next sibling (which might be NULL)
 			}
-		TUint32 oldGroupId = iParent->iId;
-		iParent = newGroup;
-		SetFirstChild();
-		
+
 		// yippii, new parent, 		
 		// add me as the first child of the new group
-		// TODO: Move the nodes to the new group?
+		iParent = newGroup;
+		iSibling = NULL;
+		SetFirstChild();
+
+		TUint32 screenNumber = iScreenNumber;
+
 		TInt i = myChildNodes.Count();
 		while( --i >=0 ) // update groupid and send new location to appui 
-			{
-			iModel->Server().Bridge()->AddData( EAlfDSMoveWindowToNewGroup, 
-					myChildNodes[i]->iId, 
-					oldGroupId, 
-					(TAny*)aNewGroupId );
+		    {
+		    iModel->Server().Bridge()->AddData( EAlfDSMoveWindowToNewGroup, 
+		            myChildNodes[i]->iId, 
+		            screenNumber, 
+		            (TAny*)aNewGroupId );
 			myChildNodes[i]->iGroupId = aNewGroupId;
 			}
 	  
@@ -1895,6 +1902,8 @@ void CAlfNodeGroup::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream* aStr
             iGroupId, 
             iId, 
             (TAny*)offset );
+    
+    AMT_MAP_STREAMER_NODE_GROUP_CONSTRUCT();
 	}
 
 // ---------------------------------------------------------------------------
@@ -2128,6 +2137,8 @@ void CAlfNodeTextCursor::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream*
             (TAny*)offset );
     
     UpdateOrdinalPosition();
+    
+    AMT_MAP_STREAMER_TEXT_CURSOR_CONSTRUCT();
     }
 
 // ---------------------------------------------------------------------------
@@ -2146,6 +2157,8 @@ CAlfNodeTextCursor* CAlfNodeTextCursor::NewL( CAlfHierarchyModel* aModel, RMemRe
 
 void CAlfNodeTextCursor::AttributeChangedL( RMemReadStream* aStream )
     {
+    AMT_MAP_BRIDGE_ADD_TEXT_CURSOR();
+    
     // TODO: PASS FORWARD!!!
     TInt attribute = aStream->ReadInt32L();
     switch ( attribute )
@@ -2184,6 +2197,8 @@ void CAlfNodeTextCursor::AttributeChangedL( RMemReadStream* aStream )
                iGroupId, 
                iId, 
                (TAny*)offset );
+       
+   AMT_MAP_STREAMER_TEXT_CURSOR_CHANGE();
     }
 CAlfNodeTextCursor::~CAlfNodeTextCursor( )
     {

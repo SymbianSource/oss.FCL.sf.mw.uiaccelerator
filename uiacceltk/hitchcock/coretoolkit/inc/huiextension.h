@@ -83,4 +83,7 @@ struct THuiGcCopyScreenToBitmapParams
     TInt iErrorCode;
     };
 
+// Uid for Release Cached Textures extension for CHuiSkin.
+const TUid KHuiSkinReleaseCachedTextures = { 0x2002E6D4 };
+
 #endif // __HUIEXTENSION_H__

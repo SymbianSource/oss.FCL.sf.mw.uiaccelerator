@@ -390,6 +390,14 @@ void CHuiStatic::ConstructL(CHuiEnv* aPrimaryEnv)
     iChangeNotifier->Start();
 #ifndef __WINSCW__
     globalWriteableData = *iData;
+    #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+        // For testing purposes, test data needs to be included into TLS
+        // because test cases require information stored in TLS.
+        if ( !Dll::Tls() )
+            {
+            Dll::SetTls( iData );    
+            }
+    #endif    
 #else
     Dll::SetTls(iData);
 #endif
@@ -417,7 +425,7 @@ CHuiStatic::~CHuiStatic()
         }
     iChangeNotifier->Cancel();
     delete iChangeNotifier;
-#ifdef __WINSCW__
+#if defined( __WINSCW__ ) || defined( USE_MODULE_TEST_HOOKS_FOR_ALF )
     Dll::FreeTls();
 #endif
     delete iData;

@@ -34,6 +34,15 @@
 
 #include <e32math.h>
 
+#include "alfmoduletestconf.h"
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // Provides TLS object data for test cases.
+    // This is used only if module test hooks are set on.
+    #include "huistatictlsdata.h"
+#endif // USE_MODULE_TEST_HOOKS_FOR_ALF
+// Provides module test hook defines.
+#include "alfmoduletestdefines.h"
+
 
 EXPORT_C CHuiCanvasGc::CHuiCanvasGc():
     iPenColor(KRgbBlack),
@@ -44,7 +53,7 @@ EXPORT_C CHuiCanvasGc::CHuiCanvasGc():
     iHorizontalTextAlign(EHuiAlignHLeft),
     iTextStyleId(EHuiTextStyleNormal),
     iEffectiveOpacityEnabled(ETrue)
-    {	    
+    {
     }
 
 EXPORT_C CHuiCanvasGc::~CHuiCanvasGc()
@@ -673,6 +682,10 @@ EXPORT_C void CHuiCanvasGc::DoDrawRects(RArray<THuiRealRect>& aRects)
         	    {
       		  	iGc->DrawRect(rect);
         	    }
+        	
+            AMT_MAP_INC_VALUE_IF( iVisual, iIntMap, 
+                                  AMT_MAP_CPTR_TO_KEY_CAST( iVisual ),
+                                  EAlfModuleTestTypeCoreToolkitDrawWindow );
 		    }    	    
 		}            
 	}
@@ -1346,7 +1359,11 @@ EXPORT_C void CHuiCanvasGc::DrawImage(const CHuiCanvasRenderBuffer& aImage, cons
 
     DisableDelayedClippingIfNeeded(); 
 
-    Cleanup();       
+    Cleanup();
+    
+    AMT_MAP_INC_VALUE_IF( iVisual, iIntMap, 
+                          AMT_MAP_CPTR_TO_KEY_CAST( iVisual ), 
+                          EAlfModuleTestTypeCoreToolkitDrawFromRenderBuffer );
     }
 
 EXPORT_C void CHuiCanvasGc::ClearRenderBuffer( CHuiCanvasRenderBuffer& aImage, const TRect & aRect )

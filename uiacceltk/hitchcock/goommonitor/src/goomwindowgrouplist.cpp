@@ -76,12 +76,13 @@ void CGOomWindowGroupList::RefreshL()
     User::LeaveIfError(iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&iLowOnMemWgs));
 
     RArray<TInt>& inactiveSurfaces = iLowOnMemWgs;
-      
+    TRACES1("Inactive surfaces count %d", inactiveSurfaces.Count());     
     RArray<TUint64> processIds;
     RArray<TUint> privMemUsed;
+    RArray<TUint64> sparedProcessIds;
     
-    if (inactiveSurfaces.Count() == 1) // ALF only 
-        {
+   //if (inactiveSurfaces.Count() == 1) // ALF only 
+   //     {
         NOK_resource_profiling eglQueryProfilingData = (NOK_resource_profiling)eglGetProcAddress("eglQueryProfilingDataNOK");
     
         if (!eglQueryProfilingData)
@@ -93,9 +94,6 @@ void CGOomWindowGroupList::RefreshL()
         EGLint data_count;
         EGLint* prof_data;
         TInt i(0);
-        RArray<TUint64> processIds;
-        RArray<TUint> privMemUsed;
-        RArray<TUint64> systemProcessIds;
         
         EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
@@ -148,6 +146,8 @@ void CGOomWindowGroupList::RefreshL()
                     TRACES1("Memory Usage by app is %d", mem);
                     if(mem > KAllowedMemUsageForApps)
                         processIds.Append(process_id);
+                    else
+                        sparedProcessIds.Append(process_id);
                 
                     i++;
                     break;
@@ -181,7 +181,7 @@ void CGOomWindowGroupList::RefreshL()
         // Optimization, no need to construct list if ALF is the only one
         ///////////////////////////////////////////////////////////////////
     
-        if (processIds.Count() == 1)
+        if( (processIds.Count() == 1) && (inactiveSurfaces.Count() == 1))
             {
             RProcess process;
             TInt err =  process.Open(processIds[0]);
@@ -192,12 +192,13 @@ void CGOomWindowGroupList::RefreshL()
                 if(secureId == 0x10003B20) // magic, wserv 
                     {
                     processIds.Close();
+                    privMemUsed.Close();
                     TRACES("Only WServ using GFX mem, no need for app actions");
                     return;
                     }
                 }
             }
-        }
+     //   }
                 
     // Refresh window group list
     // get all window groups, with info about parents
@@ -250,11 +251,12 @@ void CGOomWindowGroupList::RefreshL()
     while (index--)
         {
         //Remove if process is not in list of processes using gfx mem
+        TUint secureId = AppId(index,ETrue);
         TBool found = 0;
-        TInt i = 0;    
+        TInt i = 0;
+        //todo - do we really need to check this list , when we have all ids in inactiveSurfaces[]
         for(i = 0; i < processIds.Count(); i++)
             {
-            TUint secureId = AppId(index,ETrue);
             RProcess process;
             TInt er =  process.Open(processIds[i]);
             if(er != KErrNone)
@@ -274,31 +276,59 @@ void CGOomWindowGroupList::RefreshL()
                 }
             process.Close();
             }
-        TRACES1("Checking WG ID : %d", iWgIds[index].iId);             
-        for(TInt ii = 0; ii < inactiveSurfaces.Count(); ii++)
-           {
-            if (iWgIds[index].iId == inactiveSurfaces[ii] )
-               {
-               AppId(index,EFalse); // update iWgName for found only 
-               found = ETrue;
-               TRACES2("Found %d isSystem: %d",inactiveSurfaces[ii], iWgName->IsSystem())            
-               }     
+        
+        if(!found)
+            {
+            TRACES1("Checking WG ID : %d", iWgIds[index].iId);             
+            for(TInt ii = 0; ii < inactiveSurfaces.Count(); ii++)
+                {
+                if (iWgIds[index].iId == inactiveSurfaces[ii] )
+                    {
+                    found = ETrue;
+                    TRACES3("Found %d , AppId %x, isSystem: %d",inactiveSurfaces[ii], secureId, iWgName->IsSystem())            
+                    }     
+                }
             }
         
-        if(!found || iWgName->IsSystem())
+        if(!found)
             {
             iWgIds.Remove(index);
             continue;
             }
+      
+        //check if it is system app
+        if(iWgName->IsSystem() /*|| iWgName->Hidden()*/)
+            {
+            TRACES3("System/Hidden app found %x, ISystem %d, IsHidden %d",secureId, iWgName->IsSystem()?1:0, iWgName->Hidden()?1:0);  
+            sparedProcessIds.Append(secureId);
+            }
+      
         }
-		
     
-	processIds.Close();
+    inactiveSurfaces.Close();
+    //CleanupStack::PopAndDestroy(); //   CleanupClosePushL(inactiveSurfaces);
+    processIds.Close();
     privMemUsed.Close();      
     
+    //check if any system apps are included
     index = iWgIds.Count();
     while (index--)
         {
+        TBool skipped = EFalse;
+        for(TInt i = 0; i < sparedProcessIds.Count(); i++)
+            {
+            if(AppId(index,ETrue) == sparedProcessIds[i])
+                {
+                TRACES2("WgId %d belongs to system app %x. Removing from Kill List",iWgIds[index].iId, sparedProcessIds[i]);
+                iWgIds.Remove(index);
+                skipped = ETrue;
+                break;
+                }
+            }
+        
+        if(skipped)
+            continue;
+        
         // See if there is a tick count entry for each window in the list
         TGOomWindowGroupProperties* wgProperties = iWgToPropertiesMapping.Find(iWgIds[index].iId);
         
@@ -311,6 +341,7 @@ void CGOomWindowGroupList::RefreshL()
             }
         }
     TRACES1("Number of applications using graphics mem: %d", iWgIds.Count());    
+    sparedProcessIds.Close();
     }
 
 

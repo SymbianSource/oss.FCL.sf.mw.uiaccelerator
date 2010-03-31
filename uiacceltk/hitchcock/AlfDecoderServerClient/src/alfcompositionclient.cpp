@@ -258,6 +258,11 @@ void CAlfCompositionCntrlClient::HandleEventL(TInt aEventType, TAny* aEventData)
         return;
         }    
     
+    if (aEventType == KAlfCompositionLayoutSwitchComplete && iController)
+        {
+        iController->AlfBridgeCallback(KAlfCompositionLayoutSwitchComplete, NULL);
+        }
+    
     TInt* ptr = static_cast<TInt*>(aEventData);
     TInt target;
     
@@ -720,27 +725,22 @@ NONSHARABLE_CLASS( CSurfaceUpdateCallback ) : public CActive
 
         void RunL() 
             {
-            if( iStatus == KErrNone )
+            if( iStatus != KErrCancel )
                 {
                 SetActive();
                 if( !iPixelSource.DrawFrameL(iStatus, iBufferNumber) )
                     {
-                    __ALFLOGSTRING( "CSurfaceUpdateCallBack::RunL - DrawFrameL returned EFalse -> Pause");
-                    TRequestStatus* status = &iStatus;
-                    User::RequestComplete(status, KErrNone);
+                    __ALFLOGSTRING( "CSurfaceUpdateCallBack::RunL - DrawFrameL returned EFalse -> Pausing");
+                    TRequestStatus* status  = &iStatus;
+                    User::RequestComplete(status, KErrCancel);
                     Cancel();
-                   }
+                    }
                 }
-            else
-                {
-                __ALFLOGSTRING1("CSurfaceUpdateCallBack::RunL %d", iStatus.Int());
-                iPixelSource.Suspend();
-                }
-
-            
             };
-        void DoCancel() {  };
-        
+        void DoCancel() 
+            {
+            };
+
     private: // Data
         CAlfCompositionPixelSource& iPixelSource;
         TInt iBufferNumber;
@@ -824,6 +824,8 @@ NONSHARABLE_CLASS(CAlfCompositionPixelSource::CAlfCompositionPixelSourceData):pu
     TInt iCurrentBuffer;
     
     TRect iSurfaceRect;
+    
+    TInt iWaiterAoPriority;
     };
 
 
@@ -836,10 +838,24 @@ EXPORT_C CAlfCompositionPixelSource* CAlfCompositionPixelSource::NewL(MAlfBuffer
     {
     CAlfCompositionPixelSource* me = new (ELeave) CAlfCompositionPixelSource();
     CleanupStack::PushL(me);
-    me->ConstructL(aProvider, aWindow);
+    me->ConstructL(aProvider, CActive::EPriorityIdle, aWindow);
     CleanupStack::Pop(me);
     return me;    
     }
+
+// ---------------------------------------------------------------------------
+// CAlfCompositionPixelSource::NewL
+// ---------------------------------------------------------------------------
+//
+EXPORT_C CAlfCompositionPixelSource* CAlfCompositionPixelSource::NewL(MAlfBufferProvider& aProvider, TInt aPriority, RWindow* aWindow)
+    {
+    CAlfCompositionPixelSource* me = new (ELeave) CAlfCompositionPixelSource();
+    CleanupStack::PushL(me);
+    me->ConstructL(aProvider, aPriority, aWindow);
+    CleanupStack::Pop(me);
+    return me;    
+    }
+
 
 // ---------------------------------------------------------------------------
 // CAlfCompositionPixelSource::ActivateL
@@ -873,7 +889,7 @@ EXPORT_C void CAlfCompositionPixelSource::ActivateL()
         {
         if( !iData->iSurfaceUpdateWaiter )
             {
-            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, CActive::EPriorityIdle );
+            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, iData->iWaiterAoPriority );
             }
 
         iData->iSurfaceUpdateWaiter->SetActive();
@@ -886,7 +902,71 @@ EXPORT_C void CAlfCompositionPixelSource::ActivateL()
    
     // do nothing if content was already active
     }
-    
+
+// ---------------------------------------------------------------------------
+// CAlfCompositionPixelSource::ActivateSyncL
+// ---------------------------------------------------------------------------
+//
+EXPORT_C void CAlfCompositionPixelSource::ActivateSyncL()
+    {
+    if( !iData->iWindow && iData->iSurfaceId.IsNull() )
+        {
+        User::Leave(KErrNotReady);
+        }
+    TBool pause = EFalse;
+    if( iData->iSourceStatus == CAlfCompositionPixelSourceData::ESuspended )
+        {
+        MAlfBufferProvider::TBufferCreationAttributes& creationAttribs = iData->iProvider.BufferAttributes();
+        
+        iData->iSurfaceRect = TRect(TPoint(0,0), TSize(creationAttribs.iWidth, creationAttribs.iHeight));
+
+        ConstructSurfaceL(creationAttribs);
+
+        User::LeaveIfError( iData->iSurfaceUpdateSession.Connect() );     
+        
+        // update surface buffer before setting surface as background surface
+        if( !iData->iSurfaceUpdateWaiter )
+            {
+            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, iData->iWaiterAoPriority );
+            }
+
+        iData->iSurfaceUpdateWaiter->SetActive();
+        pause = !DrawFrameL(iData->iSurfaceUpdateWaiter->iStatus ,0);
+        if(pause && iData->iSurfaceUpdateWaiter->IsActive())
+            {
+            TRequestStatus* status  = &iData->iSurfaceUpdateWaiter->iStatus;
+            User::RequestComplete(status, KErrCancel);
+            iData->iSurfaceUpdateWaiter->Cancel();
+            }
+        
+        iData->iWindow->SetBackgroundSurface(iData->iSurfaceId);
+
+        TInt array[] = { 0, iData->iWindow->ClientHandle(), iData->iWindow->WindowGroupId() }; 
+        TInt handle = SendEvent(KAlfCompOpCreateSource, array, sizeof(array));
+        CAlfCompositionClientBase::SetHandleL( handle );
+        }
+  
+    if( iData->iSourceStatus != CAlfCompositionPixelSourceData::EActive && !pause )
+        {
+
+        if( !iData->iSurfaceUpdateWaiter )
+            {
+            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, iData->iWaiterAoPriority );
+            }
+
+        if(!iData->iSurfaceUpdateWaiter->IsActive())
+            {
+            iData->iSurfaceUpdateWaiter->SetActive();
+            TRequestStatus* status = &iData->iSurfaceUpdateWaiter->iStatus;
+            User::RequestComplete(status, KErrNone);
+            }
+        iData->iProvider.OnActivation();
+        iData->iSourceStatus = CAlfCompositionPixelSourceData::EActive;
+        }
+   
+    // do nothing if content was already active and running    
+    }
+
 // --------------------------------------------------------------------------- 
 // CAlfCompositionPixelSource::Suspend
 // ---------------------------------------------------------------------------
@@ -961,9 +1041,11 @@ EXPORT_C TInt CAlfCompositionPixelSource::SetExtent(const TRect& aRect, TInt aSc
 // CAlfCompositionPixelSource::ConstructL
 // ---------------------------------------------------------------------------
 //
-void CAlfCompositionPixelSource::ConstructL(MAlfBufferProvider& aProvider, RWindow* aWindow)
+void CAlfCompositionPixelSource::ConstructL(MAlfBufferProvider& aProvider, TInt aPriority, RWindow* aWindow)
     {
     iData = CAlfCompositionPixelSourceData::NewL( aProvider );
+    iData->iWaiterAoPriority = aPriority;
+
     TInt screenNumber = KErrNotFound;
     if( aWindow )
         {

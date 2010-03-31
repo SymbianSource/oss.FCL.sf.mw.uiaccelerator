@@ -346,6 +346,9 @@ void CHuiEnv::ConstructL(THuiRenderer aRenderer)
 
 CHuiEnv::~CHuiEnv()
     {
+    iSynchObservers.Close();
+    iSynchIds.Close();
+    
     iActionObservers.Close();
 
     // Destroy groups in reverse order so that references will be removed
@@ -1772,9 +1775,17 @@ EXPORT_C THuiMemoryLevel CHuiEnv::MemoryLevel()
 
 EXPORT_C void CHuiEnv::Synchronize(TInt aId, MHuiSynchronizationObserver* aObserver)
     {
-    iSynchObserver = aObserver;
-    iSynchId = aId;
-    
+    TInt err = iSynchObservers.Append(aObserver);
+    if(err)
+        {
+        return;
+        }
+    err = iSynchIds.Append(aId);
+    if(err )
+        {
+        iSynchObservers.Remove(iSynchObservers.Count()-1);
+        return;
+        }
     if ( aObserver )
         {
         ContinueRefresh();
@@ -1783,7 +1794,7 @@ EXPORT_C void CHuiEnv::Synchronize(TInt aId, MHuiSynchronizationObserver* aObser
 
 void CHuiEnv::DoSynchronize()
     {
-    if ( !iSynchObserver )
+    if ( iSynchObservers.Count() == 0)
         {
         return;
         }
@@ -1799,8 +1810,13 @@ void CHuiEnv::DoSynchronize()
             }
         }
 
-    iSynchObserver->Synchronized( iSynchId );
-    iSynchObserver = NULL;
+    TUint observersCount = iSynchObservers.Count()-1;
+    for(TInt u = observersCount; u >= 0 ; u-- )
+        {
+        iSynchObservers[u]->Synchronized( iSynchIds[u] );
+        iSynchObservers.Remove(u);
+        iSynchIds.Remove(u);
+        }
     }
 
 void CHuiEnv::RemoveTheControlGroup(TInt aId)

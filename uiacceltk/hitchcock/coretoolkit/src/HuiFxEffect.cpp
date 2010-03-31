@@ -82,6 +82,13 @@ EXPORT_C CHuiFxEffect::~CHuiFxEffect()
     ReleaseCachedRenderTarget();
     
     iEngine->RemoveEffect(this);
+    if (iEngine && iGroupId != KErrNotFound)
+        {
+        // if effect was deleted before it was drawn, the group must be notified. If this was the last effect in the group
+        // the group will be removed by the EffectReadyToStart
+        iEngine->NotifyEffectReady(iGroupId);
+        }
+    
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxEffect::~CHuiFxEffect - 0x%x"), this);
 #endif
@@ -308,7 +315,9 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
                 }
             
             // Write cached buffer to the display
-            iEngine->Composite(aGc, *iCachedRenderTarget, targetRect.iTl, aOpaque && !(EffectFlags() & KHuiFxAlwaysBlend), aAlpha);
+           
+	       iEngine->Composite(aGc, *iCachedRenderTarget, targetRect.iTl, aOpaque && !(EffectFlags() & KHuiFxAlwaysBlend), aAlpha);
+           
 
             if (aClipRegion.Count())
                 {
@@ -442,6 +451,16 @@ EXPORT_C void CHuiFxEffect::SetEffectFlags( TInt aFlags )
     iFlags = aFlags;
     }
 
+void CHuiFxEffect::SetEffectFlag( TInt aFlag )
+    {
+    iFlags |= aFlag;
+    }
+
+void CHuiFxEffect::ClearEffectFlag( TInt aFlag )
+    {
+    iFlags &= ~aFlag;
+    }
+
 EXPORT_C void CHuiFxEffect::SetEffectGroup(TInt aGroupId)
     {
     iGroupId = aGroupId;
@@ -462,16 +481,31 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
     if (iFlags & KHuiFxDelayRunUntilFirstFrameHasBeenDrawn)
         {
         if (iFramesDrawn)
-            {
+            { 
+            if (iFlags & KHuiFxReadyAndWaitingGroupToStartSyncronized)
+                {
+	            // this has drawn atleast once, but all the effect in this group have not drawn. Must hang on little more.
+                return;
+                }
+        
+            if (iFlags & KHuiFxWaitGroupToStartSyncronized)
+                {
+				// Group has been started, waiting the others in the group to be drawn
+                SetEffectFlag(KHuiFxReadyAndWaitingGroupToStartSyncronized);
+                ClearEffectFlag(KHuiFxWaitGroupToStartSyncronized);
+				// NotifyEffectReady will clear KHuiFxReadyAndWaitingGroupToStartSyncronized flag
+				// if all items in the group are ready.
+                iEngine->NotifyEffectReady(iGroupId);
+                return;
+                }
+
             if (iFramesDrawn == 1)
                 {
                 aElapsedTime = 0;
                 iFramesDrawn++;
                 }
-            iRoot->AdvanceTime(aElapsedTime);
-            }
-        else
-            {
+            
+                iRoot->AdvanceTime(aElapsedTime);
             }
         }
     else

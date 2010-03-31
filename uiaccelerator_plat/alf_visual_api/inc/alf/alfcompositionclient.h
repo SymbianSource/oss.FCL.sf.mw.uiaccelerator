@@ -294,10 +294,25 @@ public:
      **/
     IMPORT_C static CAlfCompositionPixelSource* NewL(MAlfBufferProvider& aProvider, RWindow* aWindow = NULL);
     
+
     /**
-     *  Activate drawing for the first time or continue drawing if it is being paused or suspended
+     * Constructor for application to decide AO priority
+     */
+    IMPORT_C static CAlfCompositionPixelSource* NewL(MAlfBufferProvider& aProvider, TInt aPriority = CActive::EPriorityIdle, RWindow* aWindow = NULL );
+
+    
+    /**
+     * Activate drawing for the first time or continue drawing if it is being paused or suspended
      **/
     IMPORT_C void ActivateL();
+    
+    
+    /*
+     * An other option to activate/continue drawing. This activate method ensures that no saw-edged black area is seen if client
+     * only wants to draw one frame. MAlfBufferProvider::ProduceNewFrameL is called from inside ActivateSyncL so that 
+     * surface buffer can be updated before making surface visible.
+     */
+    IMPORT_C void ActivateSyncL();
     
     /**
      * Suspend drawing 
@@ -329,7 +344,7 @@ protected:
 
 private: // Internal / utils
     
-    void ConstructL(MAlfBufferProvider& aProvider, RWindow* aWindow);
+    void ConstructL(MAlfBufferProvider& aProvider, TInt aPriority, RWindow* aWindow);
     void ConstructSurfaceL(MAlfBufferProvider::TBufferCreationAttributes& aCreationAttributes);
     void FreeSurface();
     TUint8* Buffer(TInt aBufferNumber);

@@ -80,6 +80,9 @@ NONSHARABLE_STRUCT( CHuiCanvasVisual::THuiCanvasVisualData )
 
     RRegionBuf<5> iShapeRegion;
     TPoint iShapeOrigin;
+
+    // Flag to indicate if this has received commands while inactive
+    TBool iCommandsReceivedWhileNoCache;
     };
 
 EXPORT_C CHuiCanvasVisual* CHuiCanvasVisual::AddNewL(CHuiControl& aOwnerControl,
@@ -124,6 +127,8 @@ void CHuiCanvasVisual::ConstructL()
     iCanvasVisualData->iLayerExtent = TRect();
     
     iCanvasVisualData->iShapeOrigin = TPoint();
+    
+    iCanvasVisualData->iCommandsReceivedWhileNoCache = EFalse;
     
     // subwindow effects
     //EnableBrushesL(ETrue);
@@ -274,6 +279,15 @@ void CHuiCanvasVisual::ExpandRectWithContent(TRect& aRect) const
 
 void CHuiCanvasVisual::HandleBuffer(TRect& aDisplayRect, TInt aAction, CHuiGc* aGc) const
     {
+    TBool touchCountWasEnabled = EFalse;
+    if (iCanvasVisualData->iCommandsReceivedWhileNoCache)
+        {
+        // Commands were received while this visual didn't keep cache. 
+        // So it's possible that some images are still in texture cache but haven't been updated.
+        touchCountWasEnabled = Env().CanvasTextureCache().IsTouchCountCheckEnabled();
+        Env().CanvasTextureCache().EnableTouchCountCheck();
+        }
+        
     if (iCanvasVisualData->iCommandSetType == ECommandBufferWs || iCanvasVisualData->iCommandSetType == ECommandBufferAlf)
         {
         TRAPD(err, iCanvasVisualData->iCanvasPainter->HandleBufferL(aDisplayRect, aAction, *this, aGc, DisplayRect().iTl.Round()));  
@@ -287,6 +301,14 @@ void CHuiCanvasVisual::HandleBuffer(TRect& aDisplayRect, TInt aAction, CHuiGc* a
         // do nothing    
         }                
     
+    if (iCanvasVisualData->iCommandsReceivedWhileNoCache)
+        {
+        Env().CanvasTextureCache().EnableTouchCountCheck( touchCountWasEnabled );
+        if ( !KeepNoCache() && aAction == EDrawBuffer )
+            {
+            iCanvasVisualData->iCommandsReceivedWhileNoCache = EFalse;
+            }   
+        }
     }
 
 
@@ -320,27 +342,37 @@ TBool CHuiCanvasVisual::PrepareDrawL()
     
 TBool CHuiCanvasVisual::CanSkipDrawing() const
     {
-    TBool semiTranparentEffectActive = (Effect() && Effect()->IsSemitransparent());
-    TBool childWindowEffectActive = (Effect() && EffectIsAppliedToChildren());
-    TBool invisible = (iOpacity.Now() <= EPSILON && !semiTranparentEffectActive);
-    TBool effectAppliedToSurfacePixels = (Effect() && (Effect()->EffectFlags() & KHuiFxEnableBackgroundInAllLayers));
-    
-    if( invisible || 
-        (!HasCommandBuffers(ETrue /*include children*/) && 
-         !childWindowEffectActive &&
-         !IsBackgroundDrawingEnabled() && 
-         !IsExternalContentDrawingEnabled()&&
-         !IsExternalContentDrawingEnabled(ETrue /*include children*/) &&
-         !effectAppliedToSurfacePixels
-         
-        ))
+    if (Effect())
         {
-        return ETrue;
+        TBool semiTranparentEffectActive = Effect()->IsSemitransparent();
+        if ((iOpacity.Now() <= EPSILON && !semiTranparentEffectActive))
+            {
+            return ETrue;
+            }
+        TBool childWindowEffectActive = EffectIsAppliedToChildren();
+        TBool effectAppliedToSurfacePixels = (Effect()->EffectFlags() & KHuiFxEnableBackgroundInAllLayers);
+        if( !childWindowEffectActive &&
+            !effectAppliedToSurfacePixels &&
+            !HasCommandBuffers(ETrue /*include children*/) && 
+            !IsBackgroundDrawingEnabled() &&
+            !IsExternalContentDrawingEnabled()&&
+            !IsExternalContentDrawingEnabled(ETrue /*include children*/))
+            {
+            return ETrue;
+            }
         }
     else
         {
-        return EFalse;
+        if (iOpacity.Now() <= EPSILON ||
+            (!HasCommandBuffers(ETrue /*include children*/) && 
+            !IsBackgroundDrawingEnabled() &&
+            !IsExternalContentDrawingEnabled() &&
+            !IsExternalContentDrawingEnabled(ETrue /*include children*/)) )
+            {
+            return ETrue;
+            }
         }
+    return EFalse;
     }
 
 void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
@@ -762,13 +794,9 @@ EXPORT_C void CHuiCanvasVisual::SetCommandSetL( const TDesC8& aCommands )
 	TRAP_IGNORE(iCanvasVisualData->iCanvasPainter->SetCommandSetL(aCommands));	
 
 	// Memory optimization. Do not prepare cache if visual is inactive.
-    TBool rosterFrozen = Display() && Display()->Roster().IsVisibleContentFrozen();
-    TBool inactive = EFalse; 
-    inactive |= Flags() & EHuiVisualFlagInactive;
-    inactive |= Flags() & EHuiVisualFlagUnderOpaqueHint;
-
-    if (rosterFrozen || inactive)
+    if (KeepNoCache())
         {
+        iCanvasVisualData->iCommandsReceivedWhileNoCache = ETrue;
         ClearCache();
         }
     else
@@ -836,13 +864,9 @@ EXPORT_C void CHuiCanvasVisual::AddCommandSetL( const TDesC8& aMoreCommands )
     TRAP_IGNORE(iCanvasVisualData->iCanvasPainter->AddCommandSetL(aMoreCommands));
     
     // Memory optimization. Do not prepare cache if visual is inactive.
-    TBool rosterFrozen = Display() && Display()->Roster().IsVisibleContentFrozen();
-    TBool inactive = EFalse; 
-    inactive |= Flags() & EHuiVisualFlagInactive;
-    inactive |= Flags() & EHuiVisualFlagUnderOpaqueHint;
-
-    if (rosterFrozen || inactive)
+    if (KeepNoCache())
         {
+        iCanvasVisualData->iCommandsReceivedWhileNoCache = ETrue;
         ClearCache();
         }
     else
@@ -988,7 +1012,11 @@ THuiCanvasPaintedArea CHuiCanvasVisual::CanvasPaintedArea(TInt aIndex) const
                 background.iPaintedRect = DisplayRect();
                 background.iPaintType = /*(iCanvasVisualData->iBackground->BackgroundColor().Alpha() == 255) ?*/ EHuiCanvasPaintTypeOpaque;// : EHuiCanvasPaintTypeTransparent; 
                 return background;
-                }                
+                }          
+            else 
+                {
+                aIndex--;
+                }
             }                                            
         }
 
@@ -1529,4 +1557,17 @@ EXPORT_C TRect CHuiCanvasVisual::CommandBufferCoverage(TInt aOrientation)
     return iCanvasVisualData->iCanvasPainter->CommandBufferCoverage(aOrientation); 
     }
 
+EXPORT_C TBool CHuiCanvasVisual::HasTransParentClear() const
+    {
+    return iCanvasVisualData->iCanvasPainter->HasCommandBuffers(EHuiCanvasBufferContainsTransparentClear);
+    }
 
+TBool CHuiCanvasVisual::KeepNoCache() const
+    {
+    TBool rosterFrozen = Display() && Display()->Roster().IsVisibleContentFrozen();
+    TBool inactive = EFalse; 
+    inactive |= Flags() & EHuiVisualFlagInactive;
+    inactive |= Flags() & EHuiVisualFlagUnderOpaqueHint;
+    
+    return rosterFrozen || inactive;
+    }

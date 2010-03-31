@@ -28,6 +28,7 @@
 #include "uiacceltk/HuiRealPoint.h"
 #include "uiacceltk/HuiRealPoint.h"
 #include "uiacceltk/HuiGc.h"
+#include "uiacceltk/huilowmemoryobserver.h"
 #include "huieffectable.h"
 
 /* Forward declarations. */
@@ -53,7 +54,8 @@ const TReal32 KDefaultDragTresholdInPixelsY = 4.0;
  *
  * @see CHuiRoster
  */
-NONSHARABLE_CLASS(CHuiRosterImpl) : public CHuiRoster, MHuiEffectable
+NONSHARABLE_CLASS(CHuiRosterImpl) : public CHuiRoster, private MHuiEffectable, 
+        private MHuiMemoryLevelObserver
 	{
 public:
 
@@ -330,6 +332,10 @@ public:
     void SetLoadingEffect(TBool aLoading);
     void EffectSetSource( TBool aIsInput1 );
     TBool EffectGetSource() const;	
+    
+    // From MHuiMemoryLevelObserver
+    void SetMemoryLevel(THuiMemoryLevel aLevel);
+    
 protected:
 
     /* Methods. */
@@ -451,6 +457,11 @@ private:
      */
 	void DrawBoundaries( CHuiGc& aGc, CHuiVisual* aVisual, TBool aDrawOutline ) const;
 
+    /**
+     * Returns true if render buffer can be used for freeze.
+     */
+    TBool UseRenderBufferForFreeze() const;
+    
 private:
 
     /** Area occupied by the roster. */
@@ -498,6 +509,9 @@ private:
     CHuiCanvasGc* iCanvasGc;
     CHuiCanvasRenderBuffer* iCanvasRenderBuffer;
     CHuiGc::TOrientation iCanvasRenderBufferOrientation;
+	
+	TBool iRosterIsFrozen;
+	TBool iMonitorMemoryLevel;
 	};
 
 #endif  // __HUIROSTERIMPL_H__

@@ -27,6 +27,7 @@
 #include "uiacceltk/HuiUtil.h"
 #include "uiacceltk/HuiPanic.h"
 #include "uiacceltk/HuiDisplay.h" 
+#include "huiextension.h"
 
 CHuiSkin::CHuiSkin(CHuiEnv& aEnv)
         : iEnv(aEnv)
@@ -192,6 +193,10 @@ EXPORT_C TInt CHuiSkin::GetTexture(TInt aSkinTextureId, const CHuiTexture*& aOut
     return err;
     }
 
+void CHuiSkin::ReleaseCachedTextures()
+    {
+    SkinExtension(KHuiSkinReleaseCachedTextures, NULL);
+    }
 
 void CHuiSkin::PrepareShadowTextureL(CHuiTexture& aTexture)
     {

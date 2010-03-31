@@ -158,6 +158,7 @@ public: // From CHuiCanvasPainter
      */
     virtual CHuiCanvasGc& CanvasGc() const;
     CHuiCanvasWsGc *CanvasWsGc() const { return iCanvasWsGc; }
+
 private:
 
     /**
@@ -320,6 +321,8 @@ private:
     TRgb iTestBrushColor;
     TRect iTestFullDisplayRect;
     #endif
+	
+	TRgb iBrushColor;
 	
 	// Stream read optimizations
     struct TStructBitBlitRect

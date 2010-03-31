@@ -350,6 +350,8 @@ public:
         
     IMPORT_C TBool HasCommandBuffers(TBool aAskFromChildren = ETrue) const;
     
+    IMPORT_C TBool HasTransParentClear() const;
+    
     // to handle background surface that may be set to the Window
 public:    
     
@@ -449,6 +451,7 @@ private:
     void CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const;
     
     TBool CanSkipDrawing() const;
+    TBool KeepNoCache() const;
 
 private: 
 

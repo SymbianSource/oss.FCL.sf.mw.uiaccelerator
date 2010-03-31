@@ -456,12 +456,11 @@ TInt CGfxTransAdapterTfx::HandleClientState( TClientState aState, const CCoeCont
 		case EPreBeginCapture:
 		    break;
 		case EPostBeginCapture:
-		    // If we get KGfxControlAppearAction, it is followed by StartTransition,
-		    // but disappear action is not. Therefore we must handle it byself
-		    // We use begin capture as trigger, as we assume that the control is still present
-		    // at that time. After EPostBeginCapture it will probably be already gone.
-		    // If we don't have plugin yet, there will be no transitions.
-		    if ( action == KGfxControlDisappearAction && iHasPlugin && aKey && aKey->DrawableWindow())
+			// Send control effect request to ALf. This is done immediately after call of 
+			// GfxTransEffect::Begin(). This makes it possible (NOT QUARANTEENED)
+			// that effect request arrives to Alf before possible visiblity changes are made to 
+			// the control.
+		    if ( iHasPlugin && aKey && aKey->DrawableWindow())
 		        {
 		        // We must generate our own transition as we won't be sending 
 		        // iClient->TransitionFinished back.
@@ -743,15 +742,7 @@ void CGfxTransAdapterTfx::StartTransition(TInt aHandle)
 
 	if( err == KErrNone ) 
 		{
-    	if ( transdata->iAction != KGfxControlDisappearAction )
-    	    {
-    	    // Disappear action was started by EPostBeginCapture event
-    		TRAP( err, DoStartTransitionL( aHandle, transdata ) );
-    	    }
-    	else
-    	    {
-            __ALFFXLOGSTRING( "CGfxTransAdapterTfx::StartTransition called for disappear action" );
-    	    }
+       __ALFFXLOGSTRING( "CGfxTransAdapterTfx::StartTransition called for disappear action. Do nothing." );
 		}
 		
     // always finish the caller		
@@ -1264,7 +1255,7 @@ void CGfxTransAdapterTfx::DoStartTransitionL( TInt /*aHandle*/, const CTransitio
 
 void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CTransitionData* aTransData)
     {
-    __ALFFXLOGSTRING("CGfxTransAdapterTfx::GenerateTransitionL >>");
+
     // We generate a transition call from begin capture for control exit transitions
 	TPtr8 inPtr = iTransferBuffer->Des();
 	inPtr.Zero();
@@ -1274,6 +1265,13 @@ void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CT
     TInt op = MAlfGfxEffectPlugin::EBeginComponentTransition;
     TInt windowGroup = aKey->DrawableWindow()->WindowGroupId();
     TInt windowHandle = aKey->DrawableWindow()->ClientHandle(); 
+    
+    __ALFFXLOGSTRING4("CGfxTransAdapterTfx::GenerateTransitionL - Operation: MAlfGfxEffectPlugin::EBeginComponentTransition Action: %d,  Uid: 0x%x, WindowGroup: %d, WindowHandle: %d  >>",
+        aTransData->iAction,
+        aTransData->iUid.iUid,
+        windowGroup,
+        windowHandle
+        );
     
     inBuf.WriteInt32L( op );
     inBuf.WriteUint32L( aTransData->iAction );
