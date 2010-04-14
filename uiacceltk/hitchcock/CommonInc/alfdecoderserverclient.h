@@ -58,7 +58,24 @@ public:
      * @return error code.
      */    
     IMPORT_C TInt GetListOfInactiveWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups);
+    
+     /**
+     * Asks list of window groups that have graphics surfaces attached
+     * @param aArray array to be populated
+     * @return error code.
+     */    
+    IMPORT_C TInt GetListOfWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups);
+
+
+     /**
+     * Asks the number of active effects
+     * @return error code or number of active effects (>= 0).
+     */    
+     IMPORT_C TInt EffectsCount();
+     
 private:
+    
+    TInt GetListOfWindowGroups(RArray<TInt>* aWindowGroups, TBool aListAll);
     TInt iSpare1;
     TInt iSpare2;
     };

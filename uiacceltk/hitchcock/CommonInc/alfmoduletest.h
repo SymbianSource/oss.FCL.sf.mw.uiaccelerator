@@ -3,6 +3,7 @@
 
 
 #include <e32base.h>
+#include <graphics/surface.h>
 #include <e32debug.h>
 
 // Informs if module test hooks have been set on.
@@ -32,7 +33,7 @@ _LIT(KAlfModuleTestMutexName, "ALF_MODULE_TEST_MUTEX");
 NONSHARABLE_CLASS(CAlfModuleTestData) : public CBase
     {
 public:
-    void PrintState()
+    void PrintState() const
         {
         RDebug::Print(_L("*** ALF INTERNAL STATE ***"));
         RDebug::Print(_L("iTotalLayerCount[0]=%d"), iTotalLayerCount[0]);
@@ -82,11 +83,13 @@ public:
         PrintSizeMapState( iSizeMap );
         RDebug::Print(_L("iPositionMap =>"));
         PrintPositionMapState( iPositionMap );
+        RDebug::Print(_L("iSurfaceMap =>"));
+        PrintSurfaceMapState( iSurfaceMap );        
         RDebug::Print(_L("*** ALF INTERNAL STATE ***"));
         }
 
 
-    void PrintBoolMapState( TAlfModuleTestMap< TBool > aMap )
+    void PrintBoolMapState( const TAlfModuleTestMap< TBool >& aMap ) const
         {
         RDebug::Print(_L("*** ALF INTERNAL BOOL MAP STATE -->"));
         RDebug::Print(_L("Map item count=%d"), aMap.ItemCount());
@@ -100,7 +103,7 @@ public:
         }
     
     
-    void PrintIntMapState( TAlfModuleTestMap< TInt > aMap )
+    void PrintIntMapState( const TAlfModuleTestMap< TInt >& aMap ) const
         {
         RDebug::Print(_L("*** ALF INTERNAL INT MAP STATE -->"));
         RDebug::Print(_L("Map item count=%d"), aMap.ItemCount());
@@ -114,7 +117,7 @@ public:
         }
     
     
-    void PrintSizeMapState( TAlfModuleTestMap< TSize > aMap )
+    void PrintSizeMapState( const TAlfModuleTestMap< TSize >& aMap ) const
         {
         RDebug::Print(_L("*** ALF INTERNAL SIZE MAP STATE -->"));
         RDebug::Print(_L("Map item count=%d"), aMap.ItemCount());
@@ -130,7 +133,7 @@ public:
         }
 
     
-    void PrintPositionMapState( TAlfModuleTestMap< TPoint > aMap )
+    void PrintPositionMapState( const TAlfModuleTestMap< TPoint >& aMap ) const
         {
         RDebug::Print(_L("*** ALF INTERNAL POSITION MAP STATE -->"));
         RDebug::Print(_L("Map item count=%d"), aMap.ItemCount() );
@@ -143,9 +146,26 @@ public:
                              i, item.Value().iX, item.Value().iY);
             }
         RDebug::Print(_L("<-- ALF INTERNAL POSITION MAP STATE ***"));
-        }    
+        }
 
     
+    void PrintSurfaceMapState( const TAlfModuleTestMap< TSurfaceId >& aMap ) const
+        {
+        RDebug::Print(_L("*** ALF INTERNAL SURFACE MAP STATE -->"));
+        RDebug::Print(_L("Map item count=%d"), aMap.ItemCount() );
+        for ( TInt i = 0; i < aMap.ItemCount(); ++i )
+            {
+            const TAlfModuleTestItem< TSurfaceId >& item( aMap.Item( i ) );
+            RDebug::Print(_L("Map item %d, iKey=%d, iTestType=%d, iValueSetCount=%d, iLinkTargetKey=%d"),
+                             i, item.Key(), item.TestType(), item.ValueSetCount(), item.LinkTargetKey());
+            RDebug::Print(_L("Map item index=%d, internal0=%d, internal1=%d, internal2=%d, internal3=%d"),
+                             i, item.Value().iInternal[ 0 ], item.Value().iInternal[ 1 ],
+                             item.Value().iInternal[ 2 ], item.Value().iInternal[ 3 ] );
+            }
+        RDebug::Print(_L("<-- ALF INTERNAL SURFACE MAP STATE ***"));
+        }
+
+
 public:
     TBool iIsEnabled;           // *** not yet implemented. For run-time enabling/disabling of the test system.  
     
@@ -204,15 +224,19 @@ public:
     TInt iASE_Temp3;
     TInt iASE_Temp4;
 
-    // Map that contains boolean items that can be specified for certain test cases.
+    // Map that contains boolean items for certain test cases.
     TAlfModuleTestMap< TBool > iBoolMap;        
-    // Map that contains integer items that can be specified for certain test cases.
+    // Map that contains integer items for certain test cases.
     TAlfModuleTestMap< TInt > iIntMap;    
-    // Map that contains size items that can be specified for certain test cases.
+    // Map that contains size items for certain test cases.
     TAlfModuleTestMap< TSize > iSizeMap;
-    // Map that contains position items that can be specified for certain test cases.
-    TAlfModuleTestMap< TPoint > iPositionMap;    
-
+    // Map that contains position items for certain test cases.
+    TAlfModuleTestMap< TPoint > iPositionMap;
+    // Map that contains rect items for certain test cases.
+    TAlfModuleTestMap< TRect > iRectMap;
+    // Map that contains surface id items for layer/surface test cases.
+    TAlfModuleTestMap< TSurfaceId > iSurfaceMap;
+    
     };
 
 

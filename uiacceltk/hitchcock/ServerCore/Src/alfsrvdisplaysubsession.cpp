@@ -234,7 +234,16 @@ CAlfSrvDisplaySubSession::~CAlfSrvDisplaySubSession()
     	#endif
         }
         
-   
+    // if this is a last displaysubsession remove "alfnative client wg" tag from bridge
+     RPointerArray<CAlfSrvSubSessionBase> displays;
+     CleanupClosePushL( displays );
+     Session().GetSubsessionsByTypeL( displays, EHuiObjectTypeDisplay );
+
+     if( displays.Count() == 0 )
+         {
+         Session().AlfAppUi()->RemoveAlfAppWindowGroup(Session().ClientWindowGroup());
+         }
+     CleanupStack::PopAndDestroy( &displays ); // displays.Close()
     }
 
 // ---------------------------------------------------------------------------

@@ -1390,7 +1390,7 @@ EXPORTS
 	??1CHuiFxEngine@@UAE@XZ @ 1389 NONAME ; CHuiFxEngine::~CHuiFxEngine(void)
 	?RegisterParameterL@CHuiFxVisualLayer@@IAEXABVTDesC16@@PAM@Z @ 1390 NONAME ; void CHuiFxVisualLayer::RegisterParameterL(class TDesC16 const &, float *)
 	?NewL@CHuiFxEffect@@SAPAV1@AAVCHuiFxEngine@@@Z @ 1391 NONAME ; class CHuiFxEffect * CHuiFxEffect::NewL(class CHuiFxEngine &)
-	?ConstructL@CHuiFxVisualLayer@@IAEXAAVMHuiEffectable@@@Z @ 1392 NONAME ; void CHuiFxVisualLayer::ConstructL(class CHuiVisual &)
+	?ConstructL@CHuiFxVisualLayer@@IAEXPAVMHuiEffectable@@@Z @ 1392 NONAME ; void CHuiFxVisualLayer::ConstructL(class MHuiEffectable *)
 	?Draw@CHuiFxEffect@@QAEHAAVCHuiGc@@ABVTRect@@@Z @ 1393 NONAME ; int CHuiFxEffect::Draw(class CHuiGc &, class TRect const &)
 	?TargetRect@CHuiFxLayer@@QBEABVTRect@@XZ @ 1394 NONAME ; class TRect const & CHuiFxLayer::TargetRect(void) const
 	?AdvanceTime@CHuiFxVisualLayer@@UAEXM@Z @ 1395 NONAME ; void CHuiFxVisualLayer::AdvanceTime(float)
@@ -1428,7 +1428,7 @@ EXPORTS
 	?AdvanceTime@CHuiFxLayer@@UAEXM@Z @ 1427 NONAME ; void CHuiFxLayer::AdvanceTime(float)
 	?SetEffectEndObserver@CHuiFxEffect@@QAEXPAVMAlfGfxEffectObserver@@H@Z @ 1428 NONAME ; void CHuiFxEffect::SetEffectEndObserver(class MAlfGfxEffectObserver *, int)
 	?BufferType@CHuiFxRenderbuffer@@QBEABW4TRenderBufferType@@XZ @ 1429 NONAME ; enum TRenderBufferType const & CHuiFxRenderbuffer::BufferType(void) const
-	?NewL@CHuiFxVisualLayer@@SAPAV1@AAVMHuiEffectable@@@Z @ 1430 NONAME ; class CHuiFxVisualLayer * CHuiFxVisualLayer::NewL(class CHuiVisual &)
+	?NewL@CHuiFxVisualLayer@@SAPAV1@PAVMHuiEffectable@@@Z @ 1430 NONAME ; class CHuiFxVisualLayer * CHuiFxVisualLayer::NewL(class MHuiEffectable *)
 	?RegisterParameterL@CHuiFxVisualLayer@@IAEXABVTDesC16@@PAVTRgb@@@Z @ 1431 NONAME ; void CHuiFxVisualLayer::RegisterParameterL(class TDesC16 const &, class TRgb *)
 	?SetVisualRect@CHuiFxLayer@@QAEXABVTRect@@@Z @ 1432 NONAME ; void CHuiFxLayer::SetVisualRect(class TRect const &)
 	?SetVisualRect@CHuiFxFilter@@QAEXABVTRect@@@Z @ 1433 NONAME ; void CHuiFxFilter::SetVisualRect(class TRect const &)

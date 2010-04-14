@@ -111,4 +111,5 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         RAknsSrvSession iSkinSrv;
         HBufC* iCurrentPluginDllName;
         HBufC* iCurrentPluginAssetDir;
+        TBool iIsUIReady;
     };

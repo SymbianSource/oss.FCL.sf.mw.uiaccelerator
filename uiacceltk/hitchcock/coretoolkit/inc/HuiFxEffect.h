@@ -153,6 +153,11 @@ public: // effect cache methods
     TBool CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque);
 
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
+
+    TInt Handle() const
+        {
+        return iHandle;    
+        }
 private:
 
     TBool IsAppliedToBackground();
@@ -183,6 +188,8 @@ protected:
     TInt iGroupId;
 	
     TInt iFramesDrawn;
+    TReal32 iElapsedTime;
+    TBool iNotifiedEffectReady;
     };
 
 #endif /*HUIFXEFFECT_H_*/

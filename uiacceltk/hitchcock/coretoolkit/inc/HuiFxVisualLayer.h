@@ -29,7 +29,7 @@ class CHuiFxParameterManager;
 class CHuiFxVisualLayer: public CHuiFxLayer
     {
 public:
-    IMPORT_C static CHuiFxVisualLayer* NewL(MHuiEffectable& aVisual);
+    IMPORT_C static CHuiFxVisualLayer* NewL(MHuiEffectable* aVisual); // param mandatory
     IMPORT_C ~CHuiFxVisualLayer();
     IMPORT_C TBool PrepareDrawL(CHuiFxEngine& aEngine);
     IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource);
@@ -52,7 +52,7 @@ public: // effect cache
 
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
 protected:
-    IMPORT_C void ConstructL(MHuiEffectable& aVisual);
+    IMPORT_C void ConstructL(MHuiEffectable* aVisual);
     
     void RegisterParameterL(const TDesC& aName, TRgb* aValue);
     void RegisterParameterL(const TDesC& aName, TReal32* aValue);

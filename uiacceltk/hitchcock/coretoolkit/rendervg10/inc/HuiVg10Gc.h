@@ -385,7 +385,7 @@ public: // new
      */
     void SetPaintPattern(CHuiTexture* aTexture, const TPoint& aTextureOrigin);
     
-    void DrawArc(const TRect& aRect, THuiFillMode aDrawMode, const TInt aThickness, TReal32 aStart, TReal32 aEnd, TBool aIsPie);
+    void DrawArc(const TRect& aRect, THuiFillMode aDrawMode, const TInt aThickness, TReal32 aStart, TReal32 aEnd, TBool aIsPie) __SOFTFP;
 
 protected:
 
@@ -482,7 +482,7 @@ private:
                           TReal32 aBorderWidth,
                           TReal32 aBorderHeight, 
                           THuiRealPoint aOffset,
-                          const THuiImage* aImage);
+                          const THuiImage* aImage) __SOFTFP;
 
 
     /**

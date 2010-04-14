@@ -147,13 +147,12 @@ EXPORT_C void RAlfBridgerClient::SendAsynchronous(TInt aOp, const TIpcArgs& aIPC
     SendReceive(aOp, aIPCArgs, aStatus );
     }
 
-
-EXPORT_C TInt RAlfBridgerClient::GetListOfInactiveWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups)
+TInt RAlfBridgerClient::GetListOfWindowGroups(RArray<TInt>* aWindowGroups, TBool aListAll)
     {
     TInt err = KErrNone;
     TInt array[10];
     TPtr8 ptr((TUint8*)array,0,40);
-    err = SendReceive(EAlfGetListOfWGsHavingInactiveSurfaces, TIpcArgs(&ptr));
+    err = SendReceive(EAlfGetListOfWGsHavingInactiveSurfaces, TIpcArgs(&ptr, aListAll));
     if (!err)
         {
         for(TInt i = 0; i < 10; i++)
@@ -170,6 +169,28 @@ EXPORT_C TInt RAlfBridgerClient::GetListOfInactiveWindowGroupsWSurfaces(RArray<T
         }
     return err; 
     }
+
+EXPORT_C TInt RAlfBridgerClient::GetListOfInactiveWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups)
+    {
+    return GetListOfWindowGroups(aWindowGroups, EFalse);
+    }
+
+EXPORT_C TInt RAlfBridgerClient::GetListOfWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups)
+    {
+    return GetListOfWindowGroups(aWindowGroups, ETrue);
+    }
+
+
+
+// ---------------------------------------------------------------------------
+// EffectsCount
+// ---------------------------------------------------------------------------
+//
+EXPORT_C TInt RAlfBridgerClient::EffectsCount()
+    {
+    return SendReceive(EAlfGetNumberOfActiveEffects, TIpcArgs());
+    }
+
 
 // Open
 // ---------------------------------------------------------------------------

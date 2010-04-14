@@ -134,7 +134,7 @@ public:
             CAlfScreen* aScreen,
             TBool& aSubtreeVisible,
             TBool& aHasVisualsWithLayers,
-            TBool aChildCanBeOpaque );
+            TBool aChildCanBeOpaque, TBool aOnlyForEmbeddedAlfApp = EFalse );
 
     /**
      * Updates layer visibilities.
@@ -262,6 +262,11 @@ public:
       * Sets HuiControlGroup as Alf application window group
       */
     void SetWindowGroupAsAlfApp(TInt aId);
+
+    /**
+      * removes Alf application window group tag
+      */
+    void RemoveWindowGroupAsAlfApp(TInt aId);
     
     // From MHuiSynchronizationObserver
     void Synchronized(TInt aId);
@@ -291,6 +296,8 @@ public:
 	
     void LayoutSwitchStart();
     void LayoutSwitchComplete();
+    
+    RAlfBridgerClient* BridgerClient();
     
 private:    
     
@@ -988,6 +995,8 @@ private:
     
     TInt iIdForEAlfDSSynchronizeOp;
     TInt iIdForLayoutSwitchFrameSync;
+    
+    RArray<TInt> iAlfNativeClientsWgIds;
     
     #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
     TInt activevisualcount;

@@ -303,7 +303,7 @@ void CAlfAppSrvSession::FocusGainedL( TBool aDoTransitionEffect )
         }
     else
         {
-        ShowControlGroupsInOrderL(*display);
+//        ShowControlGroupsInOrderL(*display);
         }    
 
 	// This is needed for Huitk BitBlit() to succeed 
@@ -437,9 +437,9 @@ void CAlfAppSrvSession::StoreControlGroupOrderL(CHuiDisplay& aDisplay, TBool aAl
         }
     }
     
-void CAlfAppSrvSession::ShowControlGroupsInOrderL(CHuiDisplay& aDisplay)
+void CAlfAppSrvSession::ShowControlGroupsInOrderL(CHuiDisplay& /*aDisplay*/)
     {
-#ifdef SYMBIAN_BUILD_GCE
+/*#ifdef SYMBIAN_BUILD_GCE
     iControlGroupOrder.Reset();
     // gather all the control groups that belong to this session
     for ( TInt g = 0 ; g < aDisplay.Roster().Count() ; g++ )
@@ -474,7 +474,7 @@ void CAlfAppSrvSession::ShowControlGroupsInOrderL(CHuiDisplay& aDisplay)
             iControlGroupOrder.Remove(iControlGroupOrder.Count()-1);
             }
         }
-    iControlGroupOrder.Reset();
+    iControlGroupOrder.Reset();*/
     }
     
 void CAlfAppSrvSession::ReOrderControlGroupSessionsL( RPointerArray<CAlfSrvSubSessionBase>& aGroupSessions )
@@ -1238,7 +1238,8 @@ void CAlfAppSrvSession::RosterHideL(const RMessage2& aMessage)
   
     
 #ifdef SYMBIAN_BUILD_GCE
-    CHuiLayout* hostContainer = controlGroup.Control(0).ContainerLayout( NULL );                
+    CHuiLayout* hostContainer = controlGroup.Control(0).ContainerLayout( NULL );      
+    controlGroup.SetAcceptInput(EFalse);
     if(hostContainer)
         hostContainer->SetFlags(EHuiVisualFlagUnderOpaqueHint);
 #else    

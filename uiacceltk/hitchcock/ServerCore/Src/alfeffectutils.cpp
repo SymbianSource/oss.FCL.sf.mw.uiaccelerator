@@ -658,7 +658,7 @@ AknTransEffect::TContext CAlfLayoutSwitchEffectCoordinator::NextLayoutSwitchCont
 //
 TBool CAlfLayoutSwitchEffectCoordinator::IsThemeEffectEnabled() const
     {
-    TBool memoryOk = !( iBridge.iHuiEnv->MemoryLevel() <= EHuiMemoryLevelLowest );
+    TBool memoryOk = !( iBridge.iHuiEnv->MemoryLevel() <= EHuiMemoryLevelLow );
     TBool tfxOn = CAknTransitionUtils::TransitionsEnabled(AknTransEffect::ELayoutswitchTransitionsOff );
     TBool tfxExists = LayoutSwitchEffectsExist();
 

@@ -192,7 +192,7 @@ class TAlfBridgerData
     };
 
 
-NONSHARABLE_CLASS(CAlfStreamerBridge): public CActive, public CHuiEnv::MHuiSwapObserver
+NONSHARABLE_CLASS(CAlfStreamerBridge): public CActive
 
     {
     public:
@@ -282,74 +282,44 @@ public:
      * @return Pointer to the data struct 
      */
     const TAny* GetVarDataL( TInt aIndex );
-
     
-	/**
-     * SetStreamerServer()
-     *
-     * Sets Streamserver instance. 
-     */
-    void SetStreamerServer( CAlfStreamerServer& aStreamerServer );
-    /**
-     * StreamerServer()
-     *
-     * Gets Streamserver instance set with set functionality.
-	 * @see SetStreamerServer()
-     */
-    CAlfStreamerServer* StreamerServer();
-
+    /* deprecated */
     IMPORT_C TUid FindAppUidForWgId(TInt aWgId);
     IMPORT_C TInt FindWgForAppUid(TUid aAppUid);
+
+    void SetObserver(MAlfStreamerListener* aObserver)
+        {
+        iObserver = aObserver;
+        }        
 
 public: // from CActive
         
     void RunL();
-    
     void DoCancel();
     
-public: // from SwapObserver
-    void PrepareSwap();
-    void SwapComplete();
-    void ReleaseWindowServer(TBool aRelease = ETrue);
-    void SetWgIdArray(TInt* aArray); 
-    
 private:
-        
+
+    CAlfStreamerServer* iStreamerServer;        
     MAlfStreamerListener* iObserver;
-   
     MAlfBatchObs* iBatchObserver;
-    
     TThreadId iThread;
     
     RArray<TAlfBridgerData> iMessages;
-    
     RArray<TInt> iQueue;
     
     RCriticalSection iQueueSema;
     
     RBuf8 iDataBuf;
-   
-    TInt iItemsInBuffer;
+    volatile TInt iItemsInBuffer;
+    volatile TBool iVarDataAddedButNotPosted;
 
-    RArray<TAlfBridgerData> iFxMessages;
-    RArray<TInt> iFxQueue;
-    RBuf8 iFxBuf;
-    TInt iFxItemsInBuffer;
-    
-    CAlfStreamerServer* iStreamerServer;
 #ifdef ALF_DEBUG_TRACK_DRAWING    
     CAlfCommandDebug* iCommandDebugger;
 #endif
-    
-    volatile TBool iSwapActive;
-    volatile TBool iMakeCurrentActive;
 
-    TBool iFxQueueActive;
-    TInt* iWgArray;
-    TBool iVarDataAddedButNotPosted;
 public:
-    TAlfNativeWindowData iAlfWindowData;
-
+    volatile TAlfNativeWindowData iAlfWindowData;
+    volatile TInt iActiveEffectCount;
     };
 
 

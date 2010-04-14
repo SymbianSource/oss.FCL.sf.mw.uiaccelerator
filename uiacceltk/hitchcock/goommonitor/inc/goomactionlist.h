@@ -184,6 +184,13 @@ public:
      */    
     void AppNotExiting(TInt aWgId);
     
+    /**
+     * Sets the flag to free memory using sw rendering. For Alf and other plugins that use sw rendering to reduces gpu mem usage.
+     * @since S60 5.0
+     * @param aUseSwRendering ETrue if sw rendering to be used.
+     */   
+    void SetUseSwRendering(TBool aUseSwRendering);
+    
 // from MGOomActionObserver
 
     /**
@@ -251,6 +258,7 @@ private: //data
     
     TUint iCurrentPluginRun;
     RArray<TInt> iLowOnMemWgs;
+    TBool iUseSwRendering;
     };
 
 #include "goomactionlist.inl"

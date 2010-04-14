@@ -44,7 +44,7 @@ public:
     
     // Run the GOOM plugin in order to free memory
     // Call the CGOomAction::MemoryFreed when it is done
-    virtual void FreeMemory(TInt aBytesRequested);
+    virtual void FreeMemory(TInt aBytesRequested, TBool aUseSwRendering);
     
     // Call the memory good function on the plugin but...
     // only if there is an outstanding FreeMemory request
@@ -76,6 +76,8 @@ private:
     CGOomPluginWaiter* iPluginWaiter;
     
     TBool iFreeMemoryCalled; // True if FreeMemory has been called since the last call to MemoryGood
+    
+    TBool iFreeMemoryWithSwRenderingCalled;
     };
 
 #include "goomrunplugin.inl"

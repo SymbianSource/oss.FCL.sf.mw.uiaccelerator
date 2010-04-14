@@ -277,13 +277,13 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
 
     if (freeMemoryAboveCurrentTarget)
         {
-        ResetTargets();
         /*if(freeMemory >= iGoodThreshold && !NeedToPostponeMemGood())
             {
                 iGOomActionList->MemoryGood();
             }
         */
         iServer->CloseAppsFinished(freeMemory, ETrue);
+        WaitAndSynchroniseMemoryState();
         return;
         }
 
@@ -386,6 +386,7 @@ void CMemoryMonitor::RefreshThresholds(TInt aForegroundAppUid)
         
     TRACES2("CMemoryMonitor::RefreshThresholds: Global Good Threshold = %d, Global Low Threshold = %d", iGoodThreshold, iLowThreshold);
 
+    TBool useSwRendering = EFalse;
     // The global value can be overridden by an app specific value
     // Find the application config entry for the foreground application
     if (aForegroundAppUid == KErrNotFound)
@@ -414,7 +415,15 @@ void CMemoryMonitor::RefreshThresholds(TInt aForegroundAppUid)
         TRACES2("CMemoryMonitor::RefreshThresholds: For foreground app %x, Target Free on Startup = %d", aForegroundAppUid, iCurrentTarget);
         }
     
+
+    if (iConfig->GetApplicationConfig(aForegroundAppUid).iUseSwRendering != KGOomThresholdUnset)
+        {
+        useSwRendering = iConfig->GetApplicationConfig(aForegroundAppUid).iUseSwRendering;
+        TRACES2("CMemoryMonitor::RefreshThresholds: For foreground app %x, UseSwRendering = %d", aForegroundAppUid, useSwRendering);
+        }
+    
     iGOomActionList->SetCurrentTarget(iCurrentTarget);
+    iGOomActionList->SetUseSwRendering(useSwRendering);
     
 #ifdef USE_ASYNCYH_NOTIFICATIONS 
 
@@ -594,7 +603,17 @@ TInt CMemoryMonitor::GetFreeMemory()
                 break;
                 }
             case EGL_PROF_PROCESS_USED_PRIVATE_MEMORY_NOK:
+                    {
+                    TUint mem = prof_data[i];
+                    TRACES1("Private memory Usage by app is %d", mem);
+                    break;
+                    }
             case EGL_PROF_PROCESS_USED_SHARED_MEMORY_NOK:
+                    {
+                    TUint mem = prof_data[i];
+                    TRACES1("Shared memory Usage by app is %d", mem);
+                    break;
+                    }
 			default:
 				{
                 i++;

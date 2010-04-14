@@ -57,7 +57,7 @@ NONSHARABLE_CLASS( RAlfDirectClient ): public RAlfClientBase
      * 
      * @param aMode ETrue to enable low memory, EFalse to disable  
      */
-    IMPORT_C void EnableLowMemoryState( TBool aMode );
+    IMPORT_C void EnableLowMemoryState( TBool aMode, TBool aUseSwRendering);
 
     /**
      * Forces SW rendering to be used. 

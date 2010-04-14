@@ -295,4 +295,40 @@ protected: // data
     CAlfCompositionSourceData* iData;
     };
 
+NONSHARABLE_CLASS(CAlfEffectObserver): public CBase
+    {
+public:
+    
+    class MAlfEffectObserver
+        {
+        public:    
+        /** bit field */    
+        enum{
+            EAlfEffectStarted = 0x1,
+            EAlfEffectComplete = 0x2
+            };    
+        virtual void HandleEffectCallback(TInt aType, TInt aHandle, TInt aStatus) = 0;
+        };
+    
+    IMPORT_C static CAlfEffectObserver* NewL();
+    IMPORT_C ~CAlfEffectObserver();
+
+     /**
+     * Asks the number of active effects
+     * @return error code or number of active effects (>= 0).
+     */    
+    IMPORT_C TInt ActiveEffectsCount();
+
+     /**
+     * Subscribe callback for a handle
+     * @leave system wide error code
+     */    
+    IMPORT_C void SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType = MAlfEffectObserver::EAlfEffectComplete );
+    
+private:
+    CAlfEffectObserver();
+    class CAlfEffectObserverData;
+    CAlfEffectObserverData* iData;
+    };
+
 #endif // #define __ALFCOMPOSITIONUTILITY_H__

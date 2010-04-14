@@ -1335,7 +1335,7 @@ EXPORTS
 	_ZN16RAlfDirectClient10DisconnectEv @ 1334 NONAME
 	_ZN16RAlfDirectClientC1Ev @ 1335 NONAME
 	_ZN16RAlfDirectClientC2Ev @ 1336 NONAME
-	_ZN16RAlfDirectClient20EnableLowMemoryStateEi @ 1337 NONAME
+	_ZN16RAlfDirectClient20EnableLowMemoryStateEii @ 1337 NONAME
 	_ZN10CAlfVisual15SetGroupEffectLERK7TDesC16i @ 1338 NONAME
 	_ZN16RAlfDirectClient16ForceSwRenderingEi @ 1339 NONAME
 	_ZN10CAlfDrawer4NewLEv @ 1340 NONAME

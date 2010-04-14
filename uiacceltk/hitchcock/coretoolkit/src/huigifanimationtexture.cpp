@@ -56,6 +56,7 @@ EXPORT_C void CHuiGifAnimationTexture::Start()
         {
         iTexture->SetTextureChanged(ETrue);        
         }
+    CHuiStatic::ContinueRefresh();
     }
 
 EXPORT_C void CHuiGifAnimationTexture::Stop()
@@ -78,6 +79,7 @@ EXPORT_C void CHuiGifAnimationTexture::EnableAnimation(TBool aEnable)
     	{
     	iAnimationState = ClearFlag(TInt(iAnimationState), TInt(EEnabled));
     	}
+    CHuiStatic::ContinueRefresh();
     }
 
 EXPORT_C TInt CHuiGifAnimationTexture::Id() 
@@ -139,7 +141,16 @@ void CHuiGifAnimationTexture::AdvanceTime(TReal32 aElapsedTime) __SOFTFP
             }
         iElapsedTime = 0.0f;
         
-        } 
+        }
+    // not enough time was elapsed,
+    // if the animation is not stopped
+    // request continuerefresh in order
+    // not to go to sleep
+    else 
+        {
+        iTexture->SetTextureChanged(ETrue);            
+        CHuiStatic::ContinueRefresh();
+        }
     }
     
 

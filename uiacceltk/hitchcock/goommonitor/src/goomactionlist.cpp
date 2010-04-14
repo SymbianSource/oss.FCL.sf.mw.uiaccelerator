@@ -380,7 +380,7 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
 
         iFreeingMemory = ETrue;
         TRACES2("CGOomActionList::FreeMemory: Running action %d which has priority %d", iCurrentActionIndex,ref.Priority());
-        action->FreeMemory(iCurrentTarget - memoryEstimate);
+        action->FreeMemory(iCurrentTarget - memoryEstimate, iUseSwRendering);
         iCurrentPluginRun = 0;
         memoryFreeingActionRun = ETrue;
 
@@ -747,4 +747,9 @@ TUint CGOomActionList::CurrentPluginRun()
 TBool CGOomActionList::IsRunningKillAppActions()
     {
     return iRunningKillAppActions;
+    }
+
+void CGOomActionList::SetUseSwRendering(TBool aUseSwRendering)
+    {
+    iUseSwRendering = aUseSwRendering;
     }

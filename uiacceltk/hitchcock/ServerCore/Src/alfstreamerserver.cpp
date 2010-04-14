@@ -149,7 +149,6 @@ void CAlfStreamerServer::ConstructL()
     
     iWindowHierarcy = CAlfHierarchyModel::NewL(*this);
     iWindowMgr = CAlfWindowManager::NewL(iWindowHierarcy);
-    iBridge->SetStreamerServer( *this );
     iThemesListener = CThemeRepositoryListener::NewL();
     iThemesListener->IssueRequest();
     iRendezvous = new (ELeave) CAsyncCallBack(EPriorityHigh*3);
@@ -199,6 +198,16 @@ void CAlfStreamerServer::HandleClientExit(const CAlfStreamerServerSession* aClie
         {
         WindowMgr()->HandleClientExit(aClient->ThreadId());
         }
+        
+    for (TInt i = iSignals.Count()-1; i >= 0 ; i--)
+        {
+        if (iSignals[i].iSession == aClient)
+            {
+            // Don't complete because client is already being deleted    
+            iSignals.Remove(i);
+            }         
+        }
+                
     if (!iSessions)
         {
         // CActiveScheduler::Stop(); // TODO: lets not die, if client dies.
@@ -692,6 +701,28 @@ void CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aM
    __ALFLOGSTRING("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL <<")
     }
 
+void CAlfStreamerServer::AddSignal(CAlfStreamerServerSession* aSession, const RMessage2& aMessage)
+    {
+    TAlfSignal signal = { aSession, aMessage, aMessage.Int0(), aMessage.Int1()};
+    if (iSignals.Append(signal))
+        {
+        aMessage.Complete(KErrNoMemory);
+        }    
+    }    
+    
+void CAlfStreamerServer::CompleteSignal(TInt aSignal, TInt aType)
+    {
+    for (TInt i = iSignals.Count()-1; i >= 0 ; i--)
+        {
+        if (iSignals[i].iHandle == aSignal && (iSignals[i].iFlags & aType))
+            {
+            iSignals[i].iMessage.Complete(iSignals[i].iHandle);
+            iSignals.Remove(i);
+            //break;
+            }       
+        }  
+    }    
+
 // ---------------------------------------------------------------------------
 // constructor
 // ---------------------------------------------------------------------------
@@ -846,7 +877,7 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
             } 
         case EAlfGetNativeWindowHandles:
             {
-            TPckgC<TAlfNativeWindowData> data(server->Bridge()->iAlfWindowData);
+            TPckgC<volatile TAlfNativeWindowData> data(server->Bridge()->iAlfWindowData);
             aMessage.WriteL(0, data);
             break;    
             }
@@ -907,7 +938,7 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
             }
         case EAlfGetListOfWGsHavingInactiveSurfaces:
             {
-            server->GetListOfWGsHavingInactiveSurfacesL(aMessage, EFalse);
+            server->GetListOfWGsHavingInactiveSurfacesL(aMessage, aMessage.Int1());
             break;    
             }
         
@@ -930,8 +961,24 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
                 }
             break;    
             }
-            
-            
+        case EAlfGetNumberOfActiveEffects:
+            {
+            if (server->Bridge()) // though always there
+                {    
+                aMessage.Complete(server->Bridge()->iActiveEffectCount);
+                }
+            break;    
+            }
+        case EAlfRequestSignal:
+            {
+            server->AddSignal(this, aMessage);    
+            return;
+            }
+        case EAlfCompleteSignal:
+            {
+            server->CompleteSignal(aMessage.Int0(), aMessage.Int1());    
+            break;    
+            }                   
         default:
             {
             aMessage.Complete(KErrNotSupported);

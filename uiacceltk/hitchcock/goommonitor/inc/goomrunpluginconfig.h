@@ -56,6 +56,10 @@ public:
     
     inline TGOomPluginType PluginType();
     
+    inline void SetSwRend(TBool aSwRend);
+    
+    inline TBool IsSwRendSupported();
+    
 private:
     CGOomRunPluginConfig(TUint aPluginId, TGOomPluginType aPluginType);
     
@@ -68,6 +72,8 @@ private:
     TInt iWaitAfterPlugin; // The period to wait after a plugin has been called
     
     TGOomPluginType iPluginType;
+    
+    TBool iSwRenderingSupported;
     };
 
 #include "goomrunpluginconfig.inl"

@@ -754,6 +754,21 @@ TBool CHuiDisplay::Refresh()
 	iGc->SetPenColor(iBackgroundColor);
 	iGc->InitNewFrame();
 
+	
+	// if there is a fade effect in progress, we
+	// need to clear the screen as fade effect uses
+	// always blending. If we do not clear here
+	// fade leaves trails in certain situations.
+	if (iEnv.EffectsEngine()->HasActiveFadeEffect())
+	    {
+        iGc->SetPenColor(KRgbBlack);
+        iGc->SetPenAlpha(0);
+        iGc->Disable(CHuiGc::EFeatureClipping);
+        iGc->Disable(CHuiGc::EFeatureBlending);
+        iGc->Clear();
+	    }
+	
+	
     if ( iDrawDirtyRegions )
         {
         // Show dirty. 
@@ -1041,6 +1056,12 @@ EXPORT_C void CHuiDisplay::SetClearBackgroundL(TClearMode aClearBackground)
 
     iClearBackground = aClearBackground;
     iBackgroundItems.Reset();
+    
+    // release background texture if clearing is set to None
+    if(aClearBackground == EClearNone)
+        {
+        iEnv.Skin().ReleaseTexture(EHuiSkinBackgroundTexture);
+        }
     }
 
 

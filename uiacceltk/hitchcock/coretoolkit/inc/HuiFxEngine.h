@@ -39,6 +39,13 @@ class CHuiFxEffectCache;
 class MAlfGfxEffectObserver;
 class CHuiGc;
 
+class MHuiEffectObserver
+    {
+    public:
+    virtual void EffectAdded(CHuiFxEffect* aEffect) = 0;
+    virtual void EffectComplete(CHuiFxEffect* aEffect) = 0;
+    };
+
 class CHuiFxEngine : public CBase, public MHuiLowMemoryObserver, public MHuiMemoryLevelObserver
     {
     // important constant! Affects memory fragmentation in backend too small 
@@ -140,6 +147,7 @@ public:
     TInt LowMemoryState();
     
     TBool HasActiveEffects() const;
+    TBool HasActiveFadeEffect() const;
     
     void ClearCache();
     
@@ -147,6 +155,11 @@ public:
     
     IMPORT_C void SetMemoryLevel(THuiMemoryLevel aLevel);
     
+    void SetObserver(MHuiEffectObserver* aObserver)
+        {
+        iEffectObserver = aObserver;    
+        }
+	
 	/**
 	 * Group effects wait until each effect has been drawn once. 
 	 *
@@ -214,6 +227,8 @@ private:
 	 * Only one simultanious effect group is supported
 	 */
     RArray<TEffectGroupStruct> iActiveEffectGroups;
+    
+    MHuiEffectObserver* iEffectObserver;
     };
 
 #endif /*HUIFXENGINE_H_*/
