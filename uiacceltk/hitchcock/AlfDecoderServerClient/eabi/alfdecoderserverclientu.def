@@ -61,4 +61,6 @@ EXPORTS
 	_ZN26CAlfCompositionCntrlClientD2Ev @ 60 NONAME
 	_ZN21CAlfCompositionSource13SetSourceRectERK5TRect @ 61 NONAME
 	_ZThn32_N21CAlfCompositionSource13SetSourceRectERK5TRect @ 62 NONAME
+	_ZN17RAlfBridgerClient38GetListOfInactiveWindowGroupsWSurfacesEP6RArrayIiE @ 63 NONAME
+	_ZN26CAlfCompositionPixelSource4NewLER18MAlfBufferProvideriP7RWindow @ 64 NONAME
 

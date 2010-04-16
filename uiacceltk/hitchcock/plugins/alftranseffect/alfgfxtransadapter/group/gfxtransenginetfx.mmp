@@ -57,6 +57,7 @@ LIBRARY flogger.lib
 
 LIBRARY gfxtrans.lib
 LIBRARY eikcore.lib
+LIBRARY apgrfx.lib
 
 NOSTRICTDEF
 #if defined(WINSCW)

@@ -174,7 +174,8 @@ CHuiGifAnimationTexture::CHuiGifAnimationTexture(CHuiTextureManager& aManager,TH
     iFrameInterval(-1),
     iFrameCount(0),
     iFlags(aFlags),
-    iId(aId)
+    iId(aId),
+    iOriginalFileInUse(EFalse)
     {
     }
 
@@ -203,11 +204,16 @@ void CHuiGifAnimationTexture::ConstructL(const TDesC& aFilename)
     TChar drive;
     User::LeaveIfError( DriveInfo::GetDefaultDrive(DriveInfo::EDefaultRam, drive ) );
         
-    iFilename = HBufC::NewL(parse.NameAndExt().Size() + 4);
+    // 32 extra for textureid and 4 for "temp"
+    iFilename = HBufC::NewL(parse.NameAndExt().Size() + 4 + 32+ 4);
     TPtr ptr = iFilename->Des();
     
     ptr.Append(drive);
-    ptr.Append(_L(":\\"));
+    ptr.Append(_L(":\\temp"));
+    // with the texture id:s the
+    // name should be "unique"
+    ptr.AppendNum(iTextureId1);
+    ptr.AppendNum(iTextureId2);
     ptr.Append(parse.NameAndExt());
     
     RFs fs;
@@ -220,10 +226,11 @@ void CHuiGifAnimationTexture::ConstructL(const TDesC& aFilename)
     CleanupStack::PopAndDestroy();
     
     if(err != KErrNone)
-	{
-	delete iFilename;    
-    iFilename = aFilename.AllocL();
-	}
+    	{
+	    iOriginalFileInUse = ETrue;
+	    delete iFilename;    
+        iFilename = aFilename.AllocL();
+	    }
     
     
     iTexture1 = &iManager.LoadTextureL(
@@ -246,18 +253,22 @@ EXPORT_C CHuiGifAnimationTexture::~CHuiGifAnimationTexture()
 
     iTexture = 0;    
     
-    RFs fs;
-    TInt err = fs.Connect();
-    if(err == KErrNone)    
+    // Don't delete the file if the original
+    // file was in use instead of the RAM copy
+    if (!iOriginalFileInUse)
         {
-        CFileMan* fileman = 0;
-        TRAP(err, fileman = CFileMan::NewL(fs));
-        if(err == KErrNone)
+        RFs fs;
+        TInt err = fs.Connect();
+        if(err == KErrNone)    
             {
-            fileman->Delete(iFilename->Des());
+            CFileMan* fileman = 0;
+            TRAP(err, fileman = CFileMan::NewL(fs));
+            if(err == KErrNone)
+                {
+                fileman->Delete(iFilename->Des());
+                }
             }
         }
-    
 
     delete iFilename;
     }

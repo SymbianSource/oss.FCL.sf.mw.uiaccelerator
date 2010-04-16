@@ -147,6 +147,30 @@ EXPORT_C void RAlfBridgerClient::SendAsynchronous(TInt aOp, const TIpcArgs& aIPC
     SendReceive(aOp, aIPCArgs, aStatus );
     }
 
+
+EXPORT_C TInt RAlfBridgerClient::GetListOfInactiveWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups)
+    {
+    TInt err = KErrNone;
+    TInt array[10];
+    TPtr8 ptr((TUint8*)array,0,40);
+    err = SendReceive(EAlfGetListOfWGsHavingInactiveSurfaces, TIpcArgs(&ptr));
+    if (!err)
+        {
+        for(TInt i = 0; i < 10; i++)
+            {
+            if (array[i])
+                {
+                aWindowGroups->Append(array[i]);
+                }
+            else
+                {
+                break;
+                }        
+            }    
+        }
+    return err; 
+    }
+
 // Open
 // ---------------------------------------------------------------------------
 //

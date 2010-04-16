@@ -34,7 +34,8 @@ public:
     virtual void LowOnGraphicsMemory()=0;
     virtual void GraphicsMemoryGood(){}
     
-    virtual void AlfBridgeCallback(TInt, TAny*){};
+    virtual void AlfBridgeCallback(TInt, TAny*){}
+    virtual void HideTarget(TInt,TBool){};
     }; 
 
 /** Wrapper class IPC <-> MAlfCompositionController **/
@@ -293,6 +294,13 @@ public:
      **/
     IMPORT_C static CAlfCompositionPixelSource* NewL(MAlfBufferProvider& aProvider, RWindow* aWindow = NULL);
     
+
+    /**
+     * Constructor for application to decide AO priority
+     */
+    IMPORT_C static CAlfCompositionPixelSource* NewL(MAlfBufferProvider& aProvider, TInt aPriority = CActive::EPriorityIdle, RWindow* aWindow = NULL );
+
+    
     /**
      *  Activate drawing for the first time or continue drawing if it is being paused or suspended
      **/
@@ -328,7 +336,7 @@ protected:
 
 private: // Internal / utils
     
-    void ConstructL(MAlfBufferProvider& aProvider, RWindow* aWindow);
+    void ConstructL(MAlfBufferProvider& aProvider, TInt aPriority, RWindow* aWindow);
     void ConstructSurfaceL(MAlfBufferProvider::TBufferCreationAttributes& aCreationAttributes);
     void FreeSurface();
     TUint8* Buffer(TInt aBufferNumber);

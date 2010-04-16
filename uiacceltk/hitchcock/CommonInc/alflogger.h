@@ -89,7 +89,7 @@ _LIT( KLogFileName,              "alf.log");
     #define __ALFFXLOGSTRING1(C, X)
     #define __ALFFXLOGSTRING2(C, X, Y)
     #define __ALFFXLOGSTRING3(C, X, Y, Z)
-    #define __ALFFXLOGSTRING4(C, X, Y, W)
+    #define __ALFFXLOGSTRING4(C, X, Y, Z, W)
 
 #endif
 #if (ALF_FXLOGGING_METHOD==1)
@@ -104,7 +104,7 @@ _LIT( KLogFileName,              "alf.log");
     #define __ALFFXLOGSTRING1(C, X)        {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X);}
     #define __ALFFXLOGSTRING2(C, X, Y)     {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y);}
     #define __ALFFXLOGSTRING3(C, X, Y, Z)  {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y,Z);}
-    #define __ALFFXLOGSTRING4(C,X,Y,Z,W)   {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y,Z,W);}
+    #define __ALFFXLOGSTRING4(C, X, Y, Z, W)   {_LIT(tempLogDes,C);RFileLogger::WriteFormat(KLogsDir(),KLogFileName(), EFileLoggingModeAppend, TRefByValue<const TDesC>(tempLogDes()),X,Y,Z,W);}
 #endif
 
 #endif // ALFLOGGER_H

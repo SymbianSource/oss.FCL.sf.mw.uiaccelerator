@@ -593,7 +593,7 @@ void CAlfRenderStage::NodeCreated(const MWsWindowTreeNode& aWindowTreeNode, MWsW
 	
     AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
     AMT_INC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
-    AMT_INC_COUNTER(iRsWindowGroupNodeCount ); 
+    AMT_INC_COUNTER(iRsTotalNodeCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -636,7 +636,7 @@ void CAlfRenderStage::NodeReleased(const MWsWindowTreeNode& aWindowTreeNode)
 
     AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeClient, iRsWindowNodeCount ); 
     AMT_DEC_COUNTER_IF(nodeType==MWsWindowTreeNode::EWinTreeNodeGroup,  iRsWindowGroupNodeCount ); 
-    AMT_DEC_COUNTER(iRsWindowGroupNodeCount ); 
+    AMT_DEC_COUNTER(iRsTotalNodeCount ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -695,6 +695,12 @@ void CAlfRenderStage::NodeExtentChanged(const MWsWindowTreeNode& aWindowTreeNode
 
     AMT_INC_COUNTER( iRsNodeExtentChangedCount );
     AMT_SET_VALUE( iRsLatestNodeExtentRect, aRect );
+    AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() ),
+                          iSizeMap, aWindowTreeNode.Window()->Handle(), 
+                          aRect.Size(), EAlfModuleTestTypeRenderStageChangeSize );
+    AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() ),
+                          iPositionMap, aWindowTreeNode.Window()->Handle(), 
+                          aRect.iTl, EAlfModuleTestTypeRenderStageChangePosition );
     }
 
 // ---------------------------------------------------------------------------
@@ -729,14 +735,52 @@ void CAlfRenderStage::FlagChanged(const MWsWindowTreeNode& aWindowTreeNode, TInt
 	iAlfSendBuffer->CommitL();
 
     AMT_INC_COUNTER( iRsTotalNodeFlagChangedCount );
+    AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.Window() ),
+                          iIntMap, aWindowTreeNode.Window()->Handle(), 
+                          EAlfModuleTestTypeRenderStageChangeFlag );
     }
 
 // ---------------------------------------------------------------------------
 // AttributeChanged
 // ---------------------------------------------------------------------------
 //
-void CAlfRenderStage::AttributeChanged(const MWsWindowTreeNode& aWindowTreeNode, TInt aAttribute )
+void CAlfRenderStage::AttributeChanged(const MWsWindowTreeNode& aWindowTreeNode, TInt aAttribute)
     {
+    if ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeClient &&
+         aWindowTreeNode.Window() != NULL )
+        {
+        TInt32 nodeId = (TInt32)&aWindowTreeNode;
+        
+        switch ( aAttribute )
+            {
+        case MWsWindowTreeObserver::EWindowShape:
+            {
+            TPoint origin( aWindowTreeNode.Window()->AbsRect().iTl );
+            
+            if ( aWindowTreeNode.Window()->WindowArea().Count() )
+                {
+                iAlfSendBuffer->WriteRegionIntsL( 
+                    EAlfNodeSetWindowArea, 
+                    aWindowTreeNode.Window()->WindowArea(), 
+                    3, 
+                    nodeId, 
+                    origin.iX,
+                    origin.iY );
+                }
+            else
+                {
+                iAlfSendBuffer->WriteIntsL( EAlfNodeSetWindowArea, 4, nodeId, 0, 0, 0 ); // no region
+                }
+            
+            iAlfSendBuffer->CommitL();
+            }
+            break;
+            
+        default:
+            break;
+            }
+        }
+        
     if ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor )
         {
         TInt32 nodeId = (TInt32)&aWindowTreeNode;
@@ -1059,7 +1103,9 @@ void CAlfRenderStage::InsertTagL( TInt aTag, TInt32 /*aParameter*/ )
             }
         case CAlfHintGraphic::EAlfEndSubWindow:
             {
+#ifdef RD_SUBWINDOW_EFFECTS            
             iAlfSendBuffer->EndMarkerL();
+#endif
             break;
             }
             
@@ -1076,7 +1122,9 @@ void CAlfRenderStage::InsertTagL( TInt aTag, TRect aBoundingRectangle, TInt aLay
         {
         case CAlfHintGraphic::EAlfBeginSubWindow:
             {
+#ifdef RD_SUBWINDOW_EFFECTS             
             iAlfSendBuffer->StartMarkerL(aBoundingRectangle, aLayerId);
+#endif
             break;
             }
         }

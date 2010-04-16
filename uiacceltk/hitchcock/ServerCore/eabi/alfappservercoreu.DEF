@@ -547,4 +547,5 @@ EXPORTS
 	_ZN18CAlfStreamerBridge15FindWgForAppUidE4TUid @ 546 NONAME
 	_ZN18CAlfStreamerBridge17FindAppUidForWgIdEi @ 547 NONAME
 	_ZN10CAlfWindow21SetLayerUsesAplhaFlagEi @ 548 NONAME
+	_ZN18CAlfWindowFxPlugin17ClientAboutToExitE9TThreadId @ 549 NONAME
 

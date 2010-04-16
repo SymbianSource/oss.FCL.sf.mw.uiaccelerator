@@ -208,7 +208,9 @@ void CAlfWindowManager::BindWindowToHitchL(CAlfWindow* aWindow, CAlfWindowManage
         aWindow->SetOpacity(aWindow->Opacity());
         }
 	aWindow->SetSurfaceExtent(aWindow->SurfaceExtent());
-        
+    aWindow->SetWindowArea();
+    aWindow->SetTransparencyAlphaChannel(aWindow->TransparencyAlphaChannel());
+    aWindow->IncludeToVisibilityCalculation(aWindow->IsIncludedToVisibilityCalculation());
 	aWindow->SetActive(aWindow->IsActive());
 	}
 
@@ -679,3 +681,15 @@ TAlfWindowCommandBufferAttributes* CAlfWindowManager::CreateWindowCommandBufferA
     *windowCommandBuffer = empty;
     return windowCommandBuffer;
     }
+
+
+void CAlfWindowManager::HandleClientExit(TThreadId aThreadId)
+    {
+    for (TInt i = iData->iPlugins.Count()-1; i >= 0 ; i--)
+        { // assuming that plugins won't actually change the order on this message 
+          //(i.e. they may destroy them selves but not the plugine inserted before them)
+        iData->iPlugins[i].iPlugin->ClientAboutToExit(aThreadId);
+        } 
+    }
+
+

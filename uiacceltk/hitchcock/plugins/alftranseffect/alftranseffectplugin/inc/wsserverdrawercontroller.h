@@ -88,6 +88,9 @@ class CAppInfoCache : public CBase
         const TUid& FocusUid() const;
         TBool SetFocusUid(TInt aWgId); 
         
+        void SetSecureId( const TUid& aUid, const TSecureId& aSecureId );
+        void SetWgId( const TUid& aUid, TInt aWgId );
+        
         void ClearActions();
         
     private:
@@ -99,7 +102,9 @@ class CAppInfoCache : public CBase
                 iUid(aUid),
                 iFlags(TAppInfo::ENone),
                 iParent(KNullUid),
-                iAction(KErrNotFound)
+                iRootWgId(0),
+                iAction(KErrNotFound),
+                iSecureId(0)
                 {}
             enum TFlags
                 {
@@ -112,6 +117,7 @@ class CAppInfoCache : public CBase
             TUid    iParent;
             TInt    iRootWgId;
             TInt    iAction;
+            TUint   iSecureId;
             };
     private:
         void ConstructL();

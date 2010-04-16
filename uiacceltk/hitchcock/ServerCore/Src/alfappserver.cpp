@@ -1448,3 +1448,20 @@ CAlfAppSrvSessionBase* CAlfAppServer::UpMostClientAboveWg( TInt aWgId )
     return sessionAboveGivenWgId;
     }
 
+CAlfAppSrvSessionBase* CAlfAppServer::SrvSessionForControlGroup(CHuiControlGroup& aGroup)
+    {
+    CAlfAppSrvSessionBase* result = NULL;
+    iSessionIter.SetToFirst();
+    while (iSessionIter)
+      {
+      CAlfAppSrvSessionBase* session = reinterpret_cast<CAlfAppSrvSessionBase*>(iSessionIter++);
+      if ( session->GetHandleFromInterface(EHuiObjectTypeControlGroup, &aGroup) != KErrNotFound )
+          {
+          result = session;
+          break;
+          }
+      }
+    return result;
+    }
+
+

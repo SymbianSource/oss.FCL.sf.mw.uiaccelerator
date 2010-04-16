@@ -370,7 +370,8 @@ public:
             TInt aScreenNumber );
     
     void MoveToWindowGroup( TUint32 aNewGroupId );
-      
+    void SetWindowAreaL( RMemReadStream* aStream );
+    
 protected:
 	
     void ConstructL( CAlfHierarchyModel* aModel, RMemReadStream* aStream  );

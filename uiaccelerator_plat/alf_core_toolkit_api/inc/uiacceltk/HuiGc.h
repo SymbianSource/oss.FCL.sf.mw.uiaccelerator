@@ -933,6 +933,16 @@ public:
      */
     IMPORT_C void NotifyImagePreferredSize(const THuiImage& aImage, THuiRealRect aRect);
 
+public:
+
+    /**
+     * Copy screen to bitmap.
+     * @internal
+     * @param aBitmap bitmap to which data should be copied.
+     * @return error code, KErrNone upon success.
+     */
+    TInt CopyScreenToBitmap(CFbsBitmap* aBitmap);
+    
 protected:
 
     /* Constructors. */

@@ -37,16 +37,12 @@
 #include <alflogger.h>
 #include <uiacceltk/HuiUtil.h>
 
-#ifdef __WINS__
+// This sets the maximum time for an effect. Even if the fxml file has specified a longer duration, 
+// this will stop the effect.
 const TInt KAlfShortEffectTimeout = 4000000;
 const TInt KAlfLongEffectTimeout  = 5000000;
-#else
-const TInt KAlfShortEffectTimeout = 2000000;
-const TInt KAlfLongEffectTimeout  = 3000000;
-#endif
+
 //const TInt KAlfLongEffectTimeout  = 500000;
-
-
 // Timer to send finish full screen effect
 // ---------------------------------------------------------
 // CAlfFinishTimer
@@ -228,14 +224,16 @@ CAlfServerDrawer* CAlfServerDrawer::NewL( CAlfWindowManager* aWindowManager,
 //
 void CAlfServerDrawer::ConstructL()
     {
-    iController = CWsServerDrawerController::NewL(this);
-
-    iIdle = CIdle::NewL(CActive::EPriorityIdle);
+    iControlController = CWsServerDrawerController::NewL(this);
+    iFullScreenController = CWsServerDrawerController::NewL(this);
 
     iFullScreenTimeout = CAlfFinishTimer::NewL();
+    iControlTimeout = CAlfFinishTimer::NewL();
     iFinishFullScreen = CAlfFinishTimer::NewL();
     
-    iTransitionEndObserver = CPSObserver::NewL( KPSAlfDomain, KAlfTransitionStatus );
+	// note, that the PS key is actually never updated and these do not do anything
+    iControlTransitionEndObserver = CPSObserver::NewL( KPSAlfDomain, KAlfTransitionStatus );
+    iFullScreenTransitionEndObserver = CPSObserver::NewL( KPSAlfDomain, KAlfTransitionStatus );
     iProperty.Attach( KPSAlfDomain, KAlfTransitionStatus );
     iProperty.Set( KPSAlfDomain, KAlfTransitionStatus, 0 );
     iFs.Connect();
@@ -258,11 +256,12 @@ CAlfServerDrawer::CAlfServerDrawer( CAlfWindowManager* aWindowManager,
 //	
 CAlfServerDrawer::~CAlfServerDrawer()
     {
-    delete iTransitionEndObserver;
+    delete iControlTransitionEndObserver;
+    delete iFullScreenTransitionEndObserver;
     iProperty.Close();
     iFs.Close();
-    delete iController;
-    delete iIdle;
+    delete iControlController;
+    delete iFullScreenController;
     delete iFinishFullScreen;
     delete iFullScreenTimeout;
         
@@ -286,7 +285,7 @@ TInt CAlfServerDrawer::BeginControlTransition( TUint aAction, TUid aControlUid,
         iControlUid = aControlUid;
         iControlWindowGroup = aWindowGroup;
         iControlHandle = aWindowHandle;
-        return iController->BeginControlTransition();
+        return iControlController->BeginControlTransition();
         }
     }
 
@@ -295,7 +294,7 @@ TInt CAlfServerDrawer::BeginControlTransition( TUint aAction, TUid aControlUid,
 //	
 void CAlfServerDrawer::EndControlTransition(TInt aHandle)
     {
-    iController->EndControlTransition(aHandle);
+    iControlController->EndControlTransition(aHandle);
     }
 
 // ---------------------------------------------------------------------------
@@ -378,30 +377,37 @@ void CAlfServerDrawer::RegisterAlfFullScreenEffect( TInt aAction, const TDesC& a
 // ---------------------------------------------------------------------------
 //	
 void CAlfServerDrawer::BeginFullscreen(	TInt aAction, const TRect& aEffectRect,
-                                        TInt aType, const TUid aUid1, const TUid aUid2, TInt aData )
-    {  
-    if ( iController->AppInfoCache().Action(aUid1) == aAction && 
-         iController->AppInfoCache().Action(aUid1) !=  AknTransEffect::EApplicationExit )
+                                        TInt aType, const TUid aUid1, const TUid aUid2, TInt aData,
+                                        TSecureId aSid1, TInt aWg1, TSecureId aSid2, TInt aWg2 )
+    {
+    __ALFFXLOGSTRING2("CAlfServerDrawer::BeginFullscreen - Action: %d, Type: %d", aAction, aType);
+    __ALFFXLOGSTRING4("CAlfServerDrawer::BeginFullscreen - ToAppUid/SecureId: 0x%x/0x%x, ToAppUid/SecureId: 0x%x/0x%x", aUid1, aSid1.iId, aUid2, aSid2.iId);
+    if ( iFullScreenController->AppInfoCache().Action(aUid1) == aAction && 
+         iFullScreenController->AppInfoCache().Action(aUid1) !=  AknTransEffect::EApplicationExit )
         {
-        __ALFFXLOGSTRING2(" -> CAlfServerDrawer::BeginFullscreen - skipping action: %d, because previous action is stronger: %d", aAction, iAction);
+        __ALFFXLOGSTRING2("CAlfServerDrawer::BeginFullscreen - skipping action: %d, because previous action is stronger: %d", aAction, iAction);
         // the action must be skipped, because stronger action has been request already.
         return;
         }
     
-    __ALFFXLOGSTRING2(" -> CAlfServerDrawer::BeginFullscreen - Action: %d, aType: %d", aAction, aType);
-    TInt action = iController->AppInfoCache().SetAction(aUid1, aAction);
+    TInt action = iFullScreenController->AppInfoCache().SetAction(aUid1, aAction);
     
     // Skip all embedded and background application effects, for now.
     // This addition is to prevent messaging app popping up in startup.
     // AVKON uses wrong parameter type and so NoEffects is not applied.
     if ( action == AknTransEffect::EEmbeddedApplicationExit ||
          action == AknTransEffect::EEmbeddedApplicationStart || 
-         action == AknTransEffect::EAppStartupBackground )
+         (action == AknTransEffect::EAppStartupBackground && aType != AknTransEffect::EParameterAvkonInternal) )
         {
-        __ALFFXLOGSTRING1(" -> CAlfServerDrawer::BeginFullscreen - Embedded/background (%d) application, skip effect", aAction);
+        __ALFFXLOGSTRING2(" -> CAlfServerDrawer::BeginFullscreen - Embedded/background (%d) application, skip effect for AppUid: 0x%x", aAction, aUid1);
         return;
         }
   
+    if (action == AknTransEffect::EAppStartupBackground && aType == AknTransEffect::EParameterAvkonInternal)
+        {
+    	__ALFFXLOGSTRING2(" -> CAlfServerDrawer::BeginFullscreen - Embedded/background (%d) application, skip effect for AppUid: 0x%x, but update the avkon info.", aAction, aUid1);
+        }
+    
     if ( aAction != AknTransEffect::ENone && aAction != AknTransEffect::EAppStartupBackground )
         {
         // no action or background activity won't stop current effect
@@ -436,6 +442,10 @@ void CAlfServerDrawer::BeginFullscreen(	TInt aAction, const TRect& aEffectRect,
         iToUid = aUid1;
         iFromUid = aUid2;
         iFlags = aData;  
+        iFromSid = aSid2;
+        iToSid = aSid1;
+        iFromWg = aWg2;
+        iToWg = aWg1;
 		}
 	if ( aType == AknTransEffect::EParameterAvkonInternal )
 	    {
@@ -483,7 +493,7 @@ void CAlfServerDrawer::BeginFullscreen(	TInt aAction, const TRect& aEffectRect,
         iScrModeChangedState = EScreenModeChangedIdle;
         }
 
-    iController->BeginFullscreen( aType, aUid1, aUid2, aData );
+    iFullScreenController->BeginFullscreen( aType, aUid1, aUid2, aData );
     __ALFFXLOGSTRING("CAlfServerDrawer::BeginFullscreen end");
     }
 
@@ -492,11 +502,11 @@ void CAlfServerDrawer::BeginFullscreen(	TInt aAction, const TRect& aEffectRect,
 //
 void CAlfServerDrawer::EndFullscreen()
     {
-    __ALFFXLOGSTRING(" -> CAlfServerDrawer::EndFullscreen");
+    __ALFFXLOGSTRING("CAlfServerDrawer::EndFullscreen >>");
     CancelEndChecker();
-    iController->EndFullscreen(EFalse);
-    iController->AppInfoCache().ClearActions();
-    __ALFFXLOGSTRING("CAlfServerDrawer::EndFullscreen end");
+    iFullScreenController->EndFullscreen(EFalse);
+    iFullScreenController->AppInfoCache().ClearActions();
+    __ALFFXLOGSTRING("CAlfServerDrawer::EndFullscreen <<");
     }
 
 // ---------------------------------------------------------------------------
@@ -514,18 +524,10 @@ void CAlfServerDrawer::CancelFullscreen()
 void CAlfServerDrawer::AbortFullscreen()
     {
     __ALFFXLOGSTRING(" -> CAlfServerDrawer::AbortFullscreen");
-    iController->AbortTransition(EAbortFullscreen);
-    iController->AppInfoCache().ClearActions();
+    iFullScreenController->AbortTransition(EAbortFullscreen);
+    iFullScreenController->AppInfoCache().ClearActions();
     __ALFFXLOGSTRING("CAlfServerDrawer::AbortFullscreen end");
     }
-
-
-TInt CAlfServerDrawer::FailedFullscreen(TAny* aArg) 
-	{
-	CAlfServerDrawer* self = static_cast<CAlfServerDrawer*>(aArg);
-	self->iController->EndExpired(); // The same as if End Checker Expires.
-	return EFalse;
-	}
 
 TBool CAlfServerDrawer::EffectFinishedFullScreen() const
     {
@@ -559,85 +561,8 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
     // Here we can start doing some effect for the application that is currently on the
     // screen. The new application effect should start at "EndFullScreen"
     // That normally means that the application has drawn something to its window.
-    
-    iFromWg = 0;
-    iToWg = 0;
-    
-	// TODO: using temp getter for window group ids vs app uids
-	//
-	// Official implementation pending on new window server APIs expected to available be around W40 
-	
-    if ( iType == AknTransEffect::EParameterType )
-        {
-        // TODO TODO TODO TODO TODO TODO TODO
-        //  THIS MUST BE FIXED IN ORDER TO HAVE APPLICATION START EFFECTS WORKING!
-        //
-        // THE WINDOWGROUP LIST FOR APPLICATIONS IS NOT UP-TO-DATE, BECAUSE WE CANNOT ASK IT ANYMORE DIRECTLY 
-        // FROM WSERV (DEADLOCK ISSUES).
-        // THUS IT IS UP TO CHANCE THAT WE GET A VALID REPLY IN THIS POINT.
-        // WE WILL VERY LIKELY NOT INITIATE THE EFFECT AT ALL, WHEN APPLICATION IS REALLY STARTING INSTEAD OF
-        // BEING BROUGHT FORWARD FROM BACKGROUND.
-        // TODO TODO TODO TODO TODO TODO TODO
-        iFromWg = iWindowManager->Bridge()->FindWgForAppUid(iFromUid);
-        __ALFFXLOGSTRING2("Window group from from-Application UID: 0x%X wg: 0x%x", iFromUid, iFromWg);    
-        //                                                    ---> YES --> id must be valid. continue
-        //                        YES --> Is this exit event? 
-        // Id found in cache? -->                             ---> NO  --> continue, but refreshed value should overwrite this valua in iEngine.
-        //                        NO  --> we must wait for the value.                    
-          
         
-        if (!iToWg)
-        	{
-        	iToWg = iWindowManager->Bridge()->FindWgForAppUid(iToUid); // This call might be now obsolete
-        	}
-        
-        __ALFFXLOGSTRING2("Window group from to-Application UID: 0x%X wg: 0x%x", iToUid, iToWg);    
-        }
-    
-    // How do we handle the case where we have app id, parent id and focus wg?
-    
-    if ( iType == AknTransEffect::EParameterAvkonInternal )
-        {
-        // Is this "from" or "to" or do we just use iFocusWg?
-        iToWg = iWindowManager->Bridge()->FindWgForAppUid(iToUid);
-        
-        __ALFFXLOGSTRING2("Window group from internal-Application UID: 0x%X wg: 0x%x", iToUid, iToWg);    
-        // Is this "from" or "to" or do we just use iFocusWg?
-        if ( iParentUid != KNullUid )
-            {
-            iFromWg = iWindowManager->Bridge()->FindWgForAppUid(iParentUid);
-            __ALFFXLOGSTRING2("Window group from parent-Application UID: 0x%X wg: 0x%x", iParentUid,  iFromWg);    
-            }
-        }
-        
-    // What do we do if there are no windows?
-    // We could use the built-in effect layer, but now we just stop here
-    
-    // We don't handle the EParameterAvkonInternal type
-    // TODO: revise this condition, when appui is available from wserv
-    /*if ( ( ( iFromWg == 0 || iFromWg == KErrNotFound ) && 
-        ( iToWg == 0 || iToWg == KErrNotFound ) &&
-        ( iFocusWg == 0 || iFocusWg == KErrNotFound ) ) ||
-        iType == AknTransEffect::EParameterAvkonInternal )
-        { // TODO: Uncomment, when appui available in alfbridge
-        // bail out, cannot start an effect without any windows
-        // We don't need to reset the WinIdLists as they have not been filled
-    	iIdle->Start(TCallBack(FailedFullscreen,this));
-        return;
-        }
-        */
-    // If we don't have the target window, we bail out
-    // This is because we get into trouble if another beginfullscreen
-    // follows too fast.
-    /*
-    if ( iToWg == 0 || iToWg == KErrNotFound )
-        {
-    	iIdle->Start(TCallBack(FailedFullscreen,this));
-        return;
-        }
-        */
-        
-    TBool blocked = iController->IsBlocked( iFromUid, iToUid );
+    TBool blocked = iFullScreenController->IsBlocked( iFromUid, iToUid );
     if (blocked)
         {
         return;
@@ -665,12 +590,11 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
     if ( err != KErrNone || fileName.Length() == 0 || !FileExistsL( resourceDir, fileName ) )
         {
         // Did not find an effect file - nothing to show
-        __ALFFXLOGSTRING2(" <- CAlfServerDrawer:: Could not get full screen kml, error %d %S", err, &fileName)
+        __ALFFXLOGSTRING2("CAlfServerDrawer::DoSendBeginFullscreenL -  Could not get full screen kml, error %d %S", err, &fileName)
         iFromWg = KErrNotFound;
         iToWg = KErrNotFound;
         iFromScreen = KErrNotFound;
         iToScreen = KErrNotFound;
-    	// iIdle->Start( TCallBack( FailedFullscreen, this ) );
     	return;
         }
         
@@ -716,7 +640,7 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
     // also the effect file name or something else to identify the effect 
     // that is going to be used
     
-    TInt bufferSize = 11 * sizeof(TInt); //operation, TYPE, 2 wg ids, 2 app uids, flags and rect
+    TInt bufferSize = 13 * sizeof(TInt); //operation, TYPE, 2 wg ids, 2 app uids, 2 secure ids, flags and rect
     bufferSize += sizeof(TPtrC);
     bufferSize += resourceDir.Length() * 2;
     bufferSize += sizeof(TPtrC);
@@ -725,10 +649,9 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
     // I don't think we need this
     TInt index = 0;
 
-    IncreaseHandle();
+    IncreaseFullScreenHandle();
 
-    iTransitionEndObserver->Cancel();
-    iIdle->Cancel(); //cancel if running.
+    iFullScreenTransitionEndObserver->Cancel();
     iFinishFullScreen->Cancel();
     iFullScreenTimeout->Cancel();
 
@@ -740,7 +663,7 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
         RMemWriteStream stream( bridgeBuffer, bufferSize );
         // The writes should not leave if we have calculated our buffer length correctly.
         stream.WriteInt32L( MAlfGfxEffectPlugin::EBeginFullscreen );
-        stream.WriteInt32L( iCurrHandle );
+        stream.WriteInt32L( iCurrentFullScreenHandle );
         stream.WriteInt32L( iType );
       	if ( iType == AknTransEffect::EParameterType && isExit )
       	    {
@@ -750,6 +673,10 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
             // AppUid
             stream.WriteInt32L( iToUid.iUid );
             stream.WriteInt32L( iFromUid.iUid );
+            
+            // SecureId
+            stream.WriteInt32L( iToSid.iId );
+            stream.WriteInt32L( iFromSid.iId );
                         
             stream.WriteInt32L( KErrNotFound ); //  was iToScreen, obsolete
             stream.WriteInt32L( KErrNotFound ); // was iToScreen, obsolete
@@ -762,6 +689,10 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
             // AppUid
             stream.WriteInt32L( iToUid.iUid );
             stream.WriteInt32L( iFromUid.iUid );
+            
+            // SecureId
+            stream.WriteInt32L( iToSid.iId );
+            stream.WriteInt32L( iFromSid.iId );
                         
             stream.WriteInt32L( KErrNotFound );  // was iToScreen, obsolete
             stream.WriteInt32L( KErrNotFound ); // was iToScreen, obsolete
@@ -787,7 +718,7 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
         iWindowManager->PostIt( bridgerData );
         
         stream.Close();
-        iTransitionEndObserver->StartObserving( TCallBack( TransitionFinished, this ), iCurrHandle );
+        iFullScreenTransitionEndObserver->StartObserving( TCallBack( FullScreenTransitionFinished, this ), iCurrentFullScreenHandle );
         }
     
     // iFlags and iAction will contain some extra information that can be used to control the effect:
@@ -859,7 +790,7 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
 //	
 TInt CAlfServerDrawer::SendEndFullscreen()
     {
-    __ALFFXLOGSTRING(" <- CAlfServerDrawer::SendEndFullscreen");
+    __ALFFXLOGSTRING("CAlfServerDrawer::SendEndFullscreen");
     
     if ( iFullScreenEndSent )
         {
@@ -868,12 +799,11 @@ TInt CAlfServerDrawer::SendEndFullscreen()
         }
     iFullScreenEndSent = ETrue;
         
-    __ALFFXLOGSTRING(" <- CAlfServerDrawer::SendEndFullscreen");
-    iTransitionEndObserver->Cancel();
+    __ALFFXLOGSTRING("CAlfServerDrawer::SendEndFullscreen");
+    iFullScreenTransitionEndObserver->Cancel();
     iFullScreenTimeout->Cancel();
     iFinishFullScreen->Cancel();
-	iIdle->Cancel(); //cancel if running.
-    /*
+	/*
     TUint action = iAction;   
     if ( iType == AknTransEffect::EParameterAvkonInternal )
         {
@@ -923,7 +853,7 @@ TInt CAlfServerDrawer::SendEndFullscreen()
         TRAP_IGNORE(
             {
             stream.WriteInt32L( MAlfGfxEffectPlugin::EEndFullscreen );
-            stream.WriteInt32L( iCurrHandle );
+            stream.WriteInt32L( iCurrentFullScreenHandle );
             stream.WriteInt32L( iType );
 
             stream.WriteInt32L( iToWg );
@@ -954,10 +884,10 @@ TInt CAlfServerDrawer::SendEndFullscreen()
             });    
                 
         bridgerData.Set( EAlfEffectFx, iAction, bufferSize, (TAny*) index );
-        __ALFFXLOGSTRING(" <- CAlfServerDrawer::sending bridgedata");
+        __ALFFXLOGSTRING1("CAlfServerDrawer::SendEndFullscreen - sending bridgedata, Current handle %d", iCurrentFullScreenHandle);
         iWindowManager->PostIt( bridgerData );
         stream.Close();
-        iTransitionEndObserver->StartObserving( TCallBack( TransitionFinished, this ), iCurrHandle  );
+        iFullScreenTransitionEndObserver->StartObserving( TCallBack( FullScreenTransitionFinished, this ), iCurrentFullScreenHandle  );
         }
 
     iFullScreenFinished = EFalse;
@@ -987,9 +917,8 @@ TInt CAlfServerDrawer::SendAbortFullscreen()
         return KErrNone;
         }
 
-    iTransitionEndObserver->Cancel();
-    iIdle->Cancel(); //cancel if running.
-
+    iFullScreenTransitionEndObserver->Cancel();
+    
     iFullScreenFxSent = EFalse;
     iFullScreenEndSent = ETrue;
     
@@ -1012,7 +941,7 @@ TInt CAlfServerDrawer::SendAbortFullscreen()
         TRAP_IGNORE(
             {
             stream.WriteInt32L( MAlfGfxEffectPlugin::EAbortFullscreen );
-            stream.WriteInt32L( iCurrHandle );
+            stream.WriteInt32L( iCurrentFullScreenHandle );
             stream.WriteInt32L( iType );
           	//if ( iType == AknTransEffect::EParameterType )
           	    {
@@ -1070,6 +999,7 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
 	
 	if ( fileName.Length() == 0 || !fileExists)
 	    {
+        __ALFFXLOGSTRING2("CAlfServerDrawer::SendBeginControlTransition -  Could not get control effect kml, file exists: %d %S. ABORTING!", fileExists, &fileName)
 	    return KErrNotFound;
 	    }
 	    
@@ -1103,10 +1033,9 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
 
     TInt index = 0;
 
-    IncreaseHandle();
-    iTransitionEndObserver->Cancel();
-    iFinishFullScreen->Cancel();
-    
+    IncreaseControlHandle();
+    iControlTransitionEndObserver->Cancel();
+    iControlTimeout->Cancel();
 
     // control transitions are not supposed to have the phasing of full screen transitions,
     // we should be ready to go immediately.
@@ -1124,7 +1053,7 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
         TRAP_IGNORE(
             {
             stream.WriteInt32L( MAlfGfxEffectPlugin::EBeginComponentTransition );
-            stream.WriteInt32L( iCurrHandle );
+            stream.WriteInt32L( iCurrentControlHandle );
             stream.WriteInt32L( iControlHandle ); // window handle
             stream.WriteInt32L( iControlWindowGroup ); // window group id
             stream.WriteInt32L( 0 ); // "screen number"; not used; save place for future
@@ -1136,14 +1065,15 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
             stream.CommitL();
             });
         bridgerData.Set( EAlfControlEffectFx, iControlAction, bufferSize, (TAny*) index );
-        __ALFFXLOGSTRING(" <- CAlfServerDrawer::sending bridgedata");
+        __ALFFXLOGSTRING1("CAlfServerDrawer::SendBeginControlTransition - sending bridgedata, Current handle: %d", iCurrentControlHandle);
         iWindowManager->PostIt( bridgerData );
         stream.Close();
-        iTransitionEndObserver->StartObserving( TCallBack( TransitionFinished, this ), iCurrHandle );
+        iControlTransitionEndObserver->StartObserving( TCallBack( ControlTransitionFinished, this ), iCurrentControlHandle );
         }
 	
     iFullScreenFinished = EFalse;
-    iFinishFullScreen->Start( KAlfLongEffectTimeout, TCallBack( ControlTimeout, this ) );
+    
+    iControlTimeout->Start( KAlfLongEffectTimeout, TCallBack( ControlTimeout, this ) );
 	
     return KErrNone;
     }
@@ -1154,11 +1084,9 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
 TInt CAlfServerDrawer::SendFinishControlTransition()
     {
     // We should now delete the effects from any controls that remain active.
-    __ALFFXLOGSTRING(" <- CAlfServerDrawer::SendFinishControlTransition");
-    iTransitionEndObserver->Cancel();
-	iIdle->Cancel(); //cancel if running.
-	iFinishFullScreen->Cancel();
-    
+    __ALFFXLOGSTRING("CAlfServerDrawer::SendFinishControlTransition >>");
+    iControlTransitionEndObserver->Cancel();
+	
     // Send the data to CAlfAppUI via bridge
     TAlfBridgerData bridgerData;
     
@@ -1178,19 +1106,20 @@ TInt CAlfServerDrawer::SendFinishControlTransition()
         TRAP_IGNORE(
             {
             stream.WriteInt32L( MAlfGfxEffectPlugin::EAbortComponentTransition );
-            stream.WriteInt32L( iCurrHandle );
+            stream.WriteInt32L( iCurrentControlHandle );
             stream.WriteInt32L( 0 );
             stream.WriteInt32L( 0 );
             stream.WriteInt32L( 0 );
             stream.WriteInt32L( 0 ); 
             stream.CommitL();    
             });
-        bridgerData.Set( EAlfStopEffectFx, iAction, bufferSize, (TAny*) index );
-        __ALFFXLOGSTRING(" <- CAlfServerDrawer::sending bridgedata");
+			// TODO, check, if iCurrentHandle is approriate
+        bridgerData.Set( EAlfStopControlEffectFx, iCurrentControlHandle, bufferSize, (TAny*) index );
+        __ALFFXLOGSTRING1("CAlfServerDrawer::sending bridgedata, Stop control handle: %d", iCurrentControlHandle);
         iWindowManager->PostIt( bridgerData );
         stream.Close();
         }
-        
+    __ALFFXLOGSTRING("CAlfServerDrawer::SendFinishControlTransition <<");
     return KErrNone;
     }
 	
@@ -1200,26 +1129,65 @@ TInt CAlfServerDrawer::SendFinishControlTransition()
 TInt CAlfServerDrawer::SendAbortControlTransition()
     {
     __ALFFXLOGSTRING(" <- CAlfServerDrawer::SendAbortControlTransition");
-    iTransitionEndObserver->Cancel();
+    iControlTransitionEndObserver->Cancel();
     // We should now delete the effects from any controls that remain active.
     return SendFinishControlTransition();
     }
 
 // ---------------------------------------------------------------------------
+// CAlfServerDrawer::FromUid
 // ---------------------------------------------------------------------------
 //		
 TUid& CAlfServerDrawer::FromUid()
 	{
 	return iFromUid;
 	}
-	
+
 // ---------------------------------------------------------------------------
+// CAlfServerDrawer::FromSid
 // ---------------------------------------------------------------------------
-//		
+//      
+TSecureId& CAlfServerDrawer::FromSid()
+    {
+    return iFromSid;
+    }
+    
+// ---------------------------------------------------------------------------
+// CAlfServerDrawer::FromWg
+// ---------------------------------------------------------------------------
+//      
+TInt CAlfServerDrawer::FromWg()
+    {
+    return iFromWg;
+    }
+
+
+// ---------------------------------------------------------------------------
+// CAlfServerDrawer::ToUid
+// ---------------------------------------------------------------------------
+//   	
 TUid& CAlfServerDrawer::ToUid()
 	{
 	return iToUid;
 	}
+
+// ---------------------------------------------------------------------------
+// CAlfServerDrawer::ToSid
+// ---------------------------------------------------------------------------
+// 
+TSecureId& CAlfServerDrawer::ToSid()
+    {
+    return iToSid;
+    }
+
+// ---------------------------------------------------------------------------
+// CAlfServerDrawer::ToWg
+// ---------------------------------------------------------------------------
+// 
+TInt CAlfServerDrawer::ToWg()
+    {
+    return iToWg;
+    }
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -1238,27 +1206,46 @@ TInt& CAlfServerDrawer::Flags()
 	}
 
 // ---------------------------------------------------------------------------
+// Guarantee, that control and fullscreen handles are unique. 
 // ---------------------------------------------------------------------------
 //		
-void CAlfServerDrawer::IncreaseHandle()
+void CAlfServerDrawer::IncreaseControlHandle()
 	{
-	iCurrHandle++;
+    // handles must be unique, but increasing control handle should not change fullscreen handle
+    TInt highestHandle = iCurrentControlHandle > iCurrentFullScreenHandle ? iCurrentControlHandle : iCurrentFullScreenHandle;
+    highestHandle++;
+    iCurrentControlHandle = highestHandle; 
 	}
 	
+void CAlfServerDrawer::IncreaseFullScreenHandle()
+    {
+    TInt highestHandle = iCurrentControlHandle > iCurrentFullScreenHandle ? iCurrentControlHandle : iCurrentFullScreenHandle;
+    highestHandle++;
+    iCurrentFullScreenHandle = highestHandle;
+    }
+
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 //		
-TInt CAlfServerDrawer::CurrentHandle()
+TInt CAlfServerDrawer::CurrentControlHandle()
 	{
-	return iCurrHandle;
+	return iCurrentControlHandle;
 	}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//      
+TInt CAlfServerDrawer::CurrentFullScreenHandle()
+    {
+    return iCurrentFullScreenHandle;
+    }
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 //		
 void CAlfServerDrawer::StartEndChecker()
 	{
-	iController->StartEndChecker();
+    iFullScreenController->StartEndChecker();
 	}
 	
 // ---------------------------------------------------------------------------
@@ -1266,7 +1253,7 @@ void CAlfServerDrawer::StartEndChecker()
 //		
 void CAlfServerDrawer::CancelEndChecker()
 	{
-	iController->CancelEndChecker();
+    iFullScreenController->CancelEndChecker();
 	}
 
 TInt CAlfServerDrawer::FullScreenTimeout( TAny* aServerDrawer )
@@ -1294,13 +1281,13 @@ TInt CAlfServerDrawer::FinishFullScreenTimeout( TAny* aServerDrawer )
 
 void CAlfServerDrawer::HandleFinishFullScreenTimeout()
     {
-    iTransitionEndObserver->Cancel();
+    iFullScreenTransitionEndObserver->Cancel();
     iFullScreenTimeout->Cancel();
     // if we haven't got a pubsub trigger,
     // we must finish the transition by calling AlfBridge.
     // If we gor the pubsub trigger, AlfBridge has done its part,
     // and all we have to do is release the reserved windows.
-    iController->FullscreenFinished( iCurrHandle );
+    iFullScreenController->FullscreenFinished( iCurrentFullScreenHandle );
     }
 
 TInt CAlfServerDrawer::ControlTimeout( TAny* aServerDrawer )
@@ -1311,25 +1298,37 @@ TInt CAlfServerDrawer::ControlTimeout( TAny* aServerDrawer )
 
 void CAlfServerDrawer::HandleControlTimeout()
     {
-    iTransitionEndObserver->Cancel();
+    iControlTransitionEndObserver->Cancel();
     iFullScreenFinished = EFalse;
-    iFullScreenTimeout->Cancel();
-    iController->EndControlTransition( iCurrHandle );
+    iControlTimeout->Cancel();
+    iControlController->EndControlTransition( iCurrentControlHandle );
     }
 
-TInt CAlfServerDrawer::TransitionFinished( TAny* aServerDrawer )
+TInt CAlfServerDrawer::FullScreenTransitionFinished( TAny* aServerDrawer )
     {
-    static_cast<CAlfServerDrawer*>(aServerDrawer)->HandleTransitionFinished();
+    static_cast<CAlfServerDrawer*>(aServerDrawer)->HandleFullScreenTransitionFinished();
     return KErrNone;
     }
 
-void CAlfServerDrawer::HandleTransitionFinished()
+TInt CAlfServerDrawer::ControlTransitionFinished( TAny* aServerDrawer )
+    {
+    static_cast<CAlfServerDrawer*>(aServerDrawer)->HandleControlTransitionFinished();
+    return KErrNone;
+    }
+
+
+void CAlfServerDrawer::HandleFullScreenTransitionFinished()
     {
     iFullScreenFinished = ETrue;
-    iIdle->Cancel(); //cancel if running.
-	iFinishFullScreen->Cancel();
+    iFinishFullScreen->Cancel();
     iFullScreenTimeout->Cancel();
-    iController->FullscreenFinished( iCurrHandle );
+    iFullScreenController->FullscreenFinished( iCurrentFullScreenHandle );
+    } 
+
+void CAlfServerDrawer::HandleControlTransitionFinished() 
+    {
+    iControlTimeout->Cancel();
+    iControlController->EndControlTransition( iCurrentControlHandle );
     }
 
 

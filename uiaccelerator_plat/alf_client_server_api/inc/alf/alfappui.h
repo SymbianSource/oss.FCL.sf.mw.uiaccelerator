@@ -196,8 +196,13 @@ public: // internal utilities
     void SetAlfWindowGroupId(TInt aWgId);
     void NotifyLowMemory(TInt aAmountOfFreeMemRequested);
     TInt ForceSwRendering(TBool aEnabled);
+    TInt GetSizeAndRotation(TSize& aSize, TInt& aRotation);
+    TInt ReadPixels(CFbsBitmap* aBitmap);
     void SetAlfAppWindowGroup( TInt aID );
     
+    CAlfAppSrvSessionBase* SrvSessionForControlGroup(CHuiControlGroup& aGroup);
+    void DoBlankScreen(const RMessage2& aMessage);
+
 private:
 
     void CreateHuiEnvL();

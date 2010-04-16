@@ -69,6 +69,30 @@ NONSHARABLE_CLASS( RAlfDirectClient ): public RAlfClientBase
      */
     IMPORT_C TInt ForceSwRendering( TBool aEnabled );
     
+    /**
+     * Gets display size and virtual rotation.
+     * @param aSize this will contain size.
+     * @param aRotation this will contain rotation.
+     * @return error code, KErrNone upon success.
+     * @internal
+     */
+    TInt GetSizeAndRotation(TSize& aSize, TInt& aRotation);
+    
+    /**
+     * Reads pixels from surface to bitmap.
+     * @param aBitmapHandle bitmap handle.
+     * @return error code, KErrNone upon success.
+     * @internal
+     */
+    TInt ReadPixels(TInt aBitmapHandle);
+    
+    /**
+     * NGA Substitute for Avkon screen blanker.
+     * Only AknCapserver can use this method (protected using SID)
+     * Does not reference count, i.e. all calls are absolute 
+     * @return error code.
+     */
+    IMPORT_C TInt BlankScreen( TBool aEnabled );    
     };
 
 #endif

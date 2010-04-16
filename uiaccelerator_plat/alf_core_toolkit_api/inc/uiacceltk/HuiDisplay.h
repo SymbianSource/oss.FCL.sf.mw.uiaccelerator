@@ -790,6 +790,14 @@ public:
     IMPORT_C CHuiTexture* ForegroundTexture() const;
     
     /**
+     * Sets foreground texture / bitmap options.
+     * @param aBlendRequired ETrue if texture should be blend, EFalse if copy
+	 *        is sufficient.
+     * @internal
+     */
+    IMPORT_C void SetForegroundTextureOptions(TBool aBlendRequired);
+    
+    /**
      * Sets bitmap which is drawn on top of the frame
      * (when used with @c SetForegroundTexture).
      * 
@@ -805,6 +813,10 @@ public:
      */
     IMPORT_C CFbsBitmap* ForegroundBitmap() const;
     
+    /**
+     * Copy raw screen data to bitmap.
+     */
+    IMPORT_C void CopyScreenToBitmapL(CFbsBitmap* aBitmap);
     
 private:
 
@@ -1007,6 +1019,8 @@ private:
     CFbsBitmapDevice* iForegroundBitmapDevice;
     /** Graphics context for foreground bitmap */
     CFbsBitGc* iForegroundBitmapGc;
+    /** ETrue if foreground texture should be blend, EFalse otherwise */
+    TBool iForegroundTextureTransparency;
     };
 
 #endif  // __HUIDISPLAY_H__

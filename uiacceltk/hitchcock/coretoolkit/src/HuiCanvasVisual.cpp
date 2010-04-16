@@ -77,6 +77,9 @@ NONSHARABLE_STRUCT( CHuiCanvasVisual::THuiCanvasVisualData )
     // For handling possible background surface that window may have
     TBool iLayerUsesAlphaFlag;
     TRect iLayerExtent;
+
+    RRegionBuf<5> iShapeRegion;
+    TPoint iShapeOrigin;
     };
 
 EXPORT_C CHuiCanvasVisual* CHuiCanvasVisual::AddNewL(CHuiControl& aOwnerControl,
@@ -119,6 +122,8 @@ void CHuiCanvasVisual::ConstructL()
 
     iCanvasVisualData->iLayerUsesAlphaFlag = EFalse;
     iCanvasVisualData->iLayerExtent = TRect();
+    
+    iCanvasVisualData->iShapeOrigin = TPoint();
     
     // subwindow effects
     //EnableBrushesL(ETrue);
@@ -166,6 +171,7 @@ CHuiCanvasVisual::~CHuiCanvasVisual()
         iCanvasVisualData->iPaintedRegion.Close();
         iCanvasVisualData->iClipRegion.Close();
         iCanvasVisualData->iChildCanvasList.Close();
+        iCanvasVisualData->iShapeRegion.Close();
         }
     
     delete iCanvasVisualData;
@@ -314,27 +320,37 @@ TBool CHuiCanvasVisual::PrepareDrawL()
     
 TBool CHuiCanvasVisual::CanSkipDrawing() const
     {
-    TBool semiTranparentEffectActive = (Effect() && Effect()->IsSemitransparent());
-    TBool childWindowEffectActive = (Effect() && EffectIsAppliedToChildren());
-    TBool invisible = (iOpacity.Now() <= EPSILON && !semiTranparentEffectActive);
-    TBool effectAppliedToSurfacePixels = (Effect() && (Effect()->EffectFlags() & KHuiFxEnableBackgroundInAllLayers));
-    
-    if( invisible || 
-        (!HasCommandBuffers(ETrue /*include children*/) && 
-         !childWindowEffectActive &&
-         !IsBackgroundDrawingEnabled() && 
-         !IsExternalContentDrawingEnabled()&&
-         !IsExternalContentDrawingEnabled(ETrue /*include children*/) &&
-         !effectAppliedToSurfacePixels
-         
-        ))
+    if (Effect())
         {
-        return ETrue;
+        TBool semiTranparentEffectActive = Effect()->IsSemitransparent();
+        if ((iOpacity.Now() <= EPSILON && !semiTranparentEffectActive))
+            {
+            return ETrue;
+            }
+        TBool childWindowEffectActive = EffectIsAppliedToChildren();
+        TBool effectAppliedToSurfacePixels = (Effect()->EffectFlags() & KHuiFxEnableBackgroundInAllLayers);
+        if( !childWindowEffectActive &&
+            !effectAppliedToSurfacePixels &&
+            !HasCommandBuffers(ETrue /*include children*/) && 
+            !IsBackgroundDrawingEnabled() &&
+            !IsExternalContentDrawingEnabled()&&
+            !IsExternalContentDrawingEnabled(ETrue /*include children*/))
+            {
+            return ETrue;
+            }
         }
     else
         {
-        return EFalse;
+        if (iOpacity.Now() <= EPSILON ||
+            (!HasCommandBuffers(ETrue /*include children*/) && 
+            !IsBackgroundDrawingEnabled() &&
+            !IsExternalContentDrawingEnabled() &&
+            !IsExternalContentDrawingEnabled(ETrue /*include children*/)) )
+            {
+            return ETrue;
+            }
         }
+    return EFalse;
     }
 
 void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
@@ -548,7 +564,14 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
     
     // Draws background if it has been defined
     if (drawVisualContent && IsBackgroundDrawingEnabled())
-        { 
+        {
+        if (iCanvasVisualData->iCanvasPainter && 
+            !iCanvasVisualData->iLayerExtent.IsEmpty())
+            {
+            // In SW rendering case, we support only clearing with transparent.
+            iCanvasVisualData->iCanvasPainter->ClearCapturingBufferArea(aDisplayRect);
+            }
+            
         iCanvasVisualData->iBackground->DrawSelf(aGc, aDisplayRect); 
         }
 
@@ -1209,6 +1232,32 @@ EXPORT_C void CHuiCanvasVisual::SetLayerExtent(TRect& aExtent)
     }
 
 
+EXPORT_C void CHuiCanvasVisual::SetShape(const TPoint& aOrigin, const TRegion& aRegion)
+    {
+    iCanvasVisualData->iShapeOrigin = aOrigin;
+    iCanvasVisualData->iShapeRegion.Copy(aRegion);
+    if ( iCanvasVisualData->iShapeRegion.CheckError() )
+        {
+        // fallback to full
+        iCanvasVisualData->iShapeRegion.Clear();
+        }
+    }
+    
+EXPORT_C TBool CHuiCanvasVisual::HasCustomShape() const
+    {
+    return iCanvasVisualData->iShapeRegion.Count();
+    }
+    
+EXPORT_C TPoint CHuiCanvasVisual::ShapeOrigin() const
+    {
+    return iCanvasVisualData->iShapeOrigin;
+    }
+    
+EXPORT_C const TRegion& CHuiCanvasVisual::ShapeRegion() const
+    {
+    return iCanvasVisualData->iShapeRegion;
+    }
+
 TBool CHuiCanvasVisual::IsCanvasClippingEnabled() const
     {
     return iCanvasVisualData->iCanvasFlags & EHuiCanvasFlagEnableCanvasClipping; 
@@ -1483,4 +1532,14 @@ void CHuiCanvasVisual::CollectRecursivePaintedRegion(TRegion& aRecursivePaintReg
             }
         }    
     aRecursivePaintRegion.Tidy();
+    }
+
+EXPORT_C TRect CHuiCanvasVisual::CommandBufferCoverage(TInt aOrientation)
+    {
+    return iCanvasVisualData->iCanvasPainter->CommandBufferCoverage(aOrientation); 
+    }
+
+EXPORT_C TBool CHuiCanvasVisual::HasTransParentClear() const
+    {
+    return iCanvasVisualData->iCanvasPainter->HasCommandBuffers(EHuiCanvasBufferContainsTransparentClear);
     }

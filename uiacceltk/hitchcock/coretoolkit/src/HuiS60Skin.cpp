@@ -59,7 +59,6 @@ EXPORT_C void CHuiS60Skin::ConstructL()
     iSkinControlContext = CAknsBasicBackgroundControlContext::NewL(
         KAknsIIDQsnBgScreen, TRect(TPoint(0, 0), HuiUtil::ScreenSize()), ETrue);
     iSpare = new (ELeave) TPrivData;
-    iSkinChanged = ETrue;
     }
 
 
@@ -143,7 +142,7 @@ void CHuiS60Skin::UpdateBackgroundL()
         iBackgroundTexture->SetSkinContent(ETrue);
         iBackgroundTexture->iContentObservers.AppendL(*this);
         }
-    else if(iSkinChanged)
+    else if(iReloadBackground || !iBackgroundTexture->HasContent() )
         {
         iBackgroundTexture->Reset();
         delete iBackgroundBitmap;
@@ -163,15 +162,45 @@ void CHuiS60Skin::UpdateBackgroundL()
     HUI_DEBUG1(_L("CHuiS60Skin::UpdateBackgroundL - Free memory at exit: %i"), HuiUtil::FreeMemory());
     }
 
+void CHuiS60Skin::FreeAllBackgroundTextureResources()
+    {
+    // delete old contents
+
+    TBackgroundTexture bgTexture;
+    TInt itemCount = ((TPrivData*)(iSpare))->iBackgrounds.Count(); 
+    for (TInt index = 0; index < itemCount; index++)
+        {
+        bgTexture = ((TPrivData*)(iSpare))->iBackgrounds[index];
+        if( bgTexture.iBackgroundTexture )
+            {
+            bgTexture.iBackgroundTexture->Reset();
+            }
+        }
+    
+    delete iBackgroundTexture;
+    iBackgroundTexture = NULL;
+    delete iBackgroundBitmap;
+    iBackgroundBitmap = NULL;
+    iBackgroundRect = TRect(0,0,0,0);
+    iCachedSkinItems.ResetAndDestroy();      
+    }
+
 
 EXPORT_C void CHuiS60Skin::SkinContentChanged()
     {
-    iSkinChanged = ETrue;
+    
     }
 
 EXPORT_C void CHuiS60Skin::SkinConfigurationChanged(
     const TAknsSkinStatusConfigurationChangeReason aReason )
     {
+    if (aReason == EAknsSkinStatusConfigurationDeployed)
+        {
+        FreeAllBackgroundTextureResources();
+        Env().NotifySkinChangedL();
+        Env().TextStyleManager().NotifyDisplaySizeChangedL();
+        ReloadBgTexturesL();
+        }
     
     }
 
@@ -191,7 +220,8 @@ EXPORT_C const CHuiTexture& CHuiS60Skin::TextureL(TInt aSkinTextureId)
     if(aSkinTextureId == EHuiSkinBackgroundTexture && 
     	CHuiStatic::Renderer().Id () != EHuiRenderPluginBitgdi) 
         {
-        if(!iBackgroundTexture || iReloadBackground || iSkinChanged)
+        if(!iBackgroundTexture || ( iBackgroundTexture && !iBackgroundTexture->HasContent() ) ||  
+           iReloadBackground )            
             {
             UpdateBackgroundL();
             iReloadBackground = EFalse;
@@ -227,12 +257,8 @@ EXPORT_C void CHuiS60Skin::ReleaseTexture(TInt aSkinTextureResource)
 EXPORT_C void CHuiS60Skin::NotifyDisplaySizeChangedL()
     {
     // The background is now different.
-    SkinContentChanged(); // for changing the iSkinChanged flag
-    Env().NotifySkinChangedL();
-    Env().TextStyleManager().NotifyDisplaySizeChangedL();
-    ReloadBgTexturesL();
-
-    iSkinChanged = EFalse;
+     SkinConfigurationChanged(EAknsSkinStatusConfigurationDeployed);
+    
     }
 
 
@@ -343,7 +369,7 @@ CHuiTexture* CHuiS60Skin::CreateSkinBackgroundL(const TAknsItemID& aID)
 
         CFbsBitmap* bitmap = new (ELeave) CFbsBitmap();
         CleanupStack::PushL(bitmap);
-        User::LeaveIfError( bitmap->Create(skinrect.Size(), EColor64K) );        
+        User::LeaveIfError( bitmap->Create(skinrect.Size(), EColor16MAP) );        
 
         CFbsBitmapDevice* device = CFbsBitmapDevice::NewL(bitmap);
         CleanupStack::PushL(device);
@@ -366,7 +392,7 @@ CHuiTexture* CHuiS60Skin::CreateSkinBackgroundL(const TAknsItemID& aID)
     else
         {
         CFbsBitmap* bitmap = SearchCachedSkinItemBitmap(aID);
-        if(iSkinChanged || !bitmap)
+        if(!bitmap)
             {
             TRect skinrect;
             TRect dummy;
@@ -427,7 +453,11 @@ void CHuiS60Skin::ReloadBgTexturesL()
         {
         bgTexture = ((TPrivData*)(iSpare))->iBackgrounds[index];
         delete bgTexture.iBackgroundTexture;
+        bgTexture.iBackgroundTexture = NULL;
+        // put back. In case of a leave NULL texture is stored and we can try to re-create it later
+        ((TPrivData*)(iSpare))->iBackgrounds[index] = bgTexture; 
         bgTexture.iBackgroundTexture = CreateSkinBackgroundL(bgTexture.iID);
+        // texture created succesfully
         ((TPrivData*)(iSpare))->iBackgrounds[index] = bgTexture;
         }
     }
@@ -449,8 +479,18 @@ void CHuiS60Skin::UpdateBackgroundsL(const RArray<THuiDisplayBackgroundItem>& aI
         if (bgItem.ClearMode() == CHuiDisplay::EClearWithSkinBackground)
             {
             bgTexture.iID = bgItem.SkinBackground();
-            bgTexture.iBackgroundTexture = CreateSkinBackgroundL(bgItem.SkinBackground());
-            ((TPrivData*)(iSpare))->iBackgrounds.Append(bgTexture);
+            bgTexture.iBackgroundTexture = NULL;
+            TRAPD(err, bgTexture.iBackgroundTexture = CreateSkinBackgroundL(bgItem.SkinBackground()));
+            // if texture creation failed because our own internal services were busy
+            // still append NULL texture so we know to try it again later
+            if(err == KErrNone || err == KErrTimedOut )
+                { 
+                ((TPrivData*)(iSpare))->iBackgrounds.Append(bgTexture);
+                }
+            else
+                {
+                User::Leave(err);
+                }
             }
         }           
     }
@@ -473,6 +513,19 @@ EXPORT_C CHuiTexture* CHuiS60Skin::BackgroundTexture(const TAknsItemID& aID)
         bgTexture = ((TPrivData*)(iSpare))->iBackgrounds[index];
         if (bgTexture.iID == aID)
             {
+            if(!bgTexture.iBackgroundTexture && !bgTexture.iBackgroundTexture->HasContent())
+                {
+                delete bgTexture.iBackgroundTexture;
+                bgTexture.iBackgroundTexture = NULL;
+                TRAPD(err, bgTexture.iBackgroundTexture = CreateSkinBackgroundL(bgTexture.iID));
+                // put bgTexture back to the array also in leave cases
+                // otherwise we could leave invalid pointer in array
+                ((TPrivData*)(iSpare))->iBackgrounds[index] = bgTexture;
+                if(err)
+                    {
+                    return NULL; // creating failed for some reason
+                    }
+                }
             return bgTexture.iBackgroundTexture;
             }
         }

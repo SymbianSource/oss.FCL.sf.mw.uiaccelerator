@@ -27,9 +27,9 @@ threshold values are used.
 -->
 	<app_specific_thresholds>
 
-  <app uid="101F857A" low_ram_threshold="28000" good_ram_threshold="30000" target_free_on_startup="22000" skip_plugin="2002B3AE"></app> <!-- Camera --> 
-  <app uid="200159B2" low_ram_threshold="5000" good_ram_threshold="10000" target_free_on_startup="26000" skip_plugin="2002B3AE"></app> <!-- MPlayer -->
-  <app uid="102824CD" low_ram_threshold="26000" good_ram_threshold="28000" skip_plugin="2002B3AE"></app> <!-- Embedded mplayer -->
+  <app uid="101F857A" low_ram_threshold="5000" good_ram_threshold="26000" skip_plugin="2002B3AE"></app> <!-- Camera --> 
+  <app uid="200159B2" low_ram_threshold="5000" good_ram_threshold="10000" skip_plugin="2002B3AE"></app> <!-- MPlayer -->
+  <app uid="102824CD" low_ram_threshold="5000" good_ram_threshold="10000" skip_plugin="2002B3AE"></app> <!-- Embedded mplayer -->
   <app uid="200009EE" low_ram_threshold="3637" good_ram_threshold="10000" target_free_on_startup="15000"></app> <!-- Photos -->
   <app uid="101FD693" low_ram_threshold="5000" good_ram_threshold="10000" target_free_on_startup="26000"></app> <!-- Flashlite -->
 
@@ -72,7 +72,7 @@ threshold values are used.
 -->
 		<system_plugin uid="DEFAULT_PLUGIN" priority="10" sync_mode="check"></system_plugin>
 		<system_plugin uid="E4B6C988" priority="3" sync_mode="check"></system_plugin> <!-- ALFOOGMPLUGIN -->
-		<system_plugin uid="2002C30A" priority="5" sync_mode="check" wait="1000"></system_plugin> <!-- FLASHOOGMPLUGIN -->
+		<system_plugin uid="2002C30A" priority="5" sync_mode="continue"></system_plugin> <!-- FLASHOOGMPLUGIN -->
 	</system_plugin_settings>
 	
 <!--	The priority of executing each application plugin is defined here.

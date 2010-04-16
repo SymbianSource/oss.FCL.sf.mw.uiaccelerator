@@ -538,6 +538,9 @@ enum TAlfredServerIPC
 
     EAlfEnableLowMemoryState = 4300,
     EAlfForceSwRendering,
+    EAlfBlankScreen,
+    EAlfGetSizeAndRotation,
+    EAlfReadPixels,
     
     EAlfLastReservedOpCmd = 10000
     };

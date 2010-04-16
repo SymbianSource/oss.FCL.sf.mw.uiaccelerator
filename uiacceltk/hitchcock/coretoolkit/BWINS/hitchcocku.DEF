@@ -1585,4 +1585,14 @@ EXPORTS
 	?SkinPackageChanged@CHuiS60Skin@@UAEXW4TAknsSkinStatusPackageChangeReason@@@Z @ 1584 NONAME ; void CHuiS60Skin::SkinPackageChanged(enum TAknsSkinStatusPackageChangeReason)
 	?SkinConfigurationChanged@CHuiS60Skin@@UAEXW4TAknsSkinStatusConfigurationChangeReason@@@Z @ 1585 NONAME ; void CHuiS60Skin::SkinConfigurationChanged(enum TAknsSkinStatusConfigurationChangeReason)
 	?Synchronize@CHuiEnv@@QAEXHPAVMHuiSynchronizationObserver@@@Z @ 1586 NONAME ; void CHuiEnv::Synchronize(int, class MHuiSynchronizationObserver *)
+	?SetForegroundTextureOptions@CHuiDisplay@@QAEXH@Z @ 1587 NONAME ; void CHuiDisplay::SetForegroundTextureOptions(int)
+	?ShapeOrigin@CHuiCanvasVisual@@QBE?AVTPoint@@XZ @ 1588 NONAME ; class TPoint CHuiCanvasVisual::ShapeOrigin(void) const
+	?HasCustomShape@CHuiCanvasVisual@@QBEHXZ @ 1589 NONAME ; int CHuiCanvasVisual::HasCustomShape(void) const
+	?ShapeRegion@CHuiCanvasVisual@@QBEABVTRegion@@XZ @ 1590 NONAME ; class TRegion const & CHuiCanvasVisual::ShapeRegion(void) const
+	?SetShape@CHuiCanvasVisual@@QAEXABVTPoint@@ABVTRegion@@@Z @ 1591 NONAME ; void CHuiCanvasVisual::SetShape(class TPoint const &, class TRegion const &)
+	?CommandBufferCoverage@CHuiCanvasVisual@@QAE?AVTRect@@H@Z @ 1592 NONAME ; class TRect CHuiCanvasVisual::CommandBufferCoverage(int)
+	?CopyScreenToBitmapL@CHuiDisplay@@QAEXPAVCFbsBitmap@@@Z @ 1593 NONAME ; void CHuiDisplay::CopyScreenToBitmapL(class CFbsBitmap *)
+	?SecureId@CHuiControlGroup@@QAEHXZ @ 1594 NONAME ; int CHuiControlGroup::SecureId(void)
+	?SetSecureId@CHuiControlGroup@@QAEXH@Z @ 1595 NONAME ; void CHuiControlGroup::SetSecureId(int)
+	?HasTransParentClear@CHuiCanvasVisual@@QBEHXZ @ 1596 NONAME ; int CHuiCanvasVisual::HasTransParentClear(void) const
 

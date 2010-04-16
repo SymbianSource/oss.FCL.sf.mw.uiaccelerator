@@ -40,6 +40,7 @@ public:
     virtual void ParsingEndedBefore()=0;
     virtual void ParsingEndedAfter(MHuiFxEffectCacheNode *aCached)=0;
     virtual TBool FxmlUsesInput1()=0;
+    virtual void Delete()=0;
 };
 
 class CHuiFxEffectCache : public CBase, public MHuiFxParsingEndedObserver
@@ -103,6 +104,7 @@ public: // from MHuiFxEffectCacheNode
      void ParsingEndedBefore();
      void ParsingEndedAfter(MHuiFxEffectCacheNode *aCached);
      TBool FxmlUsesInput1();
+     void Delete();
 
 private:
      const TDesC *iFileName;

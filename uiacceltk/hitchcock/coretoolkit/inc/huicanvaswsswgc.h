@@ -148,6 +148,8 @@ public:
     virtual TInt EnableRenderbuffer(TBool aEnable = ETrue);
     virtual THuiCanvasWsGcType Type() const;
 
+    virtual void ClearCapturingBufferArea(const TRect& aRect);
+    
 protected:
     
     void DoBeginDrawL(TBool aIsCachePrepared);

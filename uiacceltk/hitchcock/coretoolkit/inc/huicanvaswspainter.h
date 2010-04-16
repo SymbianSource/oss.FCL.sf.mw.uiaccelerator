@@ -158,6 +158,7 @@ public: // From CHuiCanvasPainter
      */
     virtual CHuiCanvasGc& CanvasGc() const;
     CHuiCanvasWsGc *CanvasWsGc() const { return iCanvasWsGc; }
+
 private:
 
     /**
@@ -281,6 +282,8 @@ private:
     void WsUseFontL() ;
 	void WsSetShapeRegionL( TInt aIndex );
     
+    virtual void ClearCapturingBufferArea(const TRect& aRect);
+    
 private:
     
     /** Region which this painter updates with current command buffers */
@@ -318,6 +321,8 @@ private:
     TRgb iTestBrushColor;
     TRect iTestFullDisplayRect;
     #endif
+	
+	TRgb iBrushColor;
 	
 	// Stream read optimizations
     struct TStructBitBlitRect

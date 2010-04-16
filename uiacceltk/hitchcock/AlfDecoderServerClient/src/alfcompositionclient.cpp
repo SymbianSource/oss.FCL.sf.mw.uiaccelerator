@@ -258,6 +258,11 @@ void CAlfCompositionCntrlClient::HandleEventL(TInt aEventType, TAny* aEventData)
         return;
         }    
     
+    if (aEventType == KAlfCompositionLayoutSwitchComplete && iController)
+        {
+        iController->AlfBridgeCallback(KAlfCompositionLayoutSwitchComplete, NULL);
+        }
+    
     TInt* ptr = static_cast<TInt*>(aEventData);
     TInt target;
     
@@ -386,7 +391,18 @@ void CAlfCompositionCntrlClient::HandleEventL(TInt aEventType, TAny* aEventData)
             iController->DeleteTarget(target);
             break;
             }
-            
+        
+        case KAlfCompositionTargetVisible:
+            {
+            iController->HideTarget(target, EFalse);
+            break;
+            }    
+
+        case KAlfCompositionTargetHidden:
+            {
+            iController->HideTarget(target, ETrue);
+            break;
+            }    
         default:
             break;
         }
@@ -813,6 +829,8 @@ NONSHARABLE_CLASS(CAlfCompositionPixelSource::CAlfCompositionPixelSourceData):pu
     TInt iCurrentBuffer;
     
     TRect iSurfaceRect;
+    
+    TInt iWaiterAoPriority;
     };
 
 
@@ -825,10 +843,24 @@ EXPORT_C CAlfCompositionPixelSource* CAlfCompositionPixelSource::NewL(MAlfBuffer
     {
     CAlfCompositionPixelSource* me = new (ELeave) CAlfCompositionPixelSource();
     CleanupStack::PushL(me);
-    me->ConstructL(aProvider, aWindow);
+    me->ConstructL(aProvider, CActive::EPriorityIdle, aWindow);
     CleanupStack::Pop(me);
     return me;    
     }
+
+// ---------------------------------------------------------------------------
+// CAlfCompositionPixelSource::NewL
+// ---------------------------------------------------------------------------
+//
+EXPORT_C CAlfCompositionPixelSource* CAlfCompositionPixelSource::NewL(MAlfBufferProvider& aProvider, TInt aPriority, RWindow* aWindow)
+    {
+    CAlfCompositionPixelSource* me = new (ELeave) CAlfCompositionPixelSource();
+    CleanupStack::PushL(me);
+    me->ConstructL(aProvider, aPriority, aWindow);
+    CleanupStack::Pop(me);
+    return me;    
+    }
+
 
 // ---------------------------------------------------------------------------
 // CAlfCompositionPixelSource::ActivateL
@@ -862,7 +894,7 @@ EXPORT_C void CAlfCompositionPixelSource::ActivateL()
         {
         if( !iData->iSurfaceUpdateWaiter )
             {
-            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, CActive::EPriorityIdle );
+            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, iData->iWaiterAoPriority );
             }
 
         iData->iSurfaceUpdateWaiter->SetActive();
@@ -950,9 +982,11 @@ EXPORT_C TInt CAlfCompositionPixelSource::SetExtent(const TRect& aRect, TInt aSc
 // CAlfCompositionPixelSource::ConstructL
 // ---------------------------------------------------------------------------
 //
-void CAlfCompositionPixelSource::ConstructL(MAlfBufferProvider& aProvider, RWindow* aWindow)
+void CAlfCompositionPixelSource::ConstructL(MAlfBufferProvider& aProvider, TInt aPriority, RWindow* aWindow)
     {
     iData = CAlfCompositionPixelSourceData::NewL( aProvider );
+    iData->iWaiterAoPriority = aPriority;
+
     TInt screenNumber = KErrNotFound;
     if( aWindow )
         {

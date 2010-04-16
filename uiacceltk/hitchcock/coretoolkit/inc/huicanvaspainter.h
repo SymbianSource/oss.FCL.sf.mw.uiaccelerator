@@ -49,6 +49,7 @@ enum THuiCanvasBufferStatusFlags
     
     /** Flag to say wheter buffer really contains somethign that really draws something */
     EHuiCanvasBufferContainsDrawing = 0x8000,
+    EHuiCanvasBufferContainsTransparentClear = 0x10000,
     /** All flags, can be used for clearing all flags */
     EHuiCanvasBufferStatusAll = 0xFFFFFFFF
     };
@@ -294,6 +295,12 @@ public:
     virtual CHuiCanvasGc& CanvasGc() const = 0;
     
     /**
+     * Clears capturing buffer area with completely transparent.
+     * @param aRect rect to clear.
+     */ 
+    virtual void ClearCapturingBufferArea(const TRect& aRect);
+    
+    /**
      * Sets canvas visual that this painter draws into
      */
     void SetVisual(CHuiCanvasVisual* aVisual);
@@ -353,6 +360,11 @@ public:
      * Does this painter have command buffers older than given time.
      */
     TBool HasOldCommandBuffers(TInt aLifeTimeInMs);
+    
+    /**
+     * Returns the area covered by buffers in the given orientation
+     */
+    TRect CommandBufferCoverage(TInt aOrientation);
 
     TInt NumBuffers() const { return iCommandBuffers.Count(); }
     CHuiCanvasCommandBuffer *At(TInt aIndex) const { return iCommandBuffers[aIndex]; }

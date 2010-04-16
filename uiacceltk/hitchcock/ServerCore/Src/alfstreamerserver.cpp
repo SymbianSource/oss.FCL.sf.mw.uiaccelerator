@@ -26,6 +26,7 @@
 #include "alfstreamerbridge.h"
 #include "alfwindowmanager.h"
 #include "alfhierarchymodel.h"
+#include "alflogger.h"
 #include <ecom.h>
 #include <alf/AlfTransEffectPlugin.h>
 #include <alf/AlfTransEffectPlugin.hrh>
@@ -160,9 +161,13 @@ void CAlfStreamerServer::ConstructL()
 // NewSessionL
 // ---------------------------------------------------------------------------
 //   
-CSession2* CAlfStreamerServer::NewSessionL(const TVersion& /*aVersion*/,const RMessage2& /*aMessage*/) const
+CSession2* CAlfStreamerServer::NewSessionL(const TVersion& /*aVersion*/,const RMessage2& aMessage) const
     {
-	CSession2* newSession = new(ELeave) CAlfStreamerServerSession();
+    RThread t;    
+    aMessage.Client(t);
+    CleanupClosePushL(t);
+	CSession2* newSession = new(ELeave) CAlfStreamerServerSession(t.Id());
+    CleanupStack::PopAndDestroy();
     iSessions++;
     
     return newSession;   
@@ -187,9 +192,13 @@ CAlfStreamerServerSession* CAlfStreamerServer::WservSession(TInt aScreenNumber)
 // HandleClientExit
 // ---------------------------------------------------------------------------
 //   
-void CAlfStreamerServer::HandleClientExit(const CSession2* /*aClient*/)
+void CAlfStreamerServer::HandleClientExit(const CAlfStreamerServerSession* aClient)
     {
     iSessions--;
+    if (WindowMgr())
+        {
+        WindowMgr()->HandleClientExit(aClient->ThreadId());
+        }
     if (!iSessions)
         {
         // CActiveScheduler::Stop(); // TODO: lets not die, if client dies.
@@ -209,6 +218,7 @@ CAlfStreamerServer::~CAlfStreamerServer()
     iCompositionHostSessions.Close();
     iCompositionTokens.Close();
     iWindowServerSessions.Close();
+    iAlfTargets.Close();
     }
 
 void CAlfStreamerServer::AppendCompositionSessionL(CAlfStreamerServerSession* aSession, TBool aHost)
@@ -282,56 +292,137 @@ void CAlfStreamerServer::RemoveCompositionSession(CAlfStreamerServerSession* aSe
 
 void CAlfStreamerServer::HandleCompositionRequestL(CAlfStreamerServerSession* aSession, TInt aOp, const RMessage2& aMessage)
     {
-    CAlfStreamerServerSession* wservsession = WservSession( aSession->ScreenNumber() );
-
     TInt length = aMessage.GetDesLength(0);
     User::LeaveIfError(length);
     HBufC8* message = HBufC8::NewLC(length+4);
     TPtr8 clientBuf = message->Des();
     aMessage.ReadL(0,clientBuf);
-
-    if(aOp == KAlfCompOpSetExtent) 
-        {
-        TInt* ptr = (TInt*)clientBuf.Ptr();
-        TInt screennumber = ptr[4];
-        if(screennumber!=aSession->ScreenNumber())
-            {
-            aSession->ExtentSurfaceId().iInternal[0] = ptr[5];
-            aSession->ExtentSurfaceId().iInternal[1] = ptr[6];
-            aSession->ExtentSurfaceId().iInternal[2] = ptr[7];
-            aSession->ExtentSurfaceId().iInternal[3] = ptr[8];
-            wservsession = WservSession( screennumber );
-            }
-        }
-    else if(aOp == KAlfCompOpSessionClosed)
-        {
-        FreeCompositionSessionExtents(aSession);
-        }
-    
-    TInt session = reinterpret_cast<TInt>(aSession);
-    clientBuf.Insert(0, TPtrC8((TUint8*)&session ,sizeof(TInt)));
-    
-    if( wservsession ) // don't send to any wservsession if composition source does not have a window anywhere and this is not SetExtent operation
-        {
-        QueueRequestForSessionL(wservsession, clientBuf, aOp);
-        }
-    
-    CleanupStack::PopAndDestroy(); // unefficient..
  
-    if (!wservsession)
-        {
-        aMessage.Complete(KErrNotReady);
-        return;
-        }
-    
+    HandleCompositionRequestL(aSession,aOp, clientBuf);
+        
     if( aOp == KAlfCompOpCreateSource )
         {
         AppendCompositionSessionL(aSession);
+        TAlfCompParams* param = (TAlfCompParams*)clientBuf.Ptr();
+        for (TInt i = iAlfTargets.Count()-1;i >= 0; i--)
+            {
+            if (iAlfTargets[i].iWindowHandle == param->iWindowHandle&& 
+                iAlfTargets[i].iWindowGroup == param->iWindowGroup)
+                {
+                aSession->AlfToken() = iAlfTargets[i].iTarget;
+                __ALFLOGSTRING("CAlfStreamerServer::HandleCompositionRequestL(): Found ALF token for composition session")
+                }     
+            }    
         aMessage.Complete(reinterpret_cast<TInt>(aSession));
         }
     else if ( aOp != KAlfCompOpSetZOrder )
         {
         aMessage.Complete(KErrNone);
+        }
+
+    CleanupStack::PopAndDestroy(); // unefficient..
+    }
+
+void CAlfStreamerServer::HandleCompositionRequestL(CAlfStreamerServerSession* aSession, TInt aOp, TPtr8& aClientBuf)
+    {
+    CAlfStreamerServerSession* wservsession = WservSession( aSession ? aSession->ScreenNumber() : 0 );
+    if (!wservsession)
+        {
+        __ALFLOGSTRING("CAlfStreamerServer::HandleCompositionRequestL(): Window server not connected yet")
+        User::Leave(KErrNotReady);
+        }
+        
+    if( aSession )
+        {
+        if(aOp == KAlfCompOpSetExtent ) 
+            {
+            TInt* ptr = (TInt*)aClientBuf.Ptr();
+            TInt screennumber = ptr[4];
+            if(screennumber!=aSession->ScreenNumber())
+                {
+                aSession->ExtentSurfaceId().iInternal[0] = ptr[5];
+                aSession->ExtentSurfaceId().iInternal[1] = ptr[6];
+                aSession->ExtentSurfaceId().iInternal[2] = ptr[7];
+                aSession->ExtentSurfaceId().iInternal[3] = ptr[8];
+                wservsession = WservSession( screennumber);
+                }
+            }
+        else if(aOp == KAlfCompOpSessionClosed)
+            {
+            FreeCompositionSessionExtents(aSession);
+            }
+        TInt targetId = reinterpret_cast<TInt>(aSession);
+        aClientBuf.Insert(0, TPtrC8((TUint8*)&targetId,sizeof(TInt)));
+        } 
+    
+    if( wservsession ) // don't send to any wservsession if composition source does not have a window anywhere and this is not SetExtent operation
+        {
+        QueueRequestForSessionL(wservsession, aClientBuf, aOp);
+        }
+    }
+
+void CAlfStreamerServer::CreatePermissionTokenL(TInt aAlfToken, TInt aWindowHandle, TInt aWindowGroup)
+    {
+    __ALFLOGSTRING3("CAlfStreamerServer::CreatePermissionTokenL %d, %d, %d >>",aAlfToken,aWindowHandle,aWindowGroup)
+    TAlfCompParams param = {aAlfToken, aAlfToken, aWindowHandle, aWindowGroup};
+    if (iAlfTargets.Find(param) != KErrNotFound)
+        {
+        __ALFLOGSTRING("CAlfStreamerServer::CreatePermissionTokenL: Already added")
+        return;
+        }    
+    TPckg<TAlfCompParams> ptr(param);
+    HandleCompositionRequestL(0, KAlfCompOpCreateSource, ptr);
+    User::LeaveIfError(iAlfTargets.Append(param));
+    __ALFLOGSTRING("CAlfStreamerServer::CreatePermissionTokenL <<")
+    }
+
+void CAlfStreamerServer::ReleasePermissionTokenL(TInt aAlfToken)
+    {
+    __ALFLOGSTRING("CAlfStreamerServer::ReleasePermissionTokenL >>")
+    RemoveTargetFromInactiveSurfaces(aAlfToken);
+    for (TInt i = 0; i < iAlfTargets.Count(); i++)
+        {
+        if (iAlfTargets[i].iTarget == aAlfToken)
+            {
+            TPckg<TInt> ptr(aAlfToken);
+            HandleCompositionRequestL(0, KAlfCompOpSessionClosed, ptr);        
+            iAlfTargets.Remove(i);
+            __ALFLOGSTRING("CAlfStreamerServer::ReleasePermissionTokenL: Found <<")
+            return;
+            }
+        }
+    __ALFLOGSTRING("CAlfStreamerServer::ReleasePermissionTokenL: Not Found <<")
+    }
+
+void CAlfStreamerServer::QueueRequestSessionsL(TInt aAlfToken, const TPtrC8& aPtr, TInt aOp)
+    {
+    __ALFLOGSTRING("CAlfStreamerServer::QueueRequestSessionsL >>")
+    for(TInt i = iCompositionSessions.Count()-1; i >= 0; i-- )
+        {
+        if (iCompositionSessions[i]->AlfToken() == aAlfToken)
+            {
+            if (iCompositionSessions[i]->IsBgAnimSession() && 
+                (aOp == KAlfCompositionTargetHidden || aOp == KAlfCompositionTargetVisible ))
+                { // omit
+                continue;    
+                }        
+                    
+            __ALFLOGSTRING("CAlfStreamerServer::QueueRequestSessionsL: Session found")
+            iCompositionSessions[i]->QueueL(aPtr, aOp);
+            }
+        }
+    __ALFLOGSTRING("CAlfStreamerServer::QueueRequestSessionsL <<")
+    }
+
+
+void CAlfStreamerServer::QueueRequestBGAnimSessionsL(const TPtrC8& aPtr, TInt aOp)
+    {
+    for(TInt i = iCompositionSessions.Count()-1; i >= 0; i-- )
+        {
+        if (iCompositionSessions[i]->IsBgAnimSession())
+            {
+            iCompositionSessions[i]->QueueL(aPtr, aOp);
+            }
         }
     }
 
@@ -367,14 +458,14 @@ TInt CAlfStreamerServer::CreatePermissionToken(const RMessage2& aMessage, TInt a
     TInt* ptr = (TInt*) clientBuf.Ptr();
     TInt newkey = Math::Random();
     
-    TRAPD( err, iCompositionTokens.AppendL( CCompositionToken( newkey, ptr[0] /* customer specified key */,
+    TRAPD( err, iCompositionTokens.AppendL( TCompositionToken( newkey, ptr[0] /* customer specified key */,
                                                                 ptr[1] /*flags*/, aTarget,
                                                                 aSession->ScreenNumber() ) ) );
     if (err)
         {
         newkey = 0;
         }
-    RDebug::Print(_L("CAlfStreamerServer::CreatePermissionToken - newkey %d target: %d, err: %d"), newkey, aTarget, err );
+    __ALFLOGSTRING3("CAlfStreamerServer::CreatePermissionToken - newkey %d target: %d, err: %d", newkey, aTarget, err )
             
     CleanupStack::PopAndDestroy(message);
     return newkey; 
@@ -456,7 +547,7 @@ void CAlfStreamerServer::HandleCompositionEventL(CAlfStreamerServerSession* aSes
         }
     
     if ( aOp == KAlfCompositionLowOnGraphicsMemory ||  aOp == KAlfCompositionGoodOnGraphicsMemory 
-		|| aOp == KAlfCompositionTargetHidden ||aOp == KAlfCompositionTargetVisible)
+		|| aOp == KAlfCompositionTargetHidden ||aOp == KAlfCompositionTargetVisible  || aOp == KAlfCompositionLayoutSwitchComplete)
         {
         aMessage.Complete(KErrNone);
         QueueRequestAllSessionsL(KNullDesC8(), aOp, ETrue);    
@@ -488,7 +579,7 @@ void CAlfStreamerServer::HandleCompositionEventL(CAlfStreamerServerSession* aSes
                     {
 
                     TRAPD( err, iCompositionTokens.AppendL( 
-                            CCompositionToken(
+                            TCompositionToken(
                             ptr[1], // new token
                             ptr[2], // secret key
                             0,
@@ -538,11 +629,74 @@ void CAlfStreamerServer::FreeCompositionSessionExtents(CAlfStreamerServerSession
         }
     }
 
+void CAlfStreamerServer::RemoveTargetFromInactiveSurfaces(TInt aTarget)
+    {
+    for (TInt i = 0; i<iInactiveSurfaces.Count(); i++)
+        {
+        if (aTarget == iInactiveSurfaces[i].iTarget)
+            {
+            iInactiveSurfaces.Remove(i);
+            break;
+            }    
+        }  
+    }
+    
+void CAlfStreamerServer::AddTargetFromInactiveSurfaces(TInt aTarget)
+    {
+    for (TInt i = 0; i<iInactiveSurfaces.Count(); i++)
+        {
+        if (aTarget == iInactiveSurfaces[i].iTarget)
+            {
+            return;
+            }    
+        }
+
+    for (TInt i = 0; i<iAlfTargets.Count(); i++)
+        {
+        if (aTarget == iAlfTargets[i].iTarget)
+            { // ret value ignored intentionally
+            iInactiveSurfaces.Append(iAlfTargets[i]);
+            break;
+            }    
+        }
+    }
+    
+void CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aMessage, TBool aActiveAlso)
+    {
+    RArray<TAlfCompParams>& arrayRef = aActiveAlso?iAlfTargets:iInactiveSurfaces;
+        
+    TInt count = arrayRef.Count();    
+   __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL >> count %d", count)
+    if ( count == 0)
+        {
+        aMessage.Complete(KErrNotFound);
+        return;
+        }
+                
+    TInt maxLength = aMessage.GetDesMaxLength(0);
+    TInt* array = new (ELeave) TInt [maxLength/4];
+    
+    count = Min(maxLength/4-1, count);
+    for ( TInt i = 0; i<count; i++ ) 
+        {
+        __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL adding %d", arrayRef[i].iWindowGroup);
+        array[i] = arrayRef[i].iWindowGroup;
+        }
+        
+    array[count] = 0;
+        
+    TPtr8 ptr((TUint8*)array,maxLength,maxLength);
+    aMessage.WriteL(0, ptr);
+    delete[] array;
+    aMessage.Complete(KErrNone);
+   __ALFLOGSTRING("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL <<")
+    }
+
 // ---------------------------------------------------------------------------
 // constructor
 // ---------------------------------------------------------------------------
 //   
-CAlfStreamerServerSession::CAlfStreamerServerSession() : iScreenNumber(KErrNotFound)
+CAlfStreamerServerSession::CAlfStreamerServerSession(const TThreadId& aThreadId) : iScreenNumber(KErrNotFound), iThreadId(aThreadId)
     {
     }
 
@@ -591,7 +745,7 @@ CAlfStreamerServerSession::~CAlfStreamerServerSession()
 //   
 void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
     {
-//    RDebug::Print(_L("CAlfStreamerServerSession::ServiceL %d"), aMessage.Function());
+   __ALFLOGSTRING1("CAlfStreamerServerSession::ServiceL %d", aMessage.Function())
    CAlfStreamerServer* server = (CAlfStreamerServer*)( Server() );
    
    TInt op = aMessage.Function();
@@ -697,6 +851,87 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
             break;    
             }
 
+        case EAlfPostDataToCompositionClient:
+            {
+            TInt clientBufL = aMessage.GetDesLength(2);       
+            TPtr8 ptr(0,0);
+            HBufC8* buf = 0;
+            if (clientBufL > 0)
+                { 
+                HBufC8::NewLC(aMessage.GetDesLength(2));
+                ptr.Set((TUint8*)buf->Ptr(),clientBufL,clientBufL);
+                }   
+            TInt op = aMessage.Int0();
+            TInt key = aMessage.Int1();
+            
+            aMessage.Complete(KErrNone);
+            TRAP_IGNORE(server->QueueRequestSessionsL(key, ptr, op);)
+            if (buf)
+                {
+                CleanupStack::PopAndDestroy();
+                }
+            break;                
+            }
+              
+        case EAlfPostDataToCompositionTarget:
+            {
+            TInt clientBufL = aMessage.GetDesLength(2);      
+            TInt int2 = aMessage.Int1();
+            TPtr8 ptr(0,0);
+            HBufC8* buf = 0;
+            if (clientBufL > 0)
+                { 
+                HBufC8::NewLC(clientBufL);
+                ptr.Set((TUint8*)buf->Ptr(),clientBufL,clientBufL);
+                }
+            else
+                {
+                ptr.Set((TUint8*)&int2, sizeof(TInt),sizeof(TInt));
+                }    
+            TInt op = aMessage.Int0();
+            aMessage.Complete(KErrNone);
+            TRAP_IGNORE(server->HandleCompositionRequestL(0, op, ptr);)
+            if (buf)
+                {
+                CleanupStack::PopAndDestroy();
+                }
+            if (op == KAlfCompositionTargetVisible)
+                {
+                server->RemoveTargetFromInactiveSurfaces(int2);
+                }
+            else if (op == KAlfCompositionTargetHidden)
+                {
+                server->AddTargetFromInactiveSurfaces(int2);
+                }                      
+            break;                
+            }
+        case EAlfGetListOfWGsHavingInactiveSurfaces:
+            {
+            server->GetListOfWGsHavingInactiveSurfacesL(aMessage, EFalse);
+            break;    
+            }
+        
+        case EAlfQueueRequestBGSessions:
+            {
+            TInt clientBufL = aMessage.GetDesLength(1);       
+            TPtr8 ptr(0,0);
+            HBufC8* buf = 0;
+            if (clientBufL > 0)
+                { 
+                HBufC8::NewLC(clientBufL);
+                ptr.Set((TUint8*)buf->Ptr(),clientBufL,clientBufL);
+                }   
+            TInt op = aMessage.Int0();    
+            aMessage.Complete(KErrNone);
+            TRAP_IGNORE(server->QueueRequestBGAnimSessionsL(ptr, op);)
+            if (buf)
+                {
+                CleanupStack::PopAndDestroy();
+                }
+            break;    
+            }
+            
+            
         default:
             {
             aMessage.Complete(KErrNotSupported);
@@ -707,7 +942,7 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
         {
         aMessage.Complete(KErrNone);
         }
-//    RDebug::Print(_L("CAlfStreamerServerSession::ServiceL exit"));
+    __ALFLOGSTRING("CAlfStreamerServerSession::ServiceL exit")
     }
 
 void CAlfStreamerServerSession::HandleCompositionOpL(TInt aOp, const RMessage2& aMessage, CAlfStreamerServer* aServer)
@@ -741,13 +976,12 @@ void CAlfStreamerServerSession::HandleCompositionOpL(TInt aOp, const RMessage2& 
     case KAlfCompositionTargetHidden:
     case KAlfCompositionTargetVisible:
     case KAlfCompositionTargetCreated:
+    case KAlfCompositionLayoutSwitchComplete:
         {
         aServer->HandleCompositionEventL(this, aOp, aMessage);
         break;
         }
 
-    // temp, should go to window server to have more precise control on 
-    // operations    
     case KAlfCompOpCreateToken:
         {
         TInt token = aServer->CreatePermissionToken( aMessage, reinterpret_cast<TInt>(this), this );
@@ -767,12 +1001,21 @@ void CAlfStreamerServerSession::HandleCompositionOpL(TInt aOp, const RMessage2& 
     case KAlfCompOpSetRotation: 
     case KAlfCompOpSetExtent:
     case KAlfCompOpEnableKb:
-    case KAlfComOpSetBackgroundAnim:
     case KAlfCompOpSessionClosed:
         {
         aServer->HandleCompositionRequestL(this, aOp, aMessage);
         break;
         }
+    case KAlfComOpSetBackgroundAnim:
+        {
+        TBool isBg(EFalse);
+        TPckg<TBool> ptr(isBg);
+        aMessage.Read(0,ptr);
+        iIsBgAnimSession = isBg;
+        aServer->HandleCompositionRequestL(this, aOp, aMessage);
+        break;
+        }
+
     case KAlfCompositionWServScreenNumber:
         {
         iScreenNumber  = aMessage.Int0();
@@ -796,7 +1039,7 @@ void CAlfStreamerServerSession::HandleCompositionOpL(TInt aOp, const RMessage2& 
         }
     default:        
         // add debug guards or remove
-        RDebug::Print(_L("Oops, unknown composition command: %d "), aOp);
+        __ALFLOGSTRING1("Oops, unknown composition command: %d ", aOp)
         User::Invariant();
         }
     }
@@ -815,7 +1058,7 @@ TBool CAlfStreamerServerSession::CompletedFromQueue(const RMessage2& aMessage)
             }
         else
             {
-            RDebug::Print(_L("CAlfStreamerServerSession::CompletedFromQueue err: %d"),err);
+            __ALFLOGSTRING1("CAlfStreamerServerSession::CompletedFromQueue err: %d",err)
             }
         if( !iMessagePtr.IsNull())
             {

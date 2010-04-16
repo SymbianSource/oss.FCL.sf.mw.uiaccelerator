@@ -156,7 +156,8 @@ public:
     
     virtual TInt EnableRenderbuffer(TBool aEnable = ETrue) = 0;
     virtual THuiCanvasWsGcType Type() const = 0;
-    
+
+    virtual void ClearCapturingBufferArea(const TRect& aRect) = 0;
     	
     ~CHuiCanvasWsGc(){}         
     };

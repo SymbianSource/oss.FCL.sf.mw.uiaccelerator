@@ -12,7 +12,7 @@
 * Contributors:
 *
 * Description:   Build information file for project alfappserver
-*  Version     : %version: tr1sido#128.1.9 %
+*  Version     : %version: tr1sido#128.1.10 %
 *
 */
 
@@ -39,7 +39,7 @@ PRJ_EXPORTS
 // separate keyword definitions for appear and disappera effects for control transitions.
 // After effect system is complete and aknskins has taken over the correct 101f84b9.sel file
 // and manifest.mf file, we should no longer export these files.
-
+#ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
 ../coretoolkit/data/101f84b9.sel /epoc32/data/z/resource/skins/101f84b9/101f84b9.sel
 ../coretoolkit/data/101f84b9.sel /epoc32/release/winscw/udeb/z/resource/skins/101f84b9/101f84b9.sel
 ../coretoolkit/data/101f84b9.sel /epoc32/release/winscw/urel/z/resource/skins/101f84b9/101f84b9.sel
@@ -59,6 +59,8 @@ PRJ_EXPORTS
 // For easier testing you can also copy the effect files onto a memory card into
 // /resource/effects/ directory.
 // These files can be changed any time and reregistered by changing the skin
+
+#endif // #ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
 
 // backround animation shaders
 ../backgroundanim/refplugin/data/refvertexshader.vsh /epoc32/data/z/private/200286D3/refvertexshader.vsh
@@ -84,9 +86,12 @@ PRJ_MMPFILES
 ../AlfHintPlugin/group/AlfHintPlugin.mmp
 ../AlfHintPlugin/group/AlfHintPluginDrawer.mmp
 
+#ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
 ../plugins/alftranseffect/alftranseffectplugin/group/alftranseffectplugin.mmp
 ../plugins/alftranseffect/alftfxserverplugin/group/AlfTfxSrvPlugin.mmp
 ../plugins/alftranseffect/alfgfxtransadapter/group/gfxtransenginetfx.mmp
+#endif // #ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+
 ../plugins/alfoogmplugin/group/alfoogmplugin.mmp
 ../plugins/alfcrpplugin/group/alfcrpplugin.mmp
 

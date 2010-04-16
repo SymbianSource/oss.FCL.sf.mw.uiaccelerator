@@ -16,7 +16,6 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include <AknsSrvClient.h>
 #include <AknsSrvChunkLookup.h>
 #include <AknsConstants.h>
 #include <AknsItemDef.h>
@@ -38,6 +37,9 @@ CBgAnimHost::CBgAnimHost()
     
 CBgAnimHost::~CBgAnimHost() 
     {
+    iSkinSrv.Close();
+    delete iCurrentPluginDllName;
+    delete iCurrentPluginAssetDir;
     delete iTimer;
     if (iPlugin)
         {
@@ -45,7 +47,9 @@ CBgAnimHost::~CBgAnimHost()
         free(iPlugin);
         }
     iPluginLibrary.Close();
+#if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)
     delete iSCPropertyListener;
+#endif
     delete iThemeRepositoryListener;
     while (iSensorListeners.Count())
         {
@@ -79,18 +83,24 @@ void CBgAnimHost::ConstructL()
     CActiveScheduler::Install(ac);
     iTimer = CHighResTimer::NewL(TCallBack(TimerFunc, this),CActive::EPriorityStandard);
     iThemeRepositoryListener = CThemeRepositoryListener::NewL(&iRunning);
+#if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)
     iSCPropertyListener = CScreenSaverPropertyListener::NewL(TCallBack(ScreenSaverCallback, this));
+#endif
     
     CreateWindowL();
 
+    User::LeaveIfError(iSkinSrv.Connect());
     // load the initial plugin
+    GetPluginConfigurationL();
     LoadPluginL();
     InitEGLL();
     CreateWindowSurfaceL();
     
     User::LeaveIfError(iPlugin->gpuresourcesavailable(1));
     iThemeRepositoryListener->IssueRequest();
+#if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)    
     iSCPropertyListener->IssueRequest();
+#endif
     }
     
 void CBgAnimHost::CreateWindowL()
@@ -185,7 +195,7 @@ void CBgAnimHost::ReleaseWindowSurface(TBool aReleaseObserver)
         
         iSurfaceInitialized = EFalse;
         
-        if (aReleaseObserver)
+        if (aReleaseObserver && iCompSource)
             {
             iCompSource->RemoveObserver(*this);
             delete iCompSource;
@@ -385,42 +395,68 @@ void CBgAnimHost::CreateWindowSurfaceL()
             }
         else
             {
-            User::After(5000000);
+            User::After(1000000);
             }
         }
 
     iSurfaceInitialized = ETrue;
     
     }
-    
-void CBgAnimHost::LoadPluginL()
+
+TBool CBgAnimHost::GetPluginConfigurationL()
     {
     // dig out the skin config from skin server
     HBufC* configstr = NULL;
-    RAknsSrvSession skinsrv;
-    User::LeaveIfError(skinsrv.Connect());
-    CleanupClosePushL(skinsrv);
-    CAknsSrvChunkLookup* cl = skinsrv.CreateChunkLookupL();
+    CAknsSrvChunkLookup* cl = iSkinSrv.CreateChunkLookupL();
     CleanupStack::PushL(cl);
     CAknsStringItemDef* configitem = static_cast<CAknsStringItemDef*>(cl->LookupAndCreateDefL( KAknsIIDPropertyAnimBgParam )); 
     User::LeaveIfNull(configitem);
     CleanupStack::PushL(configitem);
     configstr = configitem->String().AllocL();
-    CleanupStack::PopAndDestroy(3); // skinsrv, cl, configitem
+    CleanupStack::PopAndDestroy(2); // cl, configitem
     CleanupStack::PushL(configstr);
-    RDebug::Print(_L("----------------------"));
-    RDebug::Print(_L("backgroundhost config:"));
-    RDebug::Print(*configstr);
-    RDebug::Print(_L("----------------------"));
     
     TLex lex(*configstr);
-    TPtrC dllname = lex.NextToken();
-    if (!dllname.Length())
+    HBufC* dllname = lex.NextToken().AllocL();
+    CleanupStack::PushL(dllname);
+    if (!dllname || !dllname->Length())
+        {
+        User::Leave(KErrNotFound);
+        }
+
+    HBufC* assetdir = lex.NextToken().AllocL();
+    CleanupStack::PushL(assetdir);
+    if (!assetdir || !assetdir->Length())
         {
         User::Leave(KErrNotFound);
         }
     
-    User::LeaveIfError(iPluginLibrary.Load(dllname));
+    TBool confchanged = EFalse;
+    if (!iCurrentPluginDllName || !iCurrentPluginAssetDir || 
+        (iCurrentPluginDllName && !iCurrentPluginDllName->CompareF(*dllname)) ||
+        (iCurrentPluginAssetDir && !iCurrentPluginAssetDir->CompareF(*assetdir)) )
+        
+        {
+        confchanged = ETrue;
+        delete iCurrentPluginDllName;
+        delete iCurrentPluginAssetDir;
+        iCurrentPluginDllName = dllname;    
+        iCurrentPluginAssetDir = assetdir;
+        CleanupStack::Pop(2); // dllname, assetdir
+        }
+    else
+        {
+        CleanupStack::PopAndDestroy(2); // dllname, assetdir
+        }
+        
+    CleanupStack::PopAndDestroy(); // configstr
+    
+    return confchanged;
+    }
+    
+void CBgAnimHost::LoadPluginL()
+    {
+    User::LeaveIfError(iPluginLibrary.Load(*iCurrentPluginDllName));
     plugingetinterfacefunc getif = (plugingetinterfacefunc)iPluginLibrary.Lookup(1);
     if (!getif)
         {
@@ -430,23 +466,10 @@ void CBgAnimHost::LoadPluginL()
     
     iPlugin = (plugin_export_v1_t*) getif(1);
 
-    TPtrC configpath = lex.NextToken();
-    if (!configpath.Length())
-        {
-        User::Leave(KErrNotFound);
-        }
     TBuf8<256> pluginpath;
-    pluginpath.Copy(configpath);
+    pluginpath.Copy(*iCurrentPluginAssetDir);
     User::LeaveIfError(iPlugin->initialize((const char*)pluginpath.PtrZ(), KMaxGPUMemUsage));
-
-//        }
-//    else
-//        {
-//        User::LeaveIfError(iPlugin->initialize("z:\\private\\200286D3", KMaxGPUMemUsage));
-//        }
-
-    CleanupStack::PopAndDestroy(); // configstr
-    
+   
     iPlugin->setdisplaydimensions(iDisplaySize.iWidth, iDisplaySize.iHeight);
     if (iPlugin->desiredsensors && iPlugin->receivesensordata)
         {
@@ -460,6 +483,24 @@ void CBgAnimHost::LoadPluginL()
                 iSensorListeners.Append(listener);
                 }
             }
+        }
+    }
+    
+void CBgAnimHost::ReleasePlugin()
+    {
+    if (iPlugin)
+        {
+        while (iSensorListeners.Count())
+            {
+            delete iSensorListeners[0];
+            iSensorListeners.Remove(0);
+            }
+            
+        iPlugin->gpuresourcesavailable(0);
+        iPlugin->destroy();
+        free(iPlugin);
+        iPlugin = NULL;
+        iPluginLibrary.Close();
         }
     }
     
@@ -506,6 +547,12 @@ void CBgAnimHost::ExecuteL()
     iTimer->CallBack(100);
     iTimerRunning = ETrue;
     iRunning = ETrue;
+    // we only want to receive skin change messages
+    // after we have been properly initialized
+    // and running, close the session without observer
+    // and re-open with observer
+    iSkinSrv.Close();
+    User::LeaveIfError(iSkinSrv.Connect(this));
     CActiveScheduler::Start();
     }
 
@@ -535,7 +582,6 @@ void CBgAnimHost::CompositionTargetHidden()
         return;
         }
 
-    RDebug::Print(_L("!!! - HIDDEN - !!!"));
     // release gpu resources...
     iTimer->Cancel();
     iTimerRunning = EFalse;
@@ -551,8 +597,6 @@ void CBgAnimHost::CompositionTargetVisible()
         // a correct state..
         return;
         }
-
-    RDebug::Print(_L("!!! - VISIBLE - !!!"));
 
     if (!iSurfaceInitialized && iCompSource)
         {
@@ -573,17 +617,13 @@ void CBgAnimHost::CompositionTargetVisible()
 
 void CBgAnimHost::HandleScreenSaverEvent()
     {
-    RDebug::Print(_L("-----------------------------------"));
-    RDebug::Print(_L("CBgAnimHost::HandleScreenSaverEvent"));
+#if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)
     TInt scStatus = iSCPropertyListener->GetScreenSaverStatus();
-    RDebug::Print(_L("status: %d, timerrunning %d, surfacecreated %d"),scStatus, iTimerRunning, iSurfaceInitialized);
-    RDebug::Print(_L("-----------------------------------"));
     if (scStatus)
         {
         // screensaver is ON
         if (iTimerRunning)
             {
-            RDebug::Print(_L("--- screensaver on, stopping timer ---"));
             iTimer->Cancel();
             iTimerRunning = EFalse;
             }
@@ -593,12 +633,11 @@ void CBgAnimHost::HandleScreenSaverEvent()
         // screensaver is OFF
         if (!iTimerRunning && iSurfaceInitialized)
             {
-            RDebug::Print(_L("--- screensaver off, starting timer ---"));
-    
             iTimerRunning = ETrue;
             iTimer->CallBack(1);
             }
         }
+#endif
     }
 
 TInt CBgAnimHost::ScreenSaverCallback(TAny* aPtr)
@@ -621,5 +660,36 @@ void CBgAnimHost::DataError( CSensrvChannel& aChannel, TSensrvErrorSeverity aErr
     }
 
 void CBgAnimHost::GetDataListenerInterfaceL( TUid aInterfaceUid, TAny*& aInterface)
+    {
+    }
+
+void CBgAnimHost::SkinContentChanged()
+    {
+    }
+
+void CBgAnimHost::SkinConfigurationChanged( const TAknsSkinStatusConfigurationChangeReason aReason )
+    {
+    if (aReason == EAknsSkinStatusConfigurationDeployed && iPlugin)
+        {
+        // okay, the skin has changed, let's check that should we load a different
+        // animation plugin
+        TBool changed = EFalse;
+        TRAPD(err, changed = GetPluginConfigurationL());
+        if (err || !changed)
+            {
+            // plugin configuration has not changed, or there is not animation
+            // in the theme, just return
+            return;
+            }
+
+        CompositionTargetHidden();
+        ReleasePlugin();
+                
+        TRAP_IGNORE(LoadPluginL());
+        CompositionTargetVisible();
+        }
+    }
+
+void CBgAnimHost::SkinPackageChanged( const TAknsSkinStatusPackageChangeReason /*aReason*/ )
     {
     }

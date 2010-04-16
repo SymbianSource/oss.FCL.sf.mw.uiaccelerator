@@ -126,6 +126,7 @@ void CHuiFxEffectCache::UnUse(MHuiFxEffectCacheNode *aNode)
        if (count == 0)
            {
            Remove(iCachedEffects, cachedNode);
+           cachedNode->Delete();
            delete cachedNode;
            }
        }
@@ -313,6 +314,10 @@ CHuiFxEffectCacheEffectNode::~CHuiFxEffectCacheEffectNode()
     delete iFileName;
     delete iParser;
     }
+void CHuiFxEffectCacheEffectNode::Delete()
+    {
+    delete iEffect;
+    }
 
 TPtrC CHuiFxEffectCacheEffectNode::Id()
    {
@@ -371,7 +376,7 @@ void CHuiFxEffectCacheEffectNode::LightOperationL(MHuiFxEffectCacheNode *aCached
 
 void CHuiFxEffectCacheEffectNode::ParsingEndedBefore()
     {
-    iParser->Effect( iEffect );
+    iParser->Effect( iEffect ); // moves ownership of iEffect to iCachedNodeArray, and will be deleted in UnUse() / Delete().
     }
 
 void CHuiFxEffectCacheEffectNode::ParsingEndedAfter(MHuiFxEffectCacheNode *aCached)

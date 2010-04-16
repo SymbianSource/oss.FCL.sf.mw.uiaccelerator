@@ -1335,6 +1335,10 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
     // Render the NVGtexture into the image buffer. No transformations are done for this.
     SetNvgParamsFromIconHeader(*aNvgEngine, aNVGData);
     
+    // Always set blending mode to SRC_OVER before drawing NVG content (so that the  
+    // drawn icons would show correctly, and no issues with transparency would arise)
+    VGint blendMode = vgGeti(VG_BLEND_MODE);
+    vgSeti(VG_BLEND_MODE, VG_BLEND_SRC_OVER);
     if (iIconCommands)
         {
         //HUI_DEBUG(_L("CHuiVg10Texture::CreateRenderedImage() - Drawing iIconCommands"));
@@ -1344,10 +1348,7 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
         {
         // If ObjectCached version failed, try to use the old way
         //HUI_DEBUG(_L("CHuiVg10Texture::CreateRenderedImage() - Drawing with DrawNvg"));
-        VGint blendMode = vgGeti(VG_BLEND_MODE);
-        vgSeti(VG_BLEND_MODE, VG_BLEND_SRC_OVER);
         aNvgEngine->DrawNvg(GetNvgDataWithoutHeader(aNVGData), aDestSize, NULL, NULL);
-        vgSeti(VG_BLEND_MODE, blendMode);
         }
     
     // NVG-TLV icon margin special case check:
@@ -1366,7 +1367,12 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
                 aNvgEngine->DrawNvg(GetNvgDataWithoutHeader(aNVGData), size, NULL, NULL);
             }
         }
+
+    // restore the old surface before restoring original modes
+    oldSurface->MakeCurrent();  // This will also call the SetCurrentRenderSurface
     
+    // Return the original blend mode
+    vgSeti(VG_BLEND_MODE, blendMode);
     // The NVG draw messes up the paint, scissoring & rects, so mark them as dirty
     TInt dirtyFlags = EHuiVg10GcStateFlagDirtyPaint |
                     EHuiVg10GcStateFlagDirtyScissor | 
@@ -1387,7 +1393,6 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
     
     vgSeti(VG_MATRIX_MODE, VG_MATRIX_IMAGE_USER_TO_SURFACE);
     vgLoadMatrix(matrix);
-    oldSurface->MakeCurrent();  // This will also call the SetCurrentRenderSurface
     
     // Now we should have a rendered image in the image variable!
     // Release the surface, but not the context because we used a shared context
@@ -1512,18 +1517,20 @@ void CHuiVg10Texture::SetNvgParamsFromIconHeader(CNvgEngine& aNvgEngine, HBufC8*
 TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisplay, EGLSurface aSurface, EGLContext aContext)
     {
     HUI_VG_INVARIANT();
-    #ifdef __WINSCW__
-        if ( eglMakeCurrent( aDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT ) == EGL_FALSE )
-           {
-           HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL NO_Surface could not be made current, eglErr: %04x"), eglGetError());
-           return aSize;
-           }
-    #endif      
-#ifndef __WINS__ // Should possibly query the supported mode instead?
+
+#ifndef __WINSCW__  // Should possibly query the supported mode instead?
     VGImageFormat imageInternalFormat = VG_sARGB_8888_PRE;
 #else
     // This doesn't work in the Emulator anyways.. => remove?
     VGImageFormat imageInternalFormat = VG_sARGB_8888;
+    
+    // If the icon is also a current EGL surface, the getImageSubData
+    // won't succeed and return "image in use" -error..
+    if ( eglMakeCurrent( aDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT ) == EGL_FALSE )
+        {
+        HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL NO_Surface could not be made current, eglErr: %04x"), eglGetError());
+        return aSize;
+        }
 #endif
     
     TInt stride = aSize.iWidth * 4; // VG_sARGB_8888(_PRE) is four bytes long (8888)
@@ -1567,14 +1574,16 @@ TSize CHuiVg10Texture::ApplyMargin(VGImage aImage, TSize aSize, EGLDisplay aDisp
         }
     delete buf;
     HUI_VG_INVARIANT();
-    #ifdef __WINSCW__    
+    
+#ifdef __WINSCW__    
     // Make the PBuffer surface current again 
-     if ( eglMakeCurrent(aDisplay, aSurface, aSurface, aContext) == EGL_FALSE )
-         {
-         HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL aSurface could not be made current, eglErr: %04x"), eglGetError());
-         return aSize;
-         }
-    #endif     
+    if ( eglMakeCurrent(aDisplay, aSurface, aSurface, aContext) == EGL_FALSE )
+        {
+        HUI_DEBUG1(_L("CHuiVg10Texture::ApplyMargin() - EGL aSurface could not be made current, eglErr: %04x"), eglGetError());
+        return aSize;
+        }
+#endif
+    
     // If icon size has to be changed, clear out old area for new DrawNVG round!
     if(aSize.iHeight > HaN)
         {

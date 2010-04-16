@@ -60,6 +60,11 @@ CHuiRosterImpl::CHuiRosterImpl(CHuiDisplay* aDisplay)
 
 CHuiRosterImpl::~CHuiRosterImpl()
     {
+    if (iDisplay)
+        {
+        iDisplay->Env().RemoveMemoryLevelObserver(this);
+        }
+
     FreezeVisibleContentL(EFalse);
     
     delete iLongTapDetector;
@@ -530,7 +535,7 @@ void CHuiRosterImpl::DrawSelf(CHuiGc& aGc, CHuiDisplay* aDisplay) const
     
     ASSERT(display!=NULL);
 
-    if (iCanvasRenderBuffer && iCanvasGc)
+    if (IsVisibleContentFrozen())
         {
         DrawSelfFrozen(aGc, display);
         return;
@@ -1621,19 +1626,30 @@ void CHuiRosterImpl::RemoveExternalContentVisualFromParentL(CHuiVisual* aExterna
 
 void CHuiRosterImpl::FreezeVisibleContentL(TBool aEnable)
     {
+    iRosterIsFrozen = aEnable;
+    
+    if (aEnable && !iMonitorMemoryLevel && iDisplay)
+        {
+        iDisplay->Env().AddMemoryLevelObserver(this);
+        iMonitorMemoryLevel = ETrue;
+        }
+    
     if (aEnable)
         {    
-        if (!iCanvasGc)
+        if (UseRenderBufferForFreeze())
             {
-            CHuiRenderPlugin& renderplugin = CHuiStatic::Renderer();
-            iCanvasGc = renderplugin.CreateCanvasGcL();
-            }    
-        if (!iCanvasRenderBuffer)
-            {
-            iCanvasRenderBuffer = iCanvasGc->CreateRenderBufferL(TSize(0,0));
-            iCanvasRenderBuffer->InitializeL(CHuiStatic::Env().Display(0).VisibleArea().Size());
-            iCanvasRenderBuffer->Copy(TPoint(0,0));    
-            iCanvasRenderBufferOrientation = CHuiStatic::Env().Display(0).Orientation();
+            if (!iCanvasGc)
+                {
+                CHuiRenderPlugin& renderplugin = CHuiStatic::Renderer();
+                iCanvasGc = renderplugin.CreateCanvasGcL();
+                }    
+            if (!iCanvasRenderBuffer)
+                {
+                iCanvasRenderBuffer = iCanvasGc->CreateRenderBufferL(TSize(0,0));
+                iCanvasRenderBuffer->InitializeL(CHuiStatic::Env().Display(0).VisibleArea().Size());
+                iCanvasRenderBuffer->Copy(TPoint(0,0));    
+                iCanvasRenderBufferOrientation = CHuiStatic::Env().Display(0).Orientation();
+                }
             }
         }
     else
@@ -1648,7 +1664,7 @@ void CHuiRosterImpl::FreezeVisibleContentL(TBool aEnable)
 
 TBool CHuiRosterImpl::IsVisibleContentFrozen() const
     {
-    return ((iCanvasRenderBuffer != NULL) && (iCanvasGc != NULL));
+    return iRosterIsFrozen;
     }
     
 void CHuiRosterImpl::EffectSetEffect(CHuiFxEffect* aEffect)
@@ -1706,4 +1722,21 @@ void CHuiRosterImpl::EffectSetSource( TBool aIsInput1 )
 TBool CHuiRosterImpl::EffectGetSource() const
     {
     return iIsInput1;
+    }
+
+void CHuiRosterImpl::SetMemoryLevel(THuiMemoryLevel /*aLevel*/)
+    {
+    if ( IsVisibleContentFrozen() && !UseRenderBufferForFreeze() )
+        {
+        // Release render buffer if we are not supposed to use.
+        delete iCanvasGc;
+        iCanvasGc = NULL;        
+        delete iCanvasRenderBuffer;
+        iCanvasRenderBuffer = NULL;        
+        }
+    }
+
+TBool CHuiRosterImpl::UseRenderBufferForFreeze() const
+    {
+    return !iDisplay || !( iDisplay->Env().MemoryLevel() <= EHuiMemoryLevelLowest );
     }

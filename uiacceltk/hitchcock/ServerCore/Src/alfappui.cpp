@@ -36,6 +36,8 @@
 #include <uiacceltk/HuiTextVisual.h>
 #include <uiacceltk/HuiGradientBrush.h>
 #include <apgwgnam.h>
+#include <akntransitionutils.h>
+#include "alfeffectutils.h"
 
 #ifdef ALF_USE_CANVAS
 #include <uiacceltk/HuiCanvasVisual.h>
@@ -466,8 +468,10 @@ NONSHARABLE_CLASS(CAlfEventFetcher): public CActive
                 if(iWindowGc->Construct() == KErrNone)
                     {
                     iWindowGc->Activate(*iWindow);
+                    iWindow->BeginRedraw();
                     iWindowGc->SetBrushColor(0xffffffff);
                     iWindowGc->Clear();
+                    iWindow->EndRedraw();
                     iWindowGc->Deactivate();
                     }                
                 }
@@ -518,7 +522,7 @@ NONSHARABLE_CLASS(CAlfEventFetcher): public CActive
 #endif
             
 			// This is a workaround for possibly missing command buffers at layout switch
-            iWsSession.ClearAllRedrawStores(); 
+            // iWsSession.ClearAllRedrawStores(); 
             
             __ALFLOGSTRING2("ALF EventWin: Size(%d,%d)", iWindow->Size().iWidth, iWindow->Size().iHeight );
             //and fall through
@@ -641,8 +645,6 @@ public:
     CHuiDisplay* iMainDisplay;
     CHuiDisplay* iTVDisplay;
     CAlfEventBridge* iEventAo;
-    RAlfTfxClient iDsServer;
-    TBool iDsActivated;
     };
 
 // ======== MEMBER FUNCTIONS ========
@@ -980,7 +982,7 @@ void CAlfAppUi::UpdateActiveSession(CAlfAppSrvSessionBase* aSession)
         {
         if (iData->iMainDisplay) // TBD: multiple display support once again...
             {
-            iData->iMainDisplay->SetClearBackgroundL(CHuiDisplay::EClearNone);
+            TRAP_IGNORE(iData->iMainDisplay->SetClearBackgroundL(CHuiDisplay::EClearNone));
             }
         }
     }
@@ -1406,26 +1408,6 @@ void CAlfAppUi::SetAlfWindowGroupId(TInt aWgId)
 //
 void CAlfAppUi::NotifyLowMemory(TInt aAmountOfFreeMemRequested)
     {
-    if (!iData->iDsActivated)            
-        {
-        if (iData->iDsServer.Open() == KErrNone)
-            {
-            iData->iDsActivated = ETrue;            
-            }
-        }
-    
-    if (iData->iDsActivated )
-        {
-        if (!aAmountOfFreeMemRequested)
-            {
-            iData->iDsServer.SendSynch(KAlfCompositionGoodOnGraphicsMemory, TIpcArgs());
-            }
-        else
-            {          
-            iData->iDsServer.SendSynch(KAlfCompositionLowOnGraphicsMemory, TIpcArgs());
-            }
-        }
-
 /*
 	// Toggle between normal & low memory levels
     if (!aAmountOfFreeMemRequested)
@@ -1458,8 +1440,55 @@ TInt CAlfAppUi::ForceSwRendering( TBool aEnabled )
     return iData->iBridgeObj->ForceSwRendering( aEnabled );
     }
     
+// ---------------------------------------------------------------------------
+// GetSizeAndRotation
+// ---------------------------------------------------------------------------
+//
+TInt CAlfAppUi::GetSizeAndRotation(TSize& aSize, TInt& aRotation)
+    {
+    return iData->iBridgeObj->GetSizeAndRotation(aSize, aRotation);
+    }
+    
+// ---------------------------------------------------------------------------
+// ReadPixels
+// ---------------------------------------------------------------------------
+//
+TInt CAlfAppUi::ReadPixels(CFbsBitmap* aBitmap)
+    {
+    return iData->iBridgeObj->ReadPixels(aBitmap);
+    }
+    
 void CAlfAppUi::SetAlfAppWindowGroup( TInt aID )
     {
     iData->iBridgeObj->SetWindowGroupAsAlfApp( aID );
     }
+
+CAlfAppSrvSessionBase* CAlfAppUi::SrvSessionForControlGroup(CHuiControlGroup& aGroup)
+    {
+    return iData->iServer->SrvSessionForControlGroup(aGroup);
+    }
+
+void CAlfAppUi::DoBlankScreen(const RMessage2& aMessage)
+    {
+    __ALFLOGSTRING("CAlfAppUi::DoBlankScreen >>");
+    TSecureId capServerId(0x10207218);    
+    TSecurityPolicy policy(capServerId);
+    if (!policy.CheckPolicy(aMessage))
+        {
+        User::Leave(KErrPermissionDenied);    
+        }
+    
+//	if (iData->iBridgeObj->LayoutSwitchEffectCoordinator())
+//		{
+//		iData->iBridgeObj->LayoutSwitchEffectCoordinator()->EnableSafeCounter(EFalse); // let capserver rule  
+//		}
+  
+    TBool pause = aMessage.Int0();
+    
+    iData->iBridgeObj->LayoutSwitchEffectCoordinator()->Blank(pause);
+    
+    __ALFLOGSTRING("CAlfAppUi::DoBlankScreen <<");
+    // let the session complete message  
+    }
+
 // end of file

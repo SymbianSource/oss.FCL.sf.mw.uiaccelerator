@@ -1519,3 +1519,9 @@ TBool CHuiCanvasWsSwGc::IsRenderingEnabled() const
     {
     return iAction == EDrawBuffer;
     }
+
+void CHuiCanvasWsSwGc::ClearCapturingBufferArea(const TRect& /*aRect*/)
+    {
+    // Not supported by fallback GC.
+    }
+

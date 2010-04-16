@@ -67,7 +67,8 @@ public:
     // parameters are analyzed by CAlfGfxEffects
     
     void BeginFullscreen( TInt aAction, const TRect& aEffectRect, 
-						TInt aType, const TUid aUid1, const TUid aUid2, TInt aData );
+						TInt aType, const TUid aUid1, const TUid aUid2, TInt aData,
+						TSecureId aSid1, TInt aWg1, TSecureId aSid2, TInt aWg2);
     void EndFullscreen();
     void CancelFullscreen();
     void AbortFullscreen();
@@ -83,12 +84,19 @@ public:
     */
 	
 	TUid& FromUid();
+	TSecureId& FromSid();
+	TInt FromWg();
 	TUid& ToUid();
+	TSecureId& ToSid();
+	TInt ToWg();
 	TUint& Action();
 	TInt& Flags();
 
-	void IncreaseHandle();
-	TInt CurrentHandle();
+	void IncreaseControlHandle();
+	TInt CurrentControlHandle();
+	
+	void IncreaseFullScreenHandle();
+	TInt CurrentFullScreenHandle();
 	
 	void StartEndChecker();
 	void CancelEndChecker();
@@ -130,22 +138,26 @@ private:
     static TInt ControlTimeout( TAny* aServerDrawer );
     void HandleControlTimeout();
     
-    static TInt TransitionFinished( TAny* aServerDrawer );
-    void HandleTransitionFinished(); 
+    static TInt FullScreenTransitionFinished( TAny* aServerDrawer );
+    void HandleFullScreenTransitionFinished(); 
+
+    static TInt ControlTransitionFinished( TAny* aServerDrawer );
+    void HandleControlTransitionFinished();
     
     TBool FileExistsL( TPtrC& aResourceDir, TPtrC& aFileName );
         
 private: // data
 
 public:
-	CWsServerDrawerController* iController;
+	CWsServerDrawerController* iControlController;
+	CWsServerDrawerController* iFullScreenController;
+	    
 	CAlfWindowManager* iWindowManager;
     CPolicyHandler& iPolicyHandler;
 	TBool iInScreenModeChange;
 
-    CIdle* iIdle; //CIdle for async function calls.
-
-    TInt iCurrHandle;
+    TInt iCurrentControlHandle;
+    TInt iCurrentFullScreenHandle;
 
     TUint iAction;
     TUint iOldAction;
@@ -154,7 +166,8 @@ public:
     TRect iControlRect; // demarcation rectangle for control effects
     TUid iFromUid;
     TUid iToUid;
-    
+    TSecureId iFromSid;
+    TSecureId iToSid;
     TInt iFromWg;
     TInt iToWg;
     TBool iWaitingForRootWgId;
@@ -173,21 +186,19 @@ public:
     TInt iType; // parameter type for GFX parameters
     TScreenModeChangedStates iScrModeChangedState;
     CAlfFinishTimer* iFullScreenTimeout;
+    CAlfFinishTimer* iControlTimeout;
+    
     CAlfFinishTimer* iFinishFullScreen;
     
     // This variable tells if the full screen transition was finished
     // by a signal from Effect Engine (via AlfBridge)
     // or if timeout finished the transaction.
     TBool iFullScreenFinished;
-
-    // This is an array of reserverd windows
-    // We do not own these pointers, and must not delete them.
-    RPointerArray<CAlfWindow> iReservedWindows;
     
-    CPSObserver* iTransitionEndObserver;
+    CPSObserver* iFullScreenTransitionEndObserver;
+    CPSObserver* iControlTransitionEndObserver;
+    
     RProperty iProperty;
-    
-    TBool iDoNotClearEffectRect;
     
     RFs iFs;
     TBool iFullScreenFxSent;

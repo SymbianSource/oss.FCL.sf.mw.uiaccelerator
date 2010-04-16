@@ -248,6 +248,8 @@ public:
     
     IMPORT_C CAlfStreamerBridge* Bridge();
     
+    void HandleClientExit(TThreadId aThreadId);
+    
 private: // utils
 
     CAlfWindowManager();

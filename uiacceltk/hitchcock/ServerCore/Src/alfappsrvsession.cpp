@@ -364,9 +364,10 @@ TBool CAlfAppSrvSession::FocusLostL( TBool aDoTransitionEffect )
         	{
       		iAnimatedTextures.operator[](index)->EnableAnimation(EFalse); 
         	}
-       	
+#ifndef SYMBIAN_BUILD_GCE       	
       	StoreControlGroupOrderL(*display, EFalse ); // do not hide  
-       	// background must be drawn as long as the effect is displayed 
+#endif
+      	// background must be drawn as long as the effect is displayed 
        	// as the background will be visible if the effect does not cover full screen
        	// or is partially transparent.
     	}
@@ -421,6 +422,7 @@ void CAlfAppSrvSession::StoreControlGroupOrderL(CHuiDisplay& aDisplay, TBool aAl
             iControlGroupOrder.AppendL( &group );
             }
         }
+    
     // at the end the lowest index the bottom most and the biggest index the top most.
     
     // hide at the end so it does not affect the order of the group in the roster
@@ -429,7 +431,7 @@ void CAlfAppSrvSession::StoreControlGroupOrderL(CHuiDisplay& aDisplay, TBool aAl
         for ( TInt i = 0 ; i < iControlGroupOrder.Count() ; i++ )
             {
             CHuiLayout* hostContainer = iControlGroupOrder[i]->Control(0).ContainerLayout( NULL );
-            hostContainer->iOpacity.Set(0.f); 
+
             aDisplay.Roster().Hide( *iControlGroupOrder[i] );
             }
         }
@@ -437,6 +439,22 @@ void CAlfAppSrvSession::StoreControlGroupOrderL(CHuiDisplay& aDisplay, TBool aAl
     
 void CAlfAppSrvSession::ShowControlGroupsInOrderL(CHuiDisplay& aDisplay)
     {
+#ifdef SYMBIAN_BUILD_GCE
+    iControlGroupOrder.Reset();
+    // gather all the control groups that belong to this session
+    for ( TInt g = 0 ; g < aDisplay.Roster().Count() ; g++ )
+        {
+        // first append the bottom one
+        CHuiControlGroup& group = aDisplay.Roster().ControlGroup( g );
+        
+        // make sure we only store control groups for this session
+        if ( GetHandleFromInterface(EHuiObjectTypeControlGroup, &group) != KErrNotFound )
+            {
+            iControlGroupOrder.AppendL( &group );
+            }
+        }
+#endif
+    // put this session's controlgroups on top
     while ( iControlGroupOrder.Count() )
         {
         CHuiControlGroup& group = *iControlGroupOrder[iControlGroupOrder.Count()-1];
@@ -445,9 +463,11 @@ void CAlfAppSrvSession::ShowControlGroupsInOrderL(CHuiDisplay& aDisplay)
         if ( GetHandleFromInterface(EHuiObjectTypeControlGroup, &group) != KErrNotFound )
             {
             CHuiLayout* hostContainer = group.Control(0).ContainerLayout( NULL );
-            hostContainer->iOpacity.Set(1.f); 
+
 #ifdef SYMBIAN_BUILD_GCE
-            AlfAppUi()->ShowControlGroupL(aDisplay.Roster(), group, KAlfRosterShowAtBottom, 0); 
+            
+            AlfAppUi()->ShowControlGroupL(aDisplay.Roster(), group, KHuiRosterShowAtTop, 0); 
+            
 #else    
             aDisplay.Roster().ShowL( group, KAlfRosterShowAtBottom );
 #endif
@@ -664,7 +684,10 @@ void CAlfAppSrvSession::DoHandleCommandL(const RMessage2& aMessage)
             if (iFocused)
                 {
 #ifdef SYMBIAN_BUILD_GCE
-                AlfAppUi()->ShowControlGroupL(display.Roster(), controlGroup, where, 0); 
+                CHuiLayout* hostContainer = controlGroup.Control(0).ContainerLayout( NULL );                
+                if(hostContainer)
+                    hostContainer->ClearFlags( EHuiVisualFlagUnderOpaqueHint);
+                AlfAppUi()->ShowControlGroupL(display.Roster(), controlGroup, where, 0);
 #else    
                 display.Roster().ShowL(controlGroup, where);                                    
 #endif
@@ -672,10 +695,16 @@ void CAlfAppSrvSession::DoHandleCommandL(const RMessage2& aMessage)
                     *CHuiStatic::RootWin(), 
                     ClientWindowGroup(), 
                     PreferredWindowGroupPosition()  );
-
                 }
             else
-                {                
+                {
+#ifdef SYMBIAN_BUILD_GCE
+            CHuiLayout* hostContainer = controlGroup.Control(0).ContainerLayout( NULL );                
+                if(hostContainer)
+                    hostContainer->ClearFlags(EHuiVisualFlagUnderOpaqueHint);
+                AlfAppUi()->ShowControlGroupL(display.Roster(), controlGroup, where, 0);
+#else                    
+
                 if (where == KHuiRosterShowAtTop)
                     {
                     if (iControlGroupOrder.Count())
@@ -689,6 +718,7 @@ void CAlfAppSrvSession::DoHandleCommandL(const RMessage2& aMessage)
                     }
                 else if (where == KHuiRosterShowAtBottom)
                     {
+                
                     iControlGroupOrder.AppendL(&controlGroup);                
                     }
                 else
@@ -701,7 +731,8 @@ void CAlfAppSrvSession::DoHandleCommandL(const RMessage2& aMessage)
                         {
                         iControlGroupOrder.InsertL(&controlGroup, where);                                        
                         }                                                
-                    }                                                        
+                    }
+#endif                    
                 }    
                         
             break;
@@ -1024,6 +1055,24 @@ void CAlfAppSrvSession::DoHandleCommandL(const RMessage2& aMessage)
             EnvForceSwRendering( aMessage );
             break;    
             }
+        
+        case EAlfGetSizeAndRotation:
+            {
+            EnvGetSizeAndRotation( aMessage );
+            break;
+            }
+            
+        case EAlfReadPixels:
+            {
+            EnvReadPixels( aMessage );
+            break;
+            }
+                        
+        case EAlfBlankScreen:
+            {
+            AlfAppUi()->DoBlankScreen(aMessage);
+            break;    
+            }
             
             
         default:
@@ -1187,6 +1236,12 @@ void CAlfAppSrvSession::RosterHideL(const RMessage2& aMessage)
     // hide
     controlGroupSubSession.SetIsShown( EFalse );
   
+    
+#ifdef SYMBIAN_BUILD_GCE
+    CHuiLayout* hostContainer = controlGroup.Control(0).ContainerLayout( NULL );                
+    if(hostContainer)
+        hostContainer->SetFlags(EHuiVisualFlagUnderOpaqueHint);
+#else    
     // hide from the roster only if session is focused
     if ( iFocused )
         {
@@ -1200,6 +1255,7 @@ void CAlfAppSrvSession::RosterHideL(const RMessage2& aMessage)
              iControlGroupOrder.Remove( index );
              }
         }
+#endif
     }
     
 // ---------------------------------------------------------------------------
@@ -2833,5 +2889,46 @@ void CAlfAppSrvSession::EnvForceSwRendering(const RMessage2& aMessage)
     TInt err = AlfAppUi()->ForceSwRendering( enabled );
     aMessage.Complete( err );
     }
+
+// ---------------------------------------------------------------------------
+// EnvGetSizeAndRotation
+// ---------------------------------------------------------------------------
+//    
+void CAlfAppSrvSession::EnvGetSizeAndRotation(const RMessage2& aMessage)
+    {
+    TPckgBuf<TSize> size;
+    TPckgBuf<TInt> rotation;
+    TInt err = AlfAppUi()->GetSizeAndRotation(size(), rotation());
+    if ( err == KErrNone )
+        {
+        aMessage.Write(0, size);
+        aMessage.Write(1, rotation);
+        }
+    aMessage.Complete( err );
+    }
+
+// ---------------------------------------------------------------------------
+// EnvReadPixels
+// ---------------------------------------------------------------------------
+//    
+void CAlfAppSrvSession::EnvReadPixels(const RMessage2& aMessage)
+    {
+    TInt bitmapHandle = aMessage.Int0();
+    CFbsBitmap* bmp = new CFbsBitmap;
+    TInt err = KErrNoMemory;
+
+    if ( bmp )
+        {
+        err = bmp->Duplicate( bitmapHandle );
+        if ( err == KErrNone )
+            {
+            err = AlfAppUi()->ReadPixels( bmp );
+            }        
+        delete bmp;
+        }
+    
+    aMessage.Complete( err );
+    }
+
 
 // End of file    

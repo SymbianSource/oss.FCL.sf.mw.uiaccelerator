@@ -65,6 +65,7 @@ public:
     virtual void ClearCache();
     
     virtual TBool IsRenderBufferEnabled() const;
+	virtual void ClearCapturingBufferArea(const TRect& aRect);
 	
 };    
 #endif  // __HUICANVASWSBITGC_H__

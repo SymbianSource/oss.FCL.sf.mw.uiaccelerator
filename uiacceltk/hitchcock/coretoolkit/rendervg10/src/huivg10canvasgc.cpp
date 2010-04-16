@@ -144,8 +144,10 @@ void CHuiVg10CanvasGc::ClearWithSkinBackground(const THuiRealRect& /*aRect*/)
     // Acquire background texture
     const CHuiTexture* backgroundTexture = NULL;
     TInt err = CHuiStatic::Env().Skin().GetTexture(EHuiSkinBackgroundTexture, backgroundTexture);
-    ASSERT(backgroundTexture!=NULL);
-    __ASSERT_ALWAYS(err == KErrNone, User::Invariant());
+    if(err)
+        {
+        return;
+        }
 
     // Apply background texture
     THuiImage background(*backgroundTexture);
@@ -197,12 +199,13 @@ void CHuiVg10CanvasGc::ClearWithBackgroundItems(const THuiRealRect& /*aRect*/, c
                 iGc->PopClip();
                 break;
             case CHuiDisplay::EClearWithSkinBackground:
-                 TRect skinRect;
-                 TRect dummy;
-                 GetRectForItem(item.SkinBackground(), dummy, skinRect);
                  backgroundTexture = s60skin->BackgroundTexture(item.SkinBackground());
                  if (backgroundTexture)
                     {
+                    TRect skinRect;
+                    TRect dummy;
+                    GetRectForItem(item.SkinBackground(), dummy, skinRect);
+
                     THuiImage background(*backgroundTexture);
 
                     TPoint screenOrigin(0, 0);

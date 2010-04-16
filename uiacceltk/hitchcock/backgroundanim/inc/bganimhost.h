@@ -18,7 +18,7 @@
 #include <w32std.h>
 #include <apgwgnam.h> 
 #include <sensrvdatalistener.h>
-
+#include <AknsSrvClient.h>
 
 #include <EGL/egl.h>
 
@@ -30,7 +30,7 @@
 
 #include "../../../../uiaccelerator_plat/alf_visual_api/inc/alf/alfcompositionutility.h"
 
-class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrvDataListener
+class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrvDataListener, public MAknsSkinChangeObserver
     {
     public:
         void ConstructL();
@@ -52,7 +52,11 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         void DataError( CSensrvChannel& aChannel, TSensrvErrorSeverity aError );
         void GetDataListenerInterfaceL( TUid aInterfaceUid, TAny*& aInterface);
         
-        
+        // from MAknsSkinChangeObserver
+        void SkinContentChanged();
+        void SkinConfigurationChanged( const TAknsSkinStatusConfigurationChangeReason aReason );
+        void SkinPackageChanged( const TAknsSkinStatusPackageChangeReason aReason );
+
     protected:
         void CreateWindowL();
         void DestroyWindow();
@@ -61,9 +65,12 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         void CreateWindowSurfaceL();
         void ReleaseWindowSurface(TBool aReleaseObserver = ETrue);
         void LoadPluginL();
+        void ReleasePlugin();
         void NewFrame();
         void HandleScreenSaverEvent();
+        TBool GetPluginConfigurationL();
         static TInt ScreenSaverCallback(TAny* aPtr);
+        
     private:
         // windowing stuff
         RWsSession iWsSession;
@@ -101,4 +108,7 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
 
         RPointerArray<CSensorListener> iSensorListeners;
 
+        RAknsSrvSession iSkinSrv;
+        HBufC* iCurrentPluginDllName;
+        HBufC* iCurrentPluginAssetDir;
     };

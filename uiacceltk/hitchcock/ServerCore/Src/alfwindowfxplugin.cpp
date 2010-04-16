@@ -101,3 +101,10 @@ TUid* CAlfWindowFxPlugin::Identifier()
         }
     return 0;
     }
+
+
+EXPORT_C void CAlfWindowFxPlugin::ClientAboutToExit(TThreadId)
+    {
+    }
+
+

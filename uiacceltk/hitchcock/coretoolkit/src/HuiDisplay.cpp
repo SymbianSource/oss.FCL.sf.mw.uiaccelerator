@@ -851,9 +851,9 @@ TBool CHuiDisplay::Refresh()
         iGc->PushClip();
         iGc->Clip(dirtyRect);        
         
-        if ( iForegroundBitmapGc )
+        if ( iForegroundBitmapGc && !RosterImpl().IsVisibleContentFrozen() )
             {
-            // If we are in SW rendering mode, then SW bitmap is blended.
+            // If we are in SW rendering mode, then SW bitmap may be blended.
             // However, it's possible that nothing is drawn below, so clear
             // background.
             const TRgb oldBgColor = iBackgroundColor;
@@ -891,11 +891,12 @@ TBool CHuiDisplay::Refresh()
                 }                                    
             }                                        
         
-        if ( iForegroundBitmapGc )
+        if ( iForegroundBitmapGc && iForegroundTextureTransparency )
             {
+            // There is ALF content in the background, we have to
+            // clear foreground bitmap.
+            
             iForegroundBitmapGc->Reset();
-            iForegroundBitmapGc->SetClippingRegion( iGc->ClipRegion() );
-
             TRgb clearColor = KRgbBlack;
             clearColor.SetAlpha(0x00);
                     
@@ -1474,8 +1475,10 @@ void CHuiDisplay::HWAcceleratedClearWithSkinBackground(TRect /*aRect*/)
     // Acquire background texture
     const CHuiTexture* backgroundTexture = NULL;
     TInt err = iEnv.Skin().GetTexture(EHuiSkinBackgroundTexture, backgroundTexture);
-    ASSERT(backgroundTexture!=NULL);
-    __ASSERT_ALWAYS(err == KErrNone, USER_INVARIANT());
+    if( err )
+        {
+        return;
+        }
 
     // Apply background texture
     THuiImage background(*backgroundTexture);
@@ -1528,9 +1531,9 @@ void CHuiDisplay::HWAcceleratedClearWithBackgroundItems(TRect aRect)
                 break;
             case EClearWithSkinBackground:
                  backgroundTexture = s60skin->BackgroundTexture(item.SkinBackground());
-                 TRect skinRect = s60skin->SkinRect(item.SkinBackground());
                  if (backgroundTexture)
                     {
+                    TRect skinRect = s60skin->SkinRect(item.SkinBackground());
                     THuiImage background(*backgroundTexture);
 
                     TPoint screenOrigin(0, 0);
@@ -1622,6 +1625,11 @@ EXPORT_C CHuiTexture* CHuiDisplay::ForegroundTexture() const
     return iForegroundTexture;
     }
 
+EXPORT_C void CHuiDisplay::SetForegroundTextureOptions(TBool aTransparency)
+    {
+    iForegroundTextureTransparency = aTransparency;
+    }
+
 void CHuiDisplay::UpdateForegroundTexture(const TRect& aRect)
     {
     if (iForegroundTexture && iForegroundBitmap && !aRect.IsEmpty())
@@ -1649,8 +1657,16 @@ void CHuiDisplay::DoUpdateForegroundTextureL(const TRect& aRect)
 
 void CHuiDisplay::DrawForegroundTexture()
     {
-    if (iForegroundTexture)
+    if (iForegroundTexture && !RosterImpl().IsVisibleContentFrozen() )
         {
+        THuiQuality originalQuality = iGc->Quality();
+        if ( originalQuality != EHuiQualityFast )
+            {
+            // Enforce fast quality to be used - we want one to one mapping
+            // & no antialiasing.
+            iGc->SetQuality( EHuiQualityFast );
+            }            
+    
         // The following is similar to HWAcceleratedClearWithSkinBackground,
         // except blending is enabled.
         
@@ -1663,9 +1679,24 @@ void CHuiDisplay::DrawForegroundTexture()
         iGc->SetPenColor(KRgbWhite);
         iGc->SetPenAlpha(255);
         iGc->SetAlign(EHuiAlignHLeft, EHuiAlignVTop);            
-        iGc->Enable(CHuiGc::EFeatureBlending);
+        
+        if ( iForegroundTextureTransparency )
+            {
+            iGc->Enable(CHuiGc::EFeatureBlending);
+            }
+        else
+            {
+            iGc->Disable(CHuiGc::EFeatureBlending);
+            }
+               
         iGc->Enable(CHuiGc::EFeatureClipping);            
         iGc->DrawImage(image, screenOrigin, image.Texture().Size());        
+
+        if ( originalQuality != EHuiQualityFast )
+            {
+            // Restore original quality.
+            iGc->SetQuality( originalQuality );
+            }        
         }
     }
     
@@ -1707,3 +1738,17 @@ EXPORT_C CFbsBitmap* CHuiDisplay::ForegroundBitmap() const
     return iForegroundBitmap;
     }
 
+EXPORT_C void CHuiDisplay::CopyScreenToBitmapL(CFbsBitmap* aBitmap)
+    {
+    MHuiRenderSurface* oldSurface = CHuiStatic::CurrentRenderSurface();
+    RenderSurface().MakeCurrent();
+    
+    TInt err = iGc->CopyScreenToBitmap( aBitmap );
+        
+    if (oldSurface && oldSurface != &RenderSurface())
+        {
+        oldSurface->MakeCurrent();
+        }
+        
+    User::LeaveIfError( err );
+    }

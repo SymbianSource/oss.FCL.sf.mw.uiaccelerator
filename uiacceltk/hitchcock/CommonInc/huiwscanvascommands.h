@@ -123,6 +123,7 @@ enum TSgcCanvasCommands
      
      EAlfContentTag,
      EAlfFrameFlags,
+     EAlfFrameOrientation,
     
      EAlfPacketReady,
      EAlfPacketNotReady,
@@ -157,9 +158,13 @@ enum TSgcCanvasCommands
      EAlfDebugTrackNode,
      EAlfNodeLayerExtentChanged,
      EAlfNodeLayerUsesAlphaFlagChanged,
+
+     // 110
      EAlfNodeFadeAllChildren,
      EAlfCommandIndexArray,
      EAlfCommandIndexArrayHeader,
+     EAlfNodeSetWindowArea,    
+     
      // This must be kept as last command!
      EAlfLastCommand
      };

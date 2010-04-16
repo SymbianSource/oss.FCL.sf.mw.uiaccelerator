@@ -1108,4 +1108,6 @@ EXPORTS
 	?Finish@CAlfDrawer@@QAEHXZ @ 1107 NONAME ; int CAlfDrawer::Finish(void)
 	??1CAlfDrawer@@UAE@XZ @ 1108 NONAME ; CAlfDrawer::~CAlfDrawer(void)
 	?NewL@CAlfDrawer@@SAPAV1@XZ @ 1109 NONAME ; class CAlfDrawer * CAlfDrawer::NewL(void)
+	?BlankScreen@RAlfDirectClient@@QAEHH@Z @ 1110 NONAME ; int RAlfDirectClient::BlankScreen(int)
+	?FallbackCopyScreenToBitmap@CAlfDrawer@@SAHAAVCWsScreenDevice@@PAVCFbsBitmap@@ABVTRect@@@Z @ 1111 NONAME ; int CAlfDrawer::FallbackCopyScreenToBitmap(class CWsScreenDevice &, class CFbsBitmap *, class TRect const &)
 

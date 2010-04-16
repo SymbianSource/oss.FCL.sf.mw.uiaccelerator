@@ -771,19 +771,21 @@ void CHuiCanvasTextImageRasterizer::InitL(CHuiCanvasTextImage& aTextImage, TSize
     else
         {
         // First clear
-        TRgb clearColor(KRgbBlack);
-        clearColor.SetAlpha(0);
-        iTempBitmapGc->SetPenColor(clearColor);
-        iTempBitmapGc->SetBrushColor(clearColor);
+        TRgb clearColor;
         if (iTempBitmap->DisplayMode() == EColor16MA)
             {
+            clearColor = aTextImage.iGcParams.iPenColor;
             iTempBitmapGc->SetDrawMode(CGraphicsContext::EDrawModeWriteAlpha);
             }
         else
             {
+            clearColor = KRgbBlack;
             iTempBitmapGc->SetDrawMode(CGraphicsContext::EDrawModePEN);
             }
-                            	    
+
+        clearColor.SetAlpha(0);
+        iTempBitmapGc->SetPenColor(clearColor);
+        iTempBitmapGc->SetBrushColor(clearColor);                            	    
 	    iTempBitmapGc->Clear();                  
 
         // Set correct gc settings
@@ -1228,19 +1230,20 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
     touchCountChanged |= volatileBitmapOrMask;
     touchCountChanged |= (aImage.iBitmapTouchCount != bitmapTouchCount);
     touchCountChanged |= (aImage.iMaskTouchCount != maskTouchCount);
-
+    TBool serialNumberChanged = (aImage.iSerialNumber != bitmap->SerialNumber());
+    
     // Is touch count check enabled ?
     TBool touchCountCheckEnabled = CHuiStatic::Env().CanvasTextureCache().IsTouchCountCheckEnabled();
     
     // Has it old content at all ?
     TBool hasContent = aImage.iTexture->HasContent();
     
-    if (!hasContent || (touchCountCheckEnabled && touchCountChanged))
+    if (!hasContent || (touchCountCheckEnabled && touchCountChanged) || serialNumberChanged)
         {
         // Upload bitmap content...this may be slow depending on used HW acceleration !
         if (bitmap->SizeInPixels().iWidth > 0 && 
             bitmap->SizeInPixels().iHeight > 0 &&
-            (!mask || (mask->SizeInPixels().iWidth > 0 && mask->SizeInPixels().iHeight)))
+            (!mask || (mask->SizeInPixels().iWidth > 0 && mask->SizeInPixels().iHeight > 0)))
             {
             // EHuiTextureUploadFlagDoNotRetainResolution should be removed when 
             // texturecoordinates with segmented textures work.
@@ -1254,6 +1257,9 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
 
             CHuiTexture* texture = aImage.iTexture;
             texture->UploadL(*bitmap, mask, uploadFlags);
+
+            // Save the bitmap's serial number to the cached item
+            aImage.iSerialNumber = bitmap->SerialNumber();
 
 #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
             TTime endTime;
@@ -1273,6 +1279,11 @@ void CHuiCanvasGraphicImageRasterizer::RasterizeL(CHuiCanvasGraphicImage& aImage
             if (aImage.iMaskTouchCount != maskTouchCount)
                 {
                 RDebug::Print(_L(">>> CHuiCanvasGraphicImageRasterizer::UpdateCachedImageL: Reason for uploading is iMaskTouchCount %i, old was %i "), maskTouchCount, aImage.iMaskTouchCount);                     
+                }
+            
+            if (serialNumberChanged)
+                {
+                RDebug::Print(_L(">>> CHuiCanvasGraphicImageRasterizer::UpdateCachedImageL: Reason for uploading is changed bitmap serial number %li, old was %li "), bitmap->SerialNumber(), aImage.iSerialNumber);
                 }
 
             RDebug::Print(_L(">>> CHuiCanvasGraphicImageRasterizer::UpdateCachedImageL: Upload of %ix%i %i+%i took %i ms"), 
@@ -1921,7 +1932,18 @@ TInt TextOrderFunc(const CHuiCanvasTextImage& aFirst, const CHuiCanvasTextImage&
         {
         // For PC-lint
         }
-
+    if (aFirst.iTextBoxMaxSize.iHeight < aSecond.iTextBoxMaxSize.iHeight)
+           {
+           return -1; // less than
+           }
+       else if (aFirst.iTextBoxMaxSize.iHeight > aSecond.iTextBoxMaxSize.iHeight)
+           {
+           return 1; // more than  
+           }
+       else
+           {
+           // For PC-lint
+           }
     // Text content
     TInt textcompare = KErrNotFound;
     if ( aFirst.iFindTextPtr )
@@ -2077,7 +2099,7 @@ TInt RenderBufferOrderFunc(const CHuiCanvasRenderBufferImage& aFirst, const CHui
 //
 CHuiCanvasTextureCache::CHuiCanvasTextureCache()
     {
-    EnableLowMemoryState(EFalse);
+    SetMemoryLevel(EHuiMemoryLevelNormal);
     CHuiStatic::Env().AddLowMemoryObserver(this);
     }
 

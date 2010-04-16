@@ -21,6 +21,8 @@
 #include <e32base.h>
 #include <e32hashtab.h>
 #include <w32std.h>
+#include <goommonitorplugin.hrh>
+#include "alfdecoderserverclient.h"
 
 class CApaWindowGroupName;
 
@@ -76,11 +78,24 @@ public:
     
     // Find all the windowgroups in the list that matches application id for this window group
     void GetAllWgIdsMatchingAppId(TInt aWgId, RArray<TInt> & WgIdList) const;
+
+    TInt LowOnMemWgs(TInt aIndex) 
+        {
+        if (aIndex >= iLowOnMemWgs.Count() || aIndex < 0)
+            {
+            return KErrNotFound;
+            }    
+        else
+            {
+            return iLowOnMemWgs[aIndex];
+            }
+        }
+
     
     
 private:    
 
-    void CollapseWindowGroupTree();
+    void CollapseWindowGroupTree(RArray<TInt>& aWgsHavingSurfaces);
     
     void RemovePropertiesForClosedWindowsL();
 
@@ -117,6 +132,8 @@ private:
         
     CApaWindowGroupName* iWgName;
     HBufC* iWgNameBuf;              // owned by iWgName
+    RArray<TInt> iLowOnMemWgs;
+    RAlfBridgerClient iAlfClient;
     };
 
 #include "goomwindowgrouplist.inl"

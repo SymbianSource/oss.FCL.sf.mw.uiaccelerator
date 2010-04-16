@@ -45,6 +45,9 @@ class CAlfWindowFxPlugin: public CBase
     /** Cancel asynch message(s) from client */    
     IMPORT_C virtual void CancelMessage(TInt aMessageId);
 
+    /** Client about to exist, discard message(s) from client */    
+    IMPORT_C virtual void ClientAboutToExit(TThreadId aClientId);
+
     /**
     * Pure Virtuals
     */

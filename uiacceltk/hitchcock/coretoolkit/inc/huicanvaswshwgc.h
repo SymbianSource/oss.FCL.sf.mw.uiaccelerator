@@ -140,6 +140,8 @@ public:
     virtual TInt EnableRenderbuffer(TBool aEnable = ETrue);    
     virtual THuiCanvasWsGcType Type() const;
 
+    virtual void ClearCapturingBufferArea(const TRect& aRect);
+
     void BeginDrawL(TRect aDisplayRect,const CHuiCanvasVisual& aUser, TBool aIsCachePrepared, const TRegion& aUpdateRegion);
     void EndDrawL(const TRegion& aUpdateRegion, TBool aUpdateDisplay);
     void BeginScanL(TRect aDisplayRect,const CHuiCanvasVisual& aUser, TBool aIsCachePrepared, const TRegion& aUpdateRegion);

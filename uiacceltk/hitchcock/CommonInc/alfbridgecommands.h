@@ -65,6 +65,7 @@ enum TAlfDecoderServerBindings
     // 130
     EAlfEffectFx,
     EAlfStopEffectFx,
+    EAlfStopControlEffectFx,
     EAlfControlEffectFx,
     EAlfRegisterEffectFx,
     EAlfUnregisterEffectFx,
@@ -79,6 +80,9 @@ enum TAlfDecoderServerBindings
     EAlfReleaseTemporaryChunk,
     EAlfBridgeSetScreenRotation,
     EAlfDSSynchronize,
+    EAlfDSSetWindowArea,
+    EAlfDSSetTransparencyAlphaChannel,
+    EAlfDSIncludeToVisibilityCalculation,
 
     KUnInitialized
     };

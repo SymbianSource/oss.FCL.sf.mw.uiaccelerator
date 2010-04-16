@@ -1004,9 +1004,10 @@ public:
     IMPORT_C THuiMemoryLevel MemoryLevel();
     
     void DoSynchronize();
+    TBool iPauseDrawing;
 private:
-    MHuiSynchronizationObserver* iSynchObserver;
-    TInt iSynchId;
+    RPointerArray<MHuiSynchronizationObserver> iSynchObservers;
+    RArray<TInt> iSynchIds;
     };
 
 #endif  // __HUIENV_H__

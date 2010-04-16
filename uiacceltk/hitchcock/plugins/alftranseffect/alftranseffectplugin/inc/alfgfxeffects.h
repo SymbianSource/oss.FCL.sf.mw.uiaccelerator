@@ -73,6 +73,9 @@ NONSHARABLE_CLASS( CAlfGfxEffects ):   public CAlfWindowFxPlugin, MEndChecker /*
 
         /** Cancel asynch message(s) from client */    
         void CancelMessage(TInt aMessageId);
+        
+        /** release message(s) from client */  
+        void ClientAboutToExit(TThreadId aClientId);
 
 		/**
 		* From CAlfWindowManager - not implemented

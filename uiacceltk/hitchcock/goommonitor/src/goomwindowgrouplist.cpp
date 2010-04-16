@@ -68,128 +68,157 @@ void CGOomWindowGroupList::RefreshL()
     {
     FUNC_LOG;
   
-    NOK_resource_profiling eglQueryProfilingData = (NOK_resource_profiling)eglGetProcAddress("eglQueryProfilingDataNOK");
-    
-    if (!eglQueryProfilingData)
-            {
-            TRACES("RefreshL EGL_NOK_resource_profiling not available");
-            return;
-            }
-    
-    EGLint data_count;
-    EGLint* prof_data;
-    TInt i(0);
+    if (!iAlfClient.Handle())
+        {
+        User::LeaveIfError(iAlfClient.Connect());
+        }
+    iLowOnMemWgs.Reset();
+    User::LeaveIfError(iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&iLowOnMemWgs));
+
+    RArray<TInt>& inactiveSurfaces = iLowOnMemWgs;
+    TRACES1("Inactive surfaces count %d", inactiveSurfaces.Count());     
     RArray<TUint64> processIds;
     RArray<TUint> privMemUsed;
-    RArray<TUint64> systemProcessIds;
+    RArray<TUint64> sparedProcessIds;
+    
+   //if (inactiveSurfaces.Count() == 1) // ALF only 
+   //     {
+        NOK_resource_profiling eglQueryProfilingData = (NOK_resource_profiling)eglGetProcAddress("eglQueryProfilingDataNOK");
+    
+        if (!eglQueryProfilingData)
+            {
+            TRACES("RefreshL EGL_NOK_resource_profiling not available");
+			return;
+            }
+    
+        EGLint data_count;
+        EGLint* prof_data;
+        TInt i(0);
         
-    EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
-    /* Find out how much profiling data is available */
-    eglQueryProfilingData(dpy, EGL_PROF_QUERY_GLOBAL_BIT_NOK|
+        /* Find out how much profiling data is available */
+        eglQueryProfilingData(dpy, EGL_PROF_QUERY_GLOBAL_BIT_NOK|
                                 EGL_PROF_QUERY_MEMORY_USAGE_BIT_NOK,
                                 NULL, 0, &data_count);
     
-    /* Allocate room for the profiling data */
-    prof_data = (EGLint*)User::Alloc(data_count * sizeof(EGLint));
-    if (prof_data == NULL)
-        return;
+        /* Allocate room for the profiling data */
+        prof_data = (EGLint*)User::Alloc(data_count * sizeof(EGLint));
+        if (prof_data == NULL)
+		   {
+		   return;
+		   }
 
-    /* Retrieve the profiling data */
-    eglQueryProfilingData(dpy,   EGL_PROF_QUERY_GLOBAL_BIT_NOK|
+        /* Retrieve the profiling data */
+        eglQueryProfilingData(dpy,   EGL_PROF_QUERY_GLOBAL_BIT_NOK|
                                  EGL_PROF_QUERY_MEMORY_USAGE_BIT_NOK,
                                  prof_data,
                                  data_count,
                                  &data_count);
     
-    /* Iterate over the returned data */
-    TUint64 process_id;  
-    while (i < data_count)
-        {
-        TRACES2("RefreshL EGL_NOK_resource_profiling - index: %d data: %x", i, prof_data[i]);
-        switch (prof_data[i++])
-            {   
-            case EGL_PROF_PROCESS_ID_NOK:
-                {
-                if (sizeof(EGLNativeProcessIdTypeNOK) == 8)
-                    {
-                    process_id = TUint64(prof_data[i]);
-                    process_id += (TUint64(prof_data[i + 1]) << 32);
-                    i+=2;
-                    }
-                else
-                    {
-                    process_id = prof_data[i];
-                    i++;
-                    }
-                break;
-                }
-            case EGL_PROF_PROCESS_USED_PRIVATE_MEMORY_NOK:
-                {
-                TUint mem = prof_data[i];
-                privMemUsed.Append(mem);
-
-                TRACES1("Memory Usage by app is %d", mem);
-                if(mem > KAllowedMemUsageForApps)
-                    processIds.Append(process_id);
-                
-                i++;
-                break;
-                }
-            case EGL_PROF_PROCESS_USED_SHARED_MEMORY_NOK:
-                {
-                TUint mem = prof_data[i];
-                TRACES1("Shared Memory Usage by app is %d", mem);
-                if(mem > KAllowedMemUsageForApps)
-                    processIds.Append(process_id);
-                i++;
-                break;
-                }
-            case EGL_PROF_USED_MEMORY_NOK:
-            case EGL_PROF_TOTAL_MEMORY_NOK:
-            default:
-                {
-                TRACES2("RefreshL index %d, data: %d\n", i, prof_data[i]);
-                i++;
-                break;
-                }
-            }
-        }
-        
-    /* Free allocated memory */
-    User::Free(prof_data);
-    
-    TRACES1("RefreshL : %d Processes use gfx memory", processIds.Count());
-    
-    ///////////////////////////////////////////////////////////////////
-    // Optimization, no need to construct list if ALF is the only one
-    ///////////////////////////////////////////////////////////////////
-    
-    if (processIds.Count() == 1)
-        {
-        RProcess process;
-        TInt err =  process.Open(processIds[0]);
-        if(!err)
+        /* Iterate over the returned data */
+        TUint64 process_id;  
+        while (i < data_count)
             {
-            TInt secureId = process.SecureId();
-            process.Close();
-            if(secureId == 0x10003B20) // magic, wserv 
-                {
-                processIds.Close();
-                TRACES("Only WServ using GFX mem, no need for app actions");
-                return;
+            TRACES2("RefreshL EGL_NOK_resource_profiling - index: %d data: %x", i, prof_data[i]);
+            switch (prof_data[i++])
+                {   
+                case EGL_PROF_PROCESS_ID_NOK:
+                    {
+                    if (sizeof(EGLNativeProcessIdTypeNOK) == 8)
+                        {
+                        process_id = TUint64(prof_data[i]);
+                        process_id += (TUint64(prof_data[i + 1]) << 32);
+                        i+=2;
+                        }
+                    else
+                        {
+                        process_id = prof_data[i];
+                        i++;
+                        }
+                    break;
+                    }
+                case EGL_PROF_PROCESS_USED_PRIVATE_MEMORY_NOK:
+                    {
+                    TUint mem = prof_data[i];
+                    privMemUsed.Append(mem);
+
+                    TRACES1("Memory Usage by app is %d", mem);
+                    if(mem > KAllowedMemUsageForApps)
+                        processIds.Append(process_id);
+                    else
+                        sparedProcessIds.Append(process_id);
+                
+                    i++;
+                    break;
+                    }
+                case EGL_PROF_PROCESS_USED_SHARED_MEMORY_NOK:
+                    {
+                    TUint mem = prof_data[i];
+                    TRACES1("Shared Memory Usage by app is %d", mem);
+                    if(mem > KAllowedMemUsageForApps)
+                        processIds.Append(process_id);
+                    i++;
+                    break;
+                    }
+                case EGL_PROF_USED_MEMORY_NOK:
+                case EGL_PROF_TOTAL_MEMORY_NOK:
+                default:
+                    {
+                    TRACES2("RefreshL index %d, data: %d\n", i, prof_data[i]);
+                    i++;
+                    break;
+                    }
                 }
             }
-        }
-        
+       
+       /* Free allocated memory */
+        User::Free(prof_data);
+    
+        TRACES1("RefreshL : %d Processes use gfx memory", processIds.Count());
+    
+        ///////////////////////////////////////////////////////////////////
+        // Optimization, no need to construct list if ALF is the only one
+        ///////////////////////////////////////////////////////////////////
+    
+        if( (processIds.Count() == 1) && (inactiveSurfaces.Count() == 1))
+            {
+            RProcess process;
+            TInt err =  process.Open(processIds[0]);
+            if(!err)
+                {
+                TInt secureId = process.SecureId();
+                process.Close();
+                if(secureId == 0x10003B20) // magic, wserv 
+                    {
+                    processIds.Close();
+                    privMemUsed.Close();
+                    TRACES("Only WServ using GFX mem, no need for app actions");
+                    return;
+                    }
+                }
+            }
+     //   }
+                
     // Refresh window group list
     // get all window groups, with info about parents
-    TInt numGroups = iWs.NumWindowGroups(0);
+    TInt numGroups = iWs.NumWindowGroups();
     iWgIds.ReserveL(numGroups);
-    User::LeaveIfError(iWs.WindowGroupList(0, &iWgIds));
+    User::LeaveIfError(iWs.WindowGroupList(&iWgIds));
     
     // Remove all child window groups, promote parents to foremost child position
-    CollapseWindowGroupTree();
+    CollapseWindowGroupTree(inactiveSurfaces);
+    
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+    TWsEvent event;
+    event.SetType(KGoomMemoryLowEvent); // naive
+
+    for (TInt i = inactiveSurfaces.Count()-1; i>=0; i--)
+        {
+        iWs.SendEventToWindowGroup(inactiveSurfaces[i], event);
+        }
+        
+#endif    
     
     // Note the current foreground window ID (if there is one)
     TBool oldForegroundWindowExists = EFalse;
@@ -225,6 +254,7 @@ void CGOomWindowGroupList::RefreshL()
         TUint secureId = AppId(index,ETrue);
         TBool found = 0;
         TInt i = 0;
+        //todo - do we really need to check this list , when we have all ids in inactiveSurfaces[]
         for(i = 0; i < processIds.Count(); i++)
             {
             RProcess process;
@@ -249,6 +279,19 @@ void CGOomWindowGroupList::RefreshL()
         
         if(!found)
             {
+            TRACES1("Checking WG ID : %d", iWgIds[index].iId);             
+            for(TInt ii = 0; ii < inactiveSurfaces.Count(); ii++)
+                {
+                if (iWgIds[index].iId == inactiveSurfaces[ii] )
+                    {
+                    found = ETrue;
+                    TRACES3("Found %d , AppId %x, isSystem: %d",inactiveSurfaces[ii], secureId, iWgName->IsSystem())            
+                    }     
+                }
+            }
+        
+        if(!found)
+            {
             iWgIds.Remove(index);
             continue;
             }
@@ -257,11 +300,13 @@ void CGOomWindowGroupList::RefreshL()
         if(iWgName->IsSystem() /*|| iWgName->Hidden()*/)
             {
             TRACES3("System/Hidden app found %x, ISystem %d, IsHidden %d",secureId, iWgName->IsSystem()?1:0, iWgName->Hidden()?1:0);  
-            systemProcessIds.Append(secureId);
+            sparedProcessIds.Append(secureId);
             }
       
         }
-       
+    
+    inactiveSurfaces.Close();
+    //CleanupStack::PopAndDestroy(); //   CleanupClosePushL(inactiveSurfaces);
     processIds.Close();
     privMemUsed.Close();      
     
@@ -270,11 +315,11 @@ void CGOomWindowGroupList::RefreshL()
     while (index--)
         {
         TBool skipped = EFalse;
-        for(i = 0; i < systemProcessIds.Count(); i++)
+        for(TInt i = 0; i < sparedProcessIds.Count(); i++)
             {
-            if(AppId(index,ETrue) == systemProcessIds[i])
+            if(AppId(index,ETrue) == sparedProcessIds[i])
                 {
-                TRACES2("WgId %d belongs to system app %x. Removing from Kill List",iWgIds[index].iId, systemProcessIds[i]);
+                TRACES2("WgId %d belongs to system app %x. Removing from Kill List",iWgIds[index].iId, sparedProcessIds[i]);
                 iWgIds.Remove(index);
                 skipped = ETrue;
                 break;
@@ -295,9 +340,8 @@ void CGOomWindowGroupList::RefreshL()
             iWgToPropertiesMapping.InsertL(iWgIds[index].iId, wgProperties);
             }
         }
-    
-    systemProcessIds.Close();
-    
+    TRACES1("Number of applications using graphics mem: %d", iWgIds.Count());    
+    sparedProcessIds.Close();
     }
 
 
@@ -417,7 +461,7 @@ TTimeIntervalSeconds CGOomWindowGroupList::IdleTime(TInt aIndex) const
   
 
 
-void CGOomWindowGroupList::CollapseWindowGroupTree()
+void CGOomWindowGroupList::CollapseWindowGroupTree(RArray<TInt>& aWgsHavingSurfaces)
     {
     FUNC_LOG;
 
@@ -430,6 +474,23 @@ void CGOomWindowGroupList::CollapseWindowGroupTree()
             // Look for the parent position
             TInt parentPos = ii;        // use child pos as not-found signal
             TInt count = iWgIds.Count();
+            
+            for (TInt kk = aWgsHavingSurfaces.Count()-1; kk >=0; kk--)
+                {
+                if (aWgsHavingSurfaces[kk] ==info.iId && aWgsHavingSurfaces.Find(info.iParentId) == KErrNotFound )
+                    { // replace child if with parent ID    
+					aWgsHavingSurfaces.Append(info.iParentId);
+					ii=-1; // need to start all over again
+                    break;
+                    }
+                }
+				
+			if (ii == -1)
+				{
+				ii++;
+				continue;	
+				}
+				
             for (TInt jj=0; jj<count; jj++)
                 {
                 if (iWgIds[jj].iId == info.iParentId)
@@ -505,6 +566,8 @@ CGOomWindowGroupList::~CGOomWindowGroupList()
     iWgToPropertiesMapping.Close();
     iExistingWindowIds.Close();
     delete iWgName;
+    iAlfClient.Close();
+    iLowOnMemWgs.Close();
     }
 
 

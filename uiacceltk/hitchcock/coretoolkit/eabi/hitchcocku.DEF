@@ -1986,4 +1986,14 @@ EXPORTS
 	_ZThn28_N11CHuiS60Skin18SkinPackageChangedE34TAknsSkinStatusPackageChangeReason @ 1985 NONAME
 	_ZThn28_N11CHuiS60Skin24SkinConfigurationChangedE40TAknsSkinStatusConfigurationChangeReason @ 1986 NONAME
 	_ZN7CHuiEnv11SynchronizeEiP27MHuiSynchronizationObserver @ 1987 NONAME
+	_ZN11CHuiDisplay27SetForegroundTextureOptionsEi @ 1988 NONAME
+	_ZN16CHuiCanvasVisual8SetShapeERK6TPointRK7TRegion @ 1989 NONAME
+	_ZNK16CHuiCanvasVisual11ShapeOriginEv @ 1990 NONAME
+	_ZNK16CHuiCanvasVisual11ShapeRegionEv @ 1991 NONAME
+	_ZNK16CHuiCanvasVisual14HasCustomShapeEv @ 1992 NONAME
+	_ZN16CHuiCanvasVisual21CommandBufferCoverageEi @ 1993 NONAME
+	_ZN11CHuiDisplay19CopyScreenToBitmapLEP10CFbsBitmap @ 1994 NONAME
+	_ZN16CHuiControlGroup11SetSecureIdEi @ 1995 NONAME
+	_ZN16CHuiControlGroup8SecureIdEv @ 1996 NONAME
+	_ZNK16CHuiCanvasVisual19HasTransParentClearEv @ 1997 NONAME
 

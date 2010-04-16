@@ -214,9 +214,13 @@ void CAlfNode::GetAllChildrenInGroup( RPointerArray<CAlfNode>& aNodes, TUint32 a
 	if ( iParent->iType != MWsWindowTreeNode::EWinTreeNodeRoot)
 		{
 		CAlfNode* parentGroupNode = iModel->FindNode( aParentId );
+		aNodes.Append(parentGroupNode); 
 		for (CAlfNode::TIter iter( parentGroupNode ); iter.Current() != NULL;  iter.Next()) 
 			{ 
-			aNodes.Append(iter.Current()); 
+			if (iter.Current() != parentGroupNode )
+			    {
+			    aNodes.Append(iter.Current());
+			    }
 			}
 		}
 	else
@@ -1476,6 +1480,8 @@ void CAlfNodeVisual::FlagChanged( MWsWindowTreeObserver::TFlags aFlag, TBool aNe
             		{
                     iWindow->SetActive( EFalse );
             		}
+            	
+            	iWindow->IncludeToVisibilityCalculation( iVisible && iNodeActivated );
             	}
             break;
             }
@@ -1488,6 +1494,10 @@ void CAlfNodeVisual::FlagChanged( MWsWindowTreeObserver::TFlags aFlag, TBool aNe
         case MWsWindowTreeObserver::EAlphaChannelTransparencyEnabled:
             {
             iAlphaChannelTransparencyEnabled = aNewValue;
+            if ( iWindow )
+                {
+                iWindow->SetTransparencyAlphaChannel( aNewValue );
+                }
             break;
             }
         }
@@ -1637,7 +1647,9 @@ void CAlfNodeVisual::ActivateNode()
         		{
         		iWindow->SetActive( ETrue );
         		}
-        	}
+        	
+        	iWindow->IncludeToVisibilityCalculation( iVisible && iNodeActivated );
+            }
          }
      else
          {
@@ -1712,16 +1724,15 @@ void CAlfNodeWindow::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream* aSt
 
 // ---------------------------------------------------------------------------
 // MoveToWindowGroup
-// !!!! THIS METHOD HAS NOT BEEN TESTED AT ALL!!!!!! EXPECT TROUBLE!!!!
 // ---------------------------------------------------------------------------
 //
 void CAlfNodeWindow::MoveToWindowGroup( TUint32 aNewGroupId )
 	{
-	__ALFLOGSTRING("CAlfNodeWindow::MoveToWindowGroup, THIS METHOD IS UNTESTED. EXPECT TROUBLE!");
+	__ALFLOGSTRING3("CAlfNodeWindow::MoveToWindowGroup moving nodeID 0x%x from group 0x%x to 0x%x",iId, iParent->iId, aNewGroupId );
 	CAlfNodeGroup* newGroup = (CAlfNodeGroup*)iModel->FindNode( aNewGroupId );
 	if ( newGroup )
 		{
-		// collect my children in my old group
+		// collect my children in my old group (inclucing me)
 		RPointerArray<CAlfNode> myChildNodes;
 		GetAllChildrenInGroup( myChildNodes, iId );
 			    
@@ -1735,20 +1746,22 @@ void CAlfNodeWindow::MoveToWindowGroup( TUint32 aNewGroupId )
 			{
 			previous->iSibling = iSibling; // there was the a previous child. update the link to my next sibling (which might be NULL)
 			}
-		TUint32 oldGroupId = iParent->iId;
-		iParent = newGroup;
-		SetFirstChild();
-		
+
 		// yippii, new parent, 		
 		// add me as the first child of the new group
-		// TODO: Move the nodes to the new group?
+		iParent = newGroup;
+		iSibling = NULL;
+		SetFirstChild();
+
+		TUint32 screenNumber = iScreenNumber;
+
 		TInt i = myChildNodes.Count();
 		while( --i >=0 ) // update groupid and send new location to appui 
-			{
-			iModel->Server().Bridge()->AddData( EAlfDSMoveWindowToNewGroup, 
-					myChildNodes[i]->iId, 
-					oldGroupId, 
-					(TAny*)aNewGroupId );
+		    {
+		    iModel->Server().Bridge()->AddData( EAlfDSMoveWindowToNewGroup, 
+		            myChildNodes[i]->iId, 
+		            screenNumber, 
+		            (TAny*)aNewGroupId );
 			myChildNodes[i]->iGroupId = aNewGroupId;
 			}
 	  
@@ -1760,6 +1773,38 @@ void CAlfNodeWindow::MoveToWindowGroup( TUint32 aNewGroupId )
 		USER_INVARIANT();
 		}
 	}
+
+// ---------------------------------------------------------------------------
+// SetWindowAreaL
+// ---------------------------------------------------------------------------
+//
+void CAlfNodeWindow::SetWindowAreaL( RMemReadStream* aStream )
+    {
+    TPoint pos;
+    RRegion region;
+    CleanupClosePushL( region );
+    
+    pos.iX = aStream->ReadInt32L();
+    pos.iY = aStream->ReadInt32L();
+    
+    TInt count = aStream->ReadInt32L();
+    for ( TInt i = 0; i < count; ++i )
+        {
+        TRect r;
+        aStream->ReadL((TUint8*)&r.iTl.iX, 4 * sizeof(TInt32 ));
+        region.AddRect(r);
+        }
+    
+    if ( region.CheckError() )
+        {
+        // Fallback to non-shape version
+        region.Clear();
+        }
+    
+    iWindow->SetWindowArea( pos, region );
+    
+    CleanupStack::PopAndDestroy();
+    }
 
 // ---------------------------------------------------------------------------
 // NewL

@@ -68,4 +68,19 @@ struct THuiVisualQueryParams
     TInt iResult;
     };
 
+// Uid for Copy Screen To Bitmap extension
+const TUid KHuiGcCopyScreenToBitmap = { 0x2002E67B };
+
+// Parameter structure for Copy Screen To Bitmap extension
+struct THuiGcCopyScreenToBitmapParams
+    {
+    // Input parameters
+    
+    CFbsBitmap* iBitmap;
+    
+    // Output parameters
+    
+    TInt iErrorCode;
+    };
+
 #endif // __HUIEXTENSION_H__

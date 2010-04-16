@@ -2113,7 +2113,7 @@ EXPORT_C void CHuiTextureManager::RestoreL()
                 HUI_DEBUG5(_L("CHuiTextureManager::RestoreL() - Restoring texture 0x%x (\"%S\", id: %i) [%i/%i]"),
                           tex, &(tex->ImageFileName()), iTextures[i]->iId, i+1, iTextures.Count());
                 // Restore the texture.
-                tex->RestoreL();
+                TRAP_IGNORE( tex->RestoreL() );
                 }
             }
         else

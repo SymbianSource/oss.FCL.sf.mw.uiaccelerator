@@ -131,7 +131,6 @@ CHuiCanvasWsPainter::~CHuiCanvasWsPainter()
     {
     if (iCanvasVisual)
         {
-        iCanvasVisual->Env().CanvasTextureCache().ReleaseAllCachedEntries(*iCanvasVisual);
         iCanvasVisual->Env().RemoveMemoryLevelObserver(this);
         }
     else
@@ -369,8 +368,8 @@ void CHuiCanvasWsPainter::HandleBufferL(TRect& aDisplayRect, TInt aAction, const
              *        
              */            
             TBool clearBeforeHandlingBuffer = iCanvasWsGc->IsRenderBufferEnabled() 
-                && (!(aUser.Flags() & EHuiVisualFlagOpaqueHint) || aUser.IsBackgroundDrawingEnabled())
-                && !isFullUpdateRegionCleared;
+                && (!(aUser.Flags() & EHuiVisualFlagOpaqueHint) || aUser.IsBackgroundDrawingEnabled());
+
                         
             // TODO: Should avoid trap, but EndActionL must always be called
             TRAPD(err, DoHandleAllBuffersL( aDisplayRect, aAction, aUser, aGc, aPos, 
@@ -661,6 +660,14 @@ void CHuiCanvasWsPainter::DoPeekBufferL(TInt aIndex)
                     }                
                 break;
                 }
+            case EAlfFrameOrientation:
+                {
+                TInt orientation;
+                iWsCommandBufferReader->ReadInt32L(orientation);
+                commandBuffer.iOrientation = (CHuiGc::TOrientation)orientation;
+                break;
+                }
+                           
             case EAlfSetUpdateRegion: 
                 {
                 WsSetUpdateRegionL(aIndex);
@@ -790,6 +797,13 @@ void CHuiCanvasWsPainter::DoHandleBufferStringL(TInt aIndex, TRect& /*aDisplayRe
                     }
                 break;
                 }
+            case EAlfFrameOrientation:
+                {
+                TInt orientation;
+                iWsCommandBufferReader->ReadInt32L( orientation );
+                break;
+                }
+
             case EAlfSetUpdateRegion: 
                 {
                 WsSetUpdateRegionL(aIndex);                    
@@ -911,6 +925,12 @@ void CHuiCanvasWsPainter::DoHandleBufferStringL(TInt aIndex, TRect& /*aDisplayRe
             case EAlfClearRect:
                 {
                 commandBuffer->SetStatusFlags(EHuiCanvasBufferContainsDrawing);
+                TRgb transpclearcolor(KRgbWhite);
+                transpclearcolor.SetAlpha(0);
+                if (iBrushColor == transpclearcolor)
+                    {
+                    commandBuffer->SetStatusFlags(EHuiCanvasBufferContainsTransparentClear);                    
+                    }
                 WsClearRectL();
                 break;
                 }
@@ -1878,6 +1898,7 @@ void CHuiCanvasWsPainter::WsResetL()
 	#ifdef __ALF_SYMBIAN_RWINDOW_CLEARING_BUG_WORKAROUND__
 	iTestBrushColor.SetInternal(0);
 	#endif	
+	iBrushColor.SetInternal(0);
     }
 
 void CHuiCanvasWsPainter::WsSetBrushColorL()
@@ -1889,6 +1910,7 @@ void CHuiCanvasWsPainter::WsSetBrushColorL()
 	#ifdef __ALF_SYMBIAN_RWINDOW_CLEARING_BUG_WORKAROUND__
 	iTestBrushColor = color;    	  	                            	
 	#endif
+	iBrushColor = color;
     }
 
 void CHuiCanvasWsPainter::WsSetBrushOriginL()
@@ -2482,6 +2504,11 @@ TInt CHuiCanvasWsPainter::SetCapturingBufferL(CFbsBitmap* aTarget)
         }
 
     return result;
+    }
+
+void CHuiCanvasWsPainter::ClearCapturingBufferArea(const TRect& aRect)
+    {
+    iCanvasWsGc->ClearCapturingBufferArea(aRect);
     }
 
 TRect CHuiCanvasWsPainter::DirtyRect() const

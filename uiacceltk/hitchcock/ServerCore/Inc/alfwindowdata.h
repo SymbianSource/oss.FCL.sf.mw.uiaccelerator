@@ -54,6 +54,12 @@ class TAlfWindowData
     // was not set inactive because was reserved,
     // should be set inactive as soon as is reserved.
     TInt iFlags;
+
+    RRegion iWindowArea;
+    TPoint iWindowAreaOrigin;
+    
+    TBool iTransparencyAlphaChannel;
+    TBool iIncludeToVisibilityCalculation;
     };
 
 
