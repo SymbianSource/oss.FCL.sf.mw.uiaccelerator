@@ -893,7 +893,14 @@ EXPORT_C void CAlfAppUi::ConstructL()
 
     iData->iBridge = CAlfStreamerBridge::NewL(0);
     iData->iBridge->iAlfWindowData.iAlfWindowGrpId = mainWg.Identifier();
-    iData->iBridge->iAlfWindowData.iAlfWindowHandle =  iData->iPlainWindow->ClientHandle();
+    if (coe)
+        {
+    	iData->iBridge->iAlfWindowData.iAlfWindowHandle = iData->iSharedWindow->DrawableWindow()->ClientHandle();
+        }
+    else
+       	{
+    	iData->iBridge->iAlfWindowData.iAlfWindowHandle =  iData->iPlainWindow->ClientHandle();
+        }
     iData->iBridge->iAlfWindowData.iScreenNumber = 0; // TBD multiple screen support
 
     iData->iBridgeObj = CAlfBridge::NewL( &iData->iBridge, iData->iHuiEnv );
