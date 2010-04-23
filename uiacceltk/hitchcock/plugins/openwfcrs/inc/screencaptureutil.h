@@ -17,8 +17,6 @@
 #define __SCREENCAPTURERENDERSTAGE_H__
 
 #include <graphics/wsrenderstage.h>
-#include <graphics/wstestscreencapture.h>
-#include <graphics/testscreencapture.h>
 #include <graphics/surface.h>
 #include <graphics/surfacemanager.h>
 #include <graphics/surfaceupdateclient.h>

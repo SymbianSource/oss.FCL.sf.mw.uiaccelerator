@@ -649,6 +649,10 @@ EXPORT_C void CHuiCanvasGc::DrawRects(RArray<THuiRealRect>& aRects)
     DisableDelayedClippingIfNeeded();                
 
     Cleanup();
+    
+    AMT_MAP_SET_VALUE_IF( iVisual && aRects.Count() > 0, iRectMap, 
+                          AMT_MAP_CPTR_TO_KEY_CAST( iVisual ), aRects[ aRects.Count() - 1 ].Round(),
+                          EAlfModuleTestTypeCoreToolkitDrawWindow );
 	}
 
 EXPORT_C void CHuiCanvasGc::DoDrawRects(RArray<THuiRealRect>& aRects)
@@ -682,10 +686,6 @@ EXPORT_C void CHuiCanvasGc::DoDrawRects(RArray<THuiRealRect>& aRects)
         	    {
       		  	iGc->DrawRect(rect);
         	    }
-        	
-            AMT_MAP_INC_VALUE_IF( iVisual, iIntMap, 
-                                  AMT_MAP_CPTR_TO_KEY_CAST( iVisual ),
-                                  EAlfModuleTestTypeCoreToolkitDrawWindow );
 		    }    	    
 		}            
 	}
@@ -1361,8 +1361,9 @@ EXPORT_C void CHuiCanvasGc::DrawImage(const CHuiCanvasRenderBuffer& aImage, cons
 
     Cleanup();
     
-    AMT_MAP_INC_VALUE_IF( iVisual, iIntMap, 
-                          AMT_MAP_CPTR_TO_KEY_CAST( iVisual ), 
+    AMT_MAP_SET_VALUE_IF( iVisual, iRectMap,
+                          AMT_MAP_CPTR_TO_KEY_CAST( iVisual ),
+                          destinationRect.Round(), 
                           EAlfModuleTestTypeCoreToolkitDrawFromRenderBuffer );
     }
 

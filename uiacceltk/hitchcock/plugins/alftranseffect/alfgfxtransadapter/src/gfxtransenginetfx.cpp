@@ -145,6 +145,17 @@ public:
 
 	void IssueReq();
 	inline TType Type();
+	TPtr8** InBuf() { return &iInPtr; }
+	TPtr8** OutBuf() { return &iOutPtr; }
+	
+	void ResetBufs()
+		{
+		delete iInPtr;
+    	iInPtr = 0;
+		delete iOutPtr;
+    	iOutPtr = 0;	
+		}
+		
 private:
 	void RunL();
 	void DoCancel();
@@ -153,7 +164,8 @@ private:
 	MTfxServerObserver* iOwner;
 	CGfxTransAdapterTfx* iParent;
 	TType iType;
-	
+	TPtr8* iInPtr;
+	TPtr8* iOutPtr;
 };
 
 // ---------------------------------------------------------------------------
@@ -175,6 +187,7 @@ CAlfTransitionRequest::~CAlfTransitionRequest()
 	{
   	__ALFFXLOGSTRING("CAlfTransitionRequest - cancelling and deleting policy request" );
 	Cancel();
+	ResetBufs();
 	}
 	
 // ---------------------------------------------------------------------------
@@ -182,6 +195,8 @@ CAlfTransitionRequest::~CAlfTransitionRequest()
 //
 void CAlfTransitionRequest::RunL()
 	{
+	ResetBufs();
+
 	if ( iStatus.Int() == KErrCancel )
 	    {
 	    // If the request was cancelled, we are done
@@ -876,6 +891,7 @@ TInt32 CGfxTransAdapterTfx::WindowGroupIdFromAppUid( TUid aAppUid )
         if ( iCachedUidMapping.iWindowGroupId > 0 )
             {
             result = iCachedUidMapping.iWindowGroupId;
+            iCachedUidMapping.iSecureId = 0;
             found = true;
             }
         }
@@ -1371,10 +1387,15 @@ TInt CGfxTransAdapterTfx::RequestPolicyUpdates()
 		
     // send a request to plugin to start sending us policy updates
     // This is an asynchronous request
+	iPolicyReq->ResetBufs();	
 
-    TPtr8 inPtr = iAsyncTransferBuffer->Des();
+    *(iPolicyReq->InBuf())= new (ELeave) TPtr8(iAsyncTransferBuffer->Des());
+    TPtr8& inPtr = **iPolicyReq->InBuf();
     inPtr.Zero();
-    TPtr8 outPtr = iAsyncReturnBuffer->Des();
+
+    *(iPolicyReq->OutBuf())= new (ELeave) TPtr8(iAsyncReturnBuffer->Des());
+    TPtr8& outPtr = **iPolicyReq->OutBuf();
+
     outPtr.Zero();
 	RDesWriteStream inBuf( inPtr );
     TInt op = MAlfGfxEffectPlugin::ETfxServerOpControlPolicyRequest;
@@ -1391,9 +1412,6 @@ TInt CGfxTransAdapterTfx::RequestPolicyUpdates()
     __ALFFXLOGSTRING( "CGfxTransAdapterTfx::RequestPolicyUpdates" );
     iTfxServer.SendAsynchronousData( iPluginImplementation, inPtr, outPtr, iPolicyReq->iStatus );
     iPolicyReq->IssueReq();
-    // clear out used data    
-    inPtr.Zero();
-    outPtr.Zero();
     __ALFFXLOGSTRING("CGfxTransAdapterTfx::RequestPolicyUpdates <<");
     return KErrNone;
     

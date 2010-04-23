@@ -1102,7 +1102,7 @@ EXPORTS
 	?MeasureFPS@RAlfDirectClient@@QAEXJH@Z @ 1101 NONAME ; void RAlfDirectClient::MeasureFPS(long, int)
 	??0RAlfDirectClient@@QAE@XZ @ 1102 NONAME ; RAlfDirectClient::RAlfDirectClient(void)
 	?Disconnect@RAlfDirectClient@@QAEXXZ @ 1103 NONAME ; void RAlfDirectClient::Disconnect(void)
-	?EnableLowMemoryState@RAlfDirectClient@@QAEXH@Z @ 1104 NONAME ; void RAlfDirectClient::EnableLowMemoryState(int)
+	?EnableLowMemoryState@RAlfDirectClient@@QAEXHH@Z @ 1104 NONAME ; void RAlfDirectClient::EnableLowMemoryState(int, int)
 	?SetGroupEffectL@CAlfVisual@@QAEXABVTDesC16@@H@Z @ 1105 NONAME ; void CAlfVisual::SetGroupEffectL(class TDesC16 const &, int)
 	?ForceSwRendering@RAlfDirectClient@@QAEHH@Z @ 1106 NONAME ; int RAlfDirectClient::ForceSwRendering(int)
 	?Finish@CAlfDrawer@@QAEHXZ @ 1107 NONAME ; int CAlfDrawer::Finish(void)

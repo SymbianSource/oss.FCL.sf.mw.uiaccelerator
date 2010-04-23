@@ -1231,4 +1231,104 @@ void CAlfCompositionPixelSource::HandleEventL(TInt aEventType, TAny* aEventData)
     CAlfCompositionSource::HandleEventL( aEventType, aEventData );
     }
 
+class CAlfSignalObserver;
+
+class MAlfEffectObserverData
+    {
+    public:
+        virtual void Remove(CAlfSignalObserver* aObserver) = 0;
+    };
+
+NONSHARABLE_CLASS(CAlfEffectObserver::CAlfEffectObserverData): public CBase, public MAlfEffectObserverData
+    {
+    public:
+    void SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType = MAlfEffectObserver::EAlfEffectComplete );        
+    ~CAlfEffectObserverData();
+    void Remove(CAlfSignalObserver* aObserver);
+    
+    // data
+    RAlfBridgerClient iClient;
+    RPointerArray<CAlfSignalObserver> iObservers;
+    };
+
+
+NONSHARABLE_CLASS(CAlfSignalObserver):public CActive
+    {
+    public:    
+    CAlfSignalObserver(CAlfEffectObserver::MAlfEffectObserver* aObserver, MAlfEffectObserverData* aOwner, TInt aHandle, TInt aType):CActive(EPriorityStandard),
+        iOwner(aOwner), iObserver(aObserver), iHandle(aHandle), iType(aType), iArgs(aHandle,aType)
+        {   
+        CActiveScheduler::Add(this);
+        SetActive(); 
+        }
+                
+    void DoCancel(){} // do not...
+    
+    void RunL()
+        {    
+        iObserver->HandleEffectCallback(iType, iHandle, iStatus.Int());
+        iOwner->Remove(this);
+        }    
+    
+    MAlfEffectObserverData* iOwner;
+    CAlfEffectObserver::MAlfEffectObserver* iObserver;
+    TInt iHandle;        
+    TInt iType;
+    TIpcArgs iArgs;
+    };
+
+void CAlfEffectObserver::CAlfEffectObserverData::SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType)
+    {
+    CAlfSignalObserver* obs = new (ELeave) CAlfSignalObserver(aObserver, this, aHandle, aType);
+    CleanupStack::PushL(obs);
+    User::LeaveIfError(iObservers.Append(obs));
+    CleanupStack::Pop();
+    iClient.SendAsynchronous(EAlfRequestSignal, obs->iArgs, obs->iStatus);        
+    }
+        
+CAlfEffectObserver::CAlfEffectObserverData::~CAlfEffectObserverData()
+    {    
+    iClient.Close(); // destroys signals
+    iObservers.ResetAndDestroy();
+    }
+        
+void CAlfEffectObserver::CAlfEffectObserverData::Remove(CAlfSignalObserver* aObserver)
+    {
+    TInt index = iObservers.Find(aObserver);
+    iObservers.Remove(index);
+    delete aObserver;   
+    }    
+    
+EXPORT_C CAlfEffectObserver* CAlfEffectObserver::NewL()
+    {
+    CAlfEffectObserver* me = new (ELeave) CAlfEffectObserver();
+    CleanupStack::PushL(me);
+    me->iData = new (ELeave) CAlfEffectObserverData();
+    User::LeaveIfError(me->iData->iClient.Connect());
+    CleanupStack::Pop();
+    return me;    
+    }
+
+EXPORT_C CAlfEffectObserver::~CAlfEffectObserver()
+    {
+    delete iData;        
+    }
+
+EXPORT_C TInt CAlfEffectObserver::ActiveEffectsCount()
+    {
+    return iData->iClient.EffectsCount();
+    }
+
+EXPORT_C void CAlfEffectObserver::SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType)
+    {
+    iData->SubscribeCallbackL(aObserver, aHandle, aType ); 
+    }
+
+CAlfEffectObserver::CAlfEffectObserver()
+    {
+    }
+
+ 
+
+
 //end of file    

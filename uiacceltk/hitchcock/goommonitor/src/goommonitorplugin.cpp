@@ -101,12 +101,12 @@ CAppGOomMonitorPlugin::CAppGOomMonitorPlugin(TUid aAppUid)
     {
     }
 
-void CAppGOomMonitorPlugin::FreeRam(TInt)
+void CAppGOomMonitorPlugin::FreeRam(TInt, TBool)
     {
     SendMessageToApp(KAppGOomMonitor_FreeRam);
     }
 
-void CAppGOomMonitorPlugin::MemoryGood()
+void CAppGOomMonitorPlugin::MemoryGood(TBool)
     {
     SendMessageToApp(KAppGOomMonitor_MemoryGood);
     }

@@ -18,7 +18,13 @@ Call on Policy Server of MM to free G Ram
 	actions are needed. This value is meaningful only when "check" or "estimate" sync mode is
 	used with plugins.
 -->
-	<global_settings low_ram_threshold="3637" good_ram_threshold="10000" max_app_close_batch="3" default_wait_after_plugin="200">
+	<global_settings 
+		low_ram_threshold="3637" 
+		good_ram_threshold="10000" 
+		max_app_close_batch="3" 
+		default_wait_after_plugin="200"
+		default_icon_cache="6000"
+		>
 	</global_settings>
 
 <!--	Application specific low RAM and good RAM thresholds are defined here. The higher values of
@@ -27,7 +33,7 @@ threshold values are used.
 -->
 	<app_specific_thresholds>
 
-  <app uid="101F857A" low_ram_threshold="1000" good_ram_threshold="30000" skip_plugin="2002B3AE"></app> <!-- Camera --> 
+  <app uid="101F857A" low_ram_threshold="1000" good_ram_threshold="30000" skip_plugin="2002B3AE" icon_cache="0" use_sw_rend="Yes"></app> <!-- Camera --> 
   <app uid="200159B2" low_ram_threshold="5000" good_ram_threshold="10000" skip_plugin="2002B3AE"></app> <!-- MPlayer -->
   <app uid="102824CD" low_ram_threshold="5000" good_ram_threshold="10000" skip_plugin="2002B3AE"></app> <!-- Embedded mplayer -->
   <app uid="200009EE" low_ram_threshold="3637" good_ram_threshold="10000" target_free_on_startup="15000"></app> <!-- Photos -->
@@ -70,8 +76,8 @@ threshold values are used.
 <!--		The uid DEFAULT_PLUGIN refers to all plugins, which priority is not specificly
 		defined in the conf file.
 -->
-		<system_plugin uid="DEFAULT_PLUGIN" priority="10" sync_mode="check"></system_plugin>
-		<system_plugin uid="E4B6C988" priority="3" sync_mode="check"></system_plugin> <!-- ALFOOGMPLUGIN -->
+		<system_plugin uid="DEFAULT_PLUGIN" priority="10" sync_mode="check" sw_rend="not_supported"></system_plugin>
+		<system_plugin uid="E4B6C988" priority="3" sync_mode="check" sw_rend="supported"></system_plugin> <!-- ALFOOGMPLUGIN -->
 		<system_plugin uid="2002C30A" priority="5" sync_mode="continue"></system_plugin> <!-- FLASHOOGMPLUGIN -->
 	</system_plugin_settings>
 	

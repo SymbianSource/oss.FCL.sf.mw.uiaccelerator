@@ -345,7 +345,7 @@ void CHuiFxEffectParser::ParseNodeL( CMDXMLNode* aNode, CHuiFxLayer* aLayer)
 #endif
             TPtrC16 extBitmap;
             THuiFxVisualSrcType srcType = GetSrcTypeL( aNode, extBitmap );
-            CHuiFxVisualLayer* visual = CHuiFxVisualLayer::NewL( *iVisual );
+            CHuiFxVisualLayer* visual = CHuiFxVisualLayer::NewL( iVisual );
             CleanupStack::PushL( visual );
             visual->SetSourceType( srcType );
             if ( srcType == EVisualSrcBitmap && extBitmap.Length() > 0 )

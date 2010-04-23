@@ -734,6 +734,14 @@ void CAlfHierarchyModel::DoNodeCreatedL()
         case MWsWindowTreeNode::EWinTreeNodeClient:
             {
             node = CAlfNodeWindow::NewL( this, iStream, iScreenNumber );
+            
+            #ifdef __WINS__
+            if (++iDebug_CheckNodeTableItegrityCounter > 100) // Do not check too often as is can be slow
+                {
+                Debug_CheckNodeTableItegrity(_L("CAlfHierarchyModel::DoNodeCreatedL"));
+                }            
+            #endif
+            
             break;
             }
         case MWsWindowTreeNode::EWinTreeNodeRoot:
@@ -1287,5 +1295,35 @@ void CAlfHierarchyModel::ProcessUnknownNodeDrawingL( RMemReadStream& aStream )
             }
         }
     }
+
+
+#ifdef __WINS__
+// ---------------------------------------------------------------------------
+//
+// ---------------------------------------------------------------------------
+//
+void CAlfHierarchyModel::Debug_CheckNodeTableItegrity(const TDesC16& aContext)
+    {  
+    iDebug_CheckNodeTableItegrityCounter = 0;
     
+    // Loop through the all items     
+    TInt count = 0;
+    THashMapIter <TUint32,CNodeHashStruct> ptrHashSetIter(iNodeHashArray);
+    for ( ; ; )        
+        {        
+        const CNodeHashStruct* resNext = ptrHashSetIter.NextValue();        
+        if (!resNext)            
+            {             
+            break;            
+            }  
+        count++;
+        if (resNext->iNode->Type() == MWsWindowTreeNode::EWinTreeNodeClient)
+            {
+            resNext->iNode->Debug_CheckSiblingOrder(aContext);
+            }
+        }
+    }
+#endif
+
+
 

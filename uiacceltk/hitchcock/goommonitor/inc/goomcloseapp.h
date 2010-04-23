@@ -52,7 +52,7 @@ public:
      * Call the CGOomAction::MemoryFreed when it is done
      * @param aBytesRequested not used for clsoe app actions
      */
-    virtual void FreeMemory(TInt aBytesRequested);
+    virtual void FreeMemory(TInt aBytesRequested, TBool aUseSwRendering);
     
     ~CGOomCloseApp();
     

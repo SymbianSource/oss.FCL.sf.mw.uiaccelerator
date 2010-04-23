@@ -73,7 +73,9 @@ public:
     void AddTargetFromInactiveSurfaces(TInt aTarget);
     void GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aMessage, TBool aActiveAlso = ETrue);
     void QueueRequestBGAnimSessionsL(const TPtrC8& aPtr, TInt aOp);
-    
+
+    void AddSignal(CAlfStreamerServerSession* aSession, const RMessage2& aMessage);
+    void CompleteSignal(TInt aSignal, TInt aType);
     
 private:
     void ConstructL();
@@ -87,7 +89,6 @@ private:
     
     TInt SearchCommonEntryForToken(const RMessage2& aMessage);
     CAlfStreamerServerSession* SearchSessionForToken(TInt aToken);
-    
     
 private:
     CAlfStreamerBridge* iBridge; // not owned
@@ -129,6 +130,16 @@ private:
     RArray<TCompositionToken> iCompositionTokens;
 
     CAsyncCallBack * iRendezvous;
+
+    struct TAlfSignal
+        {
+        CAlfStreamerServerSession* iSession;
+        RMessagePtr2 iMessage;
+        TInt iHandle;
+        TInt iFlags;
+        };
+    
+    RArray<TAlfSignal> iSignals;
 
 public:    
     struct TAlfCompParams

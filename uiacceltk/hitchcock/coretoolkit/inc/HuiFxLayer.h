@@ -78,7 +78,7 @@ public: // effect cache
     // Internal flag to tell wheter transparency is enabled
     virtual TBool IsSemitransparent() const;
     
-    virtual void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray) { }
+    virtual void FxmlVisualInputs(RArray<THuiFxVisualSrcType> & /*aArray*/) { }
     
     TBool AlwaysReadSurfacePixels() const;
     virtual void SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels);

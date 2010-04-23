@@ -152,6 +152,16 @@
         AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor && aAttribute == ECursorFlags ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeRenderStageChangeTextCursorFlag ); \
         AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor && aAttribute == ECursorColor ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeRenderStageChangeTextCursorColor )
 
+#define AMT_MAP_RENDER_STAGE_ADD_LAYER() \
+        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeRenderStageCreateLayer ); \
+        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeRenderStageReleaseLayer )
+
+#define AMT_MAP_RENDER_STAGE_ADD_LAYER_LINK() \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeRenderStageCreateLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeRenderStageReleaseLayer ); \
+        \
+        AMT_MAP_SET_VALUE( iSurfaceMap, windowId, aLayer.Surface(), EAlfModuleTestTypeRenderStageCreateLayer )
+
 
 // Streamer defines
                           
@@ -190,16 +200,16 @@
         AMT_MAP_APPEND_AND_LINK( iPositionMap, aWindowNodeId, aClientSideId, TPoint(), EAlfModuleTestTypeBridgeChangeWindowPosition ); \
         AMT_MAP_APPEND_AND_LINK( iBoolMap, aWindowNodeId, aClientSideId, EFalse, EAlfModuleTestTypeBridgeChangeWindowVisibility ); \
         \
-        AMT_MAP_APPEND_AND_LINK_IF( aVisual, iIntMap, AMT_MAP_CPTR_TO_KEY_CAST( aVisual ), aClientSideId, 0, EAlfModuleTestTypeCoreToolkitDrawWindow ); \
-        AMT_MAP_APPEND_AND_LINK_IF( aVisual, iIntMap, AMT_MAP_CPTR_TO_KEY_CAST( aVisual ), aClientSideId, 0, EAlfModuleTestTypeCoreToolkitDrawFromRenderBuffer ); \
-        \
-        AMT_MAP_INC_VALUE( iIntMap, aClientSideId, EAlfModuleTestTypeBridgeCreateWindow ); \
+        AMT_MAP_APPEND_AND_LINK_IF( aVisual, iRectMap, AMT_MAP_CPTR_TO_KEY_CAST( aVisual ), aClientSideId, TRect(), EAlfModuleTestTypeCoreToolkitDrawWindow ); \
+        AMT_MAP_APPEND_AND_LINK_IF( aVisual, iRectMap, AMT_MAP_CPTR_TO_KEY_CAST( aVisual ), aClientSideId, TRect(), EAlfModuleTestTypeCoreToolkitDrawFromRenderBuffer ); \
         \
         AMT_MAP_APPEND( iBoolMap, aClientSideId, ETrue, EAlfModuleTestTypeBridgeCreateWindow ); \
         AMT_MAP_APPEND( iBoolMap, aClientSideId, EFalse, EAlfModuleTestTypeBridgeVisualVisibility ); \
         AMT_MAP_APPEND_LINK_IF( aVisual, iBoolMap, AMT_MAP_CPTR_TO_KEY_CAST( aVisual ), aClientSideId, EAlfModuleTestTypeBridgeVisualVisibility ); \
         AMT_MAP_APPEND( iBoolMap, aClientSideId, EFalse, EAlfModuleTestTypeBridgeReleaseWindow ); \
-        AMT_MAP_APPEND_LINK( iBoolMap, aWindowNodeId, aClientSideId, EAlfModuleTestTypeBridgeReleaseWindow )
+        AMT_MAP_APPEND_LINK( iBoolMap, aWindowNodeId, aClientSideId, EAlfModuleTestTypeBridgeReleaseWindow ); \
+        \
+        AMT_MAP_INC_VALUE( iIntMap, aClientSideId, EAlfModuleTestTypeBridgeCreateWindow )
         
 #define AMT_MAP_BRIDGE_CREATE_CONTROL_GROUP() \
         AMT_MAP_APPEND_AND_LINK( iIntMap, aWindowGroupNodeId, aClientWindowGroupId, 0, EAlfModuleTestTypeBridgeCreateWindowGroup ); \

@@ -41,6 +41,7 @@
 // this will stop the effect.
 const TInt KAlfShortEffectTimeout = 4000000;
 const TInt KAlfLongEffectTimeout  = 5000000;
+const TInt KAlfActiveControlFxGranularity = 4;
 
 //const TInt KAlfLongEffectTimeout  = 500000;
 // Timer to send finish full screen effect
@@ -237,7 +238,6 @@ void CAlfServerDrawer::ConstructL()
     iProperty.Attach( KPSAlfDomain, KAlfTransitionStatus );
     iProperty.Set( KPSAlfDomain, KAlfTransitionStatus, 0 );
     iFs.Connect();
-    
     }
 
 // ---------------------------------------------------------------------------
@@ -246,7 +246,8 @@ void CAlfServerDrawer::ConstructL()
 CAlfServerDrawer::CAlfServerDrawer( CAlfWindowManager* aWindowManager,
     CPolicyHandler& aPolicyHandler  ):
     iWindowManager( aWindowManager ),
-    iPolicyHandler( aPolicyHandler )
+    iPolicyHandler( aPolicyHandler ),
+    iActiveControlFx( KAlfActiveControlFxGranularity )
     {
     iScrModeChangedState = EScreenModeChangedIdle;
     }
@@ -264,7 +265,7 @@ CAlfServerDrawer::~CAlfServerDrawer()
     delete iFullScreenController;
     delete iFinishFullScreen;
     delete iFullScreenTimeout;
-        
+    iActiveControlFx.Close();
     }
 
 // ---------------------------------------------------------------------------
@@ -663,7 +664,7 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
         RMemWriteStream stream( bridgeBuffer, bufferSize );
         // The writes should not leave if we have calculated our buffer length correctly.
         stream.WriteInt32L( MAlfGfxEffectPlugin::EBeginFullscreen );
-        stream.WriteInt32L( iCurrentFullScreenHandle );
+        stream.WriteInt32L(  iToSid.iId ); //iCurrentFullScreenHandle );
         stream.WriteInt32L( iType );
       	if ( iType == AknTransEffect::EParameterType && isExit )
       	    {
@@ -1053,7 +1054,7 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
         TRAP_IGNORE(
             {
             stream.WriteInt32L( MAlfGfxEffectPlugin::EBeginComponentTransition );
-            stream.WriteInt32L( iCurrentControlHandle );
+            stream.WriteInt32L( iControlHandle ); //iCurrentControlHandle );
             stream.WriteInt32L( iControlHandle ); // window handle
             stream.WriteInt32L( iControlWindowGroup ); // window group id
             stream.WriteInt32L( 0 ); // "screen number"; not used; save place for future
@@ -1065,10 +1066,15 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
             stream.CommitL();
             });
         bridgerData.Set( EAlfControlEffectFx, iControlAction, bufferSize, (TAny*) index );
-        __ALFFXLOGSTRING1("CAlfServerDrawer::SendBeginControlTransition - sending bridgedata, Current handle: %d", iCurrentControlHandle);
+        __ALFFXLOGSTRING1("CAlfServerDrawer::SendBeginControlTransition - sending bridgedata, Current handle: %d", iControlHandle)
         iWindowManager->PostIt( bridgerData );
         stream.Close();
-        iControlTransitionEndObserver->StartObserving( TCallBack( ControlTransitionFinished, this ), iCurrentControlHandle );
+        iControlTransitionEndObserver->StartObserving( TCallBack( ControlTransitionFinished, this ), iControlHandle );
+        
+        if ( iActiveControlFx.Find( iControlHandle ) == KErrNotFound )
+            {
+            iActiveControlFx.Append( iControlHandle );
+            }
         }
 	
     iFullScreenFinished = EFalse;
@@ -1086,7 +1092,24 @@ TInt CAlfServerDrawer::SendFinishControlTransition()
     // We should now delete the effects from any controls that remain active.
     __ALFFXLOGSTRING("CAlfServerDrawer::SendFinishControlTransition >>");
     iControlTransitionEndObserver->Cancel();
-	
+    
+    while ( iActiveControlFx.Count() )
+        {
+        TInt handle = iActiveControlFx[ iActiveControlFx.Count() - 1 ];
+        iActiveControlFx.Remove( iActiveControlFx.Count() - 1 );
+        DoSendFinishControlTransition( handle );
+        }
+
+    return KErrNone;
+    }
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//
+TInt CAlfServerDrawer::DoSendFinishControlTransition(TInt aHandle)
+    {
+    __ALFFXLOGSTRING1("CAlfServerDrawer::DoSendFinishControlTransition %d >>", aHandle)
+    	
     // Send the data to CAlfAppUI via bridge
     TAlfBridgerData bridgerData;
     
@@ -1106,7 +1129,7 @@ TInt CAlfServerDrawer::SendFinishControlTransition()
         TRAP_IGNORE(
             {
             stream.WriteInt32L( MAlfGfxEffectPlugin::EAbortComponentTransition );
-            stream.WriteInt32L( iCurrentControlHandle );
+            stream.WriteInt32L( aHandle );
             stream.WriteInt32L( 0 );
             stream.WriteInt32L( 0 );
             stream.WriteInt32L( 0 );
@@ -1114,12 +1137,12 @@ TInt CAlfServerDrawer::SendFinishControlTransition()
             stream.CommitL();    
             });
 			// TODO, check, if iCurrentHandle is approriate
-        bridgerData.Set( EAlfStopControlEffectFx, iCurrentControlHandle, bufferSize, (TAny*) index );
-        __ALFFXLOGSTRING1("CAlfServerDrawer::sending bridgedata, Stop control handle: %d", iCurrentControlHandle);
+        bridgerData.Set( EAlfStopControlEffectFx, aHandle, bufferSize, (TAny*) index );
+        __ALFFXLOGSTRING1("CAlfServerDrawer::sending bridgedata, Stop control handle: %d", aHandle);
         iWindowManager->PostIt( bridgerData );
         stream.Close();
         }
-    __ALFFXLOGSTRING("CAlfServerDrawer::SendFinishControlTransition <<");
+    __ALFFXLOGSTRING("CAlfServerDrawer::DoSendFinishControlTransition <<")
     return KErrNone;
     }
 	

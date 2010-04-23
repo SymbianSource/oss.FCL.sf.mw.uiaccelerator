@@ -216,12 +216,16 @@ public:
      * @param aTestType Describes for what case the item is for.
      * @param aKey Key of the map item.
      * @param aValue If map item is found, value of the item is set here.
+     * @param aAcceptDefault ETrue if an existing object having its default value
+     *                       is accepted. EFalse if value should have been updated
+     *                       separately.
      * @return TBool ETrue if map item is found and value has been set. Else EFalse. 
      */    
-    TBool GetActualValue( const TAlfModuleTestType& aTestType, TInt aKey, T& aValue )
+    TBool GetActualValue( 
+        const TAlfModuleTestType& aTestType, TInt aKey, T& aValue, TBool aAcceptDefault )
         {
         const TAlfModuleTestItem< T >* item( FindActual( aTestType, aKey ) );
-        if ( item && item->ValueSetCount() > 0 )
+        if ( item && ( aAcceptDefault || item->ValueSetCount() > 0 ) )
             {
             aValue = item->Value();
             return ETrue;
@@ -233,12 +237,15 @@ public:
     /**
      * Finds an actual item if it exists and checks if it equals the given value.
      * 
+     * @param aTestType Describes for what case the item is for.
+     * @param aKey Key of the map item.
+     * @param aValue Value of the map item.
      * @return TBool ETrue if item is found and its value equals given value. Else EFalse. 
      */
     TBool ActualEquals( const TAlfModuleTestType& aTestType, TInt aKey, const T& aValue )
         {
         T value( aValue );
-        if ( GetActualValue( aTestType, aKey, value ) && value == aValue )
+        if ( GetActualValue( aTestType, aKey, value, ETrue ) && value == aValue )
             {
             return ETrue;
             }

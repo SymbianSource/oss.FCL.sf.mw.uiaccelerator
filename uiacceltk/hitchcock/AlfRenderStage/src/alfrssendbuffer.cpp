@@ -1176,10 +1176,11 @@ TBool CAlfRsSendBuffer::WriteFollowingFrameOffsetL(TBool aSendArray)
 // ARRAY IMPLEMENTATION
 //
 
+#ifdef RD_SUBWINDOW_EFFECTS
+
 const TInt KArrayOffsetTemplate = 23456789;
 const TInt KArraySizeTemplate = 23456789;
 
-#ifdef RD_SUBWINDOW_EFFECTS
 void CAlfRsSendBuffer::WriteArrayHeaderTemplateL()
 {
     WriteInt8L( EAlfCommandIndexArrayHeader );
@@ -1455,6 +1456,7 @@ void CAlfRsSendBuffer::OpenPrimaryChunkForWritingL()
         iBufStream->Open( iChunk.Base() + sizeof( TChunkHeader), iPrimaryChunkMaxSize );
 #else
         delete iStreamPtr;
+        iStreamPtr = NULL;
         iStreamPtr = new(ELeave)TPtr8( (TUint8*)(iChunk.Base() + sizeof( TChunkHeader)), iPrimaryChunkMaxSize - sizeof( TChunkHeader));
         iChunkHeader->iMemWriteStream = (RMemWriteStream*)1;
 #endif

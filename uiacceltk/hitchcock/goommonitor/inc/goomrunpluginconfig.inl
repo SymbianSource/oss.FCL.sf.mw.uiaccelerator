@@ -60,4 +60,13 @@ inline TUint CGOomRunPluginConfig::TargetApp() const
     return iTargetAppId;
     }
 
+inline void CGOomRunPluginConfig::SetSwRend(TBool aSwRend)
+    {
+    iSwRenderingSupported = aSwRend;
+    }
+
+inline TBool CGOomRunPluginConfig::IsSwRendSupported()
+    {
+    return iSwRenderingSupported;
+    }
 #endif /*GOOMRUNPLUGINCONFIGINL_H_*/
