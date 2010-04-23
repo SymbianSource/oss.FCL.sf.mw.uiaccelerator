@@ -119,7 +119,8 @@ EXPORT_C RAlfDirectClient::RAlfDirectClient()
     : RAlfClientBase(KAlfServiceUid.iUid) 
     {
     // elegant SW design, right
-	TRAP_IGNORE(OpenL());
+	//darios: commented out to avoid deadlock in akncapserver.exe
+	//TRAP_IGNORE(OpenL());
     }
 
 // ---------------------------------------------------------------------------
