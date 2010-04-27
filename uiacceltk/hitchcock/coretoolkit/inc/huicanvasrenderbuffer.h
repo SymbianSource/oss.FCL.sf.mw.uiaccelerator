@@ -80,6 +80,13 @@ public:
      */ 
     IMPORT_C virtual void Copy(TPoint aPoint);    
     
+    /**
+     * Initializes render buffer, with clear option.
+     * @param aSize size of render buffer.
+     * @param aClear contents of render buffer are cleared even if alredy initialized.
+     */
+    IMPORT_C virtual void InitializeL(const TSize& aSize, TBool aClear);
+    
 protected:
     
     TSize iSize;

@@ -77,6 +77,15 @@ EXPORT_C TBool CHuiFxEngine::FxmlUsesInput1(const TDesC &aFileName)
     return EFalse;
 #endif
     }
+EXPORT_C TBool CHuiFxEngine::FxmlUsesOpaqueHint(const TDesC &aFileName)
+    {
+#ifdef HUIFX_EFFECTCACHE_ENABLED
+    return iCache->FxmlUsesOpaqueHint(aFileName);
+#endif
+#ifndef HUIFX_EFFECTCACHE_ENABLED
+    return EFalse;
+#endif    
+    }
 
 TBool CHuiFxEngine::FxmlUsesInput1(CHuiFxEffect& aEffect)
     {
@@ -287,7 +296,13 @@ void CHuiFxEngine::NotifyEffectEndObservers()
 #ifdef HUIFX_TRACE
             RDebug::Printf("void CHuiFxEngine::NotifyEffectEndObservers() calling NotifyEffectEndObserver");
 #endif
-            effect->NotifyEffectEndObserver();
+            if (!effect->NotifyEffectEndObserver())
+                {
+				// this effect is not in effect cleanupstack and does not have end observer on coretoolkit
+				// side. However, it might have observer on alf side, that is notified from RemoveEffect.
+				// Alf clients are responsible for destroying their own effects
+                RemoveEffect(effect);
+                }
             }
         }    
     }
@@ -366,6 +381,8 @@ EXPORT_C void CHuiFxEngine::RemoveEffect(CHuiFxEffect* aEffect)
     TInt i = iActiveEffects.Find(aEffect);
     if (i >= 0)
         {
+		// Note, will effecsts will be drawn until they are destroyed. Removing 
+		// from iActiveEffects list only stops timeline updates.
         iActiveEffects.Remove(i);
         if (iEffectObserver)
             {

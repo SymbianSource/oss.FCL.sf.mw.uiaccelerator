@@ -769,7 +769,7 @@ EXPORT_C void CAlfVisualHandler::HandleCmdL(TInt aCommandId, const TDesC8& aInpu
             if (engine)
                 {
                 CHuiFxEffect* effect = NULL;
-                engine->LoadEffectL( params->iFileName, effect, iVisual->Effectable() );
+                engine->LoadEffectL( params->iFileName, effect, iVisual->Effectable(), NULL , NULL, params->iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn );
                 // The effect will be automatically set to the visual if parsing succeeds
                 }
             break;
@@ -784,8 +784,8 @@ EXPORT_C void CAlfVisualHandler::HandleCmdL(TInt aCommandId, const TDesC8& aInpu
                 CHuiFxEffect* effect = NULL;
                 // this will add the group, if it does not exist already
                 // Begin and End group events are supposed to come through GfxTransEffect API.
-                engine->BeginGroupEffect(groupHandle); 
-                engine->LoadGroupEffectL( params->iFileName, effect, iVisual->Effectable(),groupHandle );
+                engine->BeginGroupEffect(groupHandle);
+                engine->LoadGroupEffectL( params->iFileName, effect, iVisual->Effectable(),groupHandle, NULL, NULL, params->iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn );
                 // The effect will be automatically set to the visual if parsing succeeds
                 }
             break;

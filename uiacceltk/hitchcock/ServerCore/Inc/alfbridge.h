@@ -298,7 +298,18 @@ public:
     void LayoutSwitchComplete();
     
     RAlfBridgerClient* BridgerClient();
-    
+
+    /**
+     * Refresh requested. This is meant to be used by alfstreamerbridge when
+     * frame has ended.
+     */
+    void RefreshNow(TBool aSyncWait);
+
+    /**
+     * Asynchronous refresh when in SW rendering mode.
+     */
+    void AsynchRefresh();
+
 private:    
     
     
@@ -788,6 +799,13 @@ private:
     TBool HasActivePaintedAreas( CHuiCanvasVisual& aVisual, TBool aIncludeChildren );
     TBool HasActiveFadedChildren( CHuiCanvasVisual& aVisual );
 
+    /*
+     * This is for updating all the layout that are created to correspond the window server window groups.
+     * This should be called immediately when layout switch happens. Layout extents must be update then otherwise
+     * visibility calculations will clip to old sizes.
+     */
+    void UpdateRootVisualsToFullscreen();
+    
 private:
 
     RPointerArray<CAlfScreen> iAlfScreens;
@@ -1002,6 +1020,8 @@ private:
     TInt activevisualcount;
     TInt passivevisualcount;
     #endif
+    
+    CPeriodic* iManualRefreshTimer;
     };    
 
 #endif // __ALF_BRIDGE_H__

@@ -24,6 +24,7 @@
 
 
 MACRO ALF_USE_CANVAS
+MACRO ALF_DRAW_FRAME_BEFORE_END_CALLBACK
 #define ALF_USE_CANVAS
 
 // Enable this to add GetWinIdListL method to CAlfWindowManager API.

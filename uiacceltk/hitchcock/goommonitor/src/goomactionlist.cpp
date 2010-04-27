@@ -753,3 +753,8 @@ void CGOomActionList::SetUseSwRendering(TBool aUseSwRendering)
     {
     iUseSwRendering = aUseSwRendering;
     }
+
+TBool CGOomActionList::UseSwRendering()
+    {
+    return iUseSwRendering;
+    }

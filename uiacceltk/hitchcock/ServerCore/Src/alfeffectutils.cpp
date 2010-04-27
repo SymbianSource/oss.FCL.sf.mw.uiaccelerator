@@ -21,8 +21,6 @@
 #include <alflogger.h>
 
 const TInt KRosterFreezeEndTimeoutInMs = 100;
-const TInt KFirstTimeoutForApplicationEndFullScreenInMs = 20;
-const TReal KMinimumPaintedAreaBeforeForcedEffect = 0.75;
 
 // ---------------------------------------------------------
 // CAlfRosterFreezeEndTimer

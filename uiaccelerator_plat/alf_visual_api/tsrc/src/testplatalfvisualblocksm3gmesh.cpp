@@ -41,6 +41,11 @@ TInt CTestPlatAlfVisual::TestAlfM3GMeshLoadSceneL( CStifItemParser& /*aItem*/ )
     // Print to log file
     iLog->Log( KTestAlfM3GMeshLoadSceneL );
     
+    // Mesh not supported at the moment
+    STIF_ASSERT_LEAVES_WITH( KErrNotSupported,
+                             CAlfMeshVisual::AddNewL( *iAlfCtl ) );
+    return KErrNone;    
+/* Not supported at the moment
     CAlfMeshVisual* vVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );
     vVisual->CreateMeshL( EAlfMeshTypeM3G );
     CAlfM3GMesh* vMesh = vVisual->M3GMesh();
@@ -55,7 +60,7 @@ TInt CTestPlatAlfVisual::TestAlfM3GMeshLoadSceneL( CStifItemParser& /*aItem*/ )
         {
         return KErrNone;
         }
-
+*/
     }
 
 // End of file

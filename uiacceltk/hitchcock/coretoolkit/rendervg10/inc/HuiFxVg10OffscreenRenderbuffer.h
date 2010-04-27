@@ -57,7 +57,8 @@ private:
     EGLContext              iSavedContext;
     EGLSurface              iSavedReadSurface;
     EGLSurface              iSavedDrawSurface;
-    VGImage                 iRotatedImage;    
+    VGImage                 iRotatedImage;  
+    TSize                   iRotatedImageSize;
     TEGLState               iPreviousEGLState;
     };
 

@@ -203,6 +203,8 @@ public: // internal utilities
     
     CAlfAppSrvSessionBase* SrvSessionForControlGroup(CHuiControlGroup& aGroup);
     void DoBlankScreen(const RMessage2& aMessage);
+    
+    TInt GetLastActiveClient();
 
 private:
 

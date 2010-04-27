@@ -40,6 +40,8 @@ public:
     virtual void ParsingEndedBefore()=0;
     virtual void ParsingEndedAfter(MHuiFxEffectCacheNode *aCached)=0;
     virtual TBool FxmlUsesInput1()=0;
+    virtual TBool FxmlUsesOpaqueHint() const=0;
+
     virtual void Delete()=0;
 };
 
@@ -53,8 +55,9 @@ public:
     IMPORT_C void UnUse(MHuiFxEffectCacheNode *aNode);
     IMPORT_C ~CHuiFxEffectCache();
     void ParsingEnded(TInt aHandle);
-    MHuiFxEffectCacheNode *FindCached(const TDesC &aId);
+    MHuiFxEffectCacheNode *FindCached(const TDesC &aId) const;
     TBool FxmlUsesInput1(const TDesC &aFileName);
+    TBool FxmlUsesOpaqueHint(const TDesC &aFileName) const;
 private:
     struct IDNode
         {
@@ -104,6 +107,7 @@ public: // from MHuiFxEffectCacheNode
      void ParsingEndedBefore();
      void ParsingEndedAfter(MHuiFxEffectCacheNode *aCached);
      TBool FxmlUsesInput1();
+     TBool FxmlUsesOpaqueHint() const;
      void Delete();
 
 private:

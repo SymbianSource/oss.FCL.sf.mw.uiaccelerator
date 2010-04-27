@@ -263,6 +263,9 @@ public: // internals
     
     CAlfAppSrvSessionBase* SrvSessionForControlGroup(CHuiControlGroup& aGroup);
     
+    TInt GetLastActiveClient();
+    
+    
 public:
     
     CAlfAppSrvSessionBase* iOldSession;

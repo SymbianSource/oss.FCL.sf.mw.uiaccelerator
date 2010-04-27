@@ -73,8 +73,8 @@
 "..\conf\ui_testplatalfvisualtextstyle.cfg"-"c:\Testframework\ui_testplatalfvisualtextstyle.cfg", FF   ; FF stands for Normal file
 "..\conf\tctestplatalfvisualtexture.cfg"-"c:\Testframework\tctestplatalfvisualtexture.cfg", FF   ; FF stands for Normal file
 "..\conf\ui_testplatalfvisualtexture.cfg"-"c:\Testframework\ui_testplatalfvisualtexture.cfg", FF   ; FF stands for Normal file
-"..\conf\tctestplatalfvisualtextureautosizeparams.cfg"-"c:\Testframework\tctestplatalfvisualtextureautosizeparams.cfg", FF   ; FF stands for Normal file
-"..\conf\ui_testplatalfvisualtextureautosizeparams.cfg"-"c:\Testframework\ui_testplatalfvisualtextureautosizeparams.cfg", FF   ; FF stands for Normal file
+"..\conf\tctestplatalfvisualtextureautosize.cfg"-"c:\Testframework\tctestplatalfvisualtextureautosize.cfg", FF   ; FF stands for Normal file
+"..\conf\ui_testplatalfvisualtextureautosize.cfg"-"c:\Testframework\ui_testplatalfvisualtextureautosize.cfg", FF   ; FF stands for Normal file
 "..\conf\tctestplatalfvisualshadowborderbrush.cfg"-"c:\Testframework\tctestplatalfvisualshadowborderbrush.cfg", FF   ; FF stands for Normal file
 "..\conf\ui_testplatalfvisualshadowborderbrush.cfg"-"c:\Testframework\ui_testplatalfvisualshadowborderbrush.cfg", FF   ; FF stands for Normal file
 "..\conf\tctestplatalfvisualpropertyowner.cfg"-"c:\Testframework\tctestplatalfvisualpropertyowner.cfg", FF   ; FF stands for Normal file
@@ -89,8 +89,8 @@
 "..\conf\ui_testplatalfvisualdecklayout.cfg"-"c:\Testframework\ui_testplatalfvisualdecklayout.cfg", FF   ; FF stands for Normal file
 "..\conf\tctestplatalfvisualdisplay.cfg"-"c:\Testframework\tctestplatalfvisualdisplay.cfg", FF   ; FF stands for Normal file
 "..\conf\ui_testplatalfvisualdisplay.cfg"-"c:\Testframework\ui_testplatalfvisualdisplay.cfg", FF   ; FF stands for Normal file
-"..\conf\tctestplatalfvisualdisplaybackgrounditem.cfg"-"c:\Testframework\tctestplatalfvisualdisplaybackgrounditem.cfg", FF   ; FF stands for Normal file
-"..\conf\ui_testplatalfvisualdisplaybackgrounditem.cfg"-"c:\Testframework\ui_testplatalfvisualdisplaybackgrounditem.cfg", FF   ; FF stands for Normal file
+"..\conf\tctestplatalfvisualdisplaybgitem.cfg"-"c:\Testframework\tctestplatalfvisualdisplaybgitem.cfg", FF   ; FF stands for Normal file
+"..\conf\ui_testplatalfvisualdisplaybgitem.cfg"-"c:\Testframework\ui_testplatalfvisualdisplaybgitem.cfg", FF   ; FF stands for Normal file
 "..\conf\tctestplatalfvisualdropsshadow.cfg"-"c:\Testframework\tctestplatalfvisualdropsshadow.cfg", FF   ; FF stands for Normal file
 "..\conf\ui_testplatalfvisualdropsshadow.cfg"-"c:\Testframework\ui_testplatalfvisualdropsshadow.cfg", FF   ; FF stands for Normal file
 "..\conf\tctestplatalfvisualdropsshadowbrush.cfg"-"c:\Testframework\tctestplatalfvisualdropsshadowbrush.cfg", FF   ; FF stands for Normal file

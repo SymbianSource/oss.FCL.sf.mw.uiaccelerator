@@ -114,7 +114,7 @@ public:
             TInt aFlags = 0 );
     
     IMPORT_C TBool FxmlUsesInput1(const TDesC &aFileName);
-
+    IMPORT_C TBool FxmlUsesOpaqueHint(const TDesC &aFileName);
     
     IMPORT_C void AdvanceTime(TReal32 aElapsedTime);
     

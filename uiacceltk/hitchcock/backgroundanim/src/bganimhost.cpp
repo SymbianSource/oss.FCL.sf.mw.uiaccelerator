@@ -481,6 +481,7 @@ void CBgAnimHost::LoadPluginL()
             if (!serr)
                 {
                 iSensorListeners.Append(listener);
+                StartSensorsL();
                 }
             }
         }
@@ -524,7 +525,7 @@ void CBgAnimHost::NewFrame()
                                      lValOfNoUse);
         if (err == KErrNotFound)
             {
-            iTimer->CallBack(1);
+            iTimer->CallBack(500);
             return;
             }
         }
@@ -600,14 +601,16 @@ void CBgAnimHost::CompositionTargetHidden()
     iTimerRunning = EFalse;
     iPlugin->gpuresourcesavailable(0);
     ReleaseWindowSurface(EFalse);
+    StopSensors();
     }
 
 void CBgAnimHost::CompositionTargetVisible()
     {
-    if (iSurfaceInitialized)
+    if (iSurfaceInitialized || iHiddenDueSC)
         {
         // don't bother if we are already in
-        // a correct state..
+        // a correct state, or if we are hidden by
+        // the screensaver
         return;
         }
 
@@ -626,6 +629,7 @@ void CBgAnimHost::CompositionTargetVisible()
         iTimer->CallBack(1);
         iTimerRunning = ETrue;
         }
+    TRAP_IGNORE(StartSensorsL());
     }
 
 void CBgAnimHost::HandleScreenSaverEvent()
@@ -635,24 +639,33 @@ void CBgAnimHost::HandleScreenSaverEvent()
     if (scStatus)
         {
         // screensaver is ON
-        if (iTimerRunning)
-            {
-            iTimer->Cancel();
-            iTimerRunning = EFalse;
-            }
+        iHiddenDueSC = ETrue;
+        CompositionTargetHidden();
         }
     else
         {
         // screensaver is OFF
-        if (!iTimerRunning && iSurfaceInitialized)
-            {
-            iTimerRunning = ETrue;
-            iTimer->CallBack(1);
-            }
+        iHiddenDueSC = EFalse;
+        CompositionTargetVisible();
         }
 #endif
     }
 
+void CBgAnimHost::StartSensorsL()
+    {
+    for (TInt count = 0; count < iSensorListeners.Count(); count++)
+        {
+        iSensorListeners[count]->StartListeningL();
+        }
+    }
+    
+void CBgAnimHost::StopSensors()
+    {
+    for (TInt count = 0; count < iSensorListeners.Count(); count++)
+        {
+        iSensorListeners[count]->StopListening();
+        }
+    }
 TInt CBgAnimHost::ScreenSaverCallback(TAny* aPtr)
     {
     CBgAnimHost* me = (CBgAnimHost*) aPtr;

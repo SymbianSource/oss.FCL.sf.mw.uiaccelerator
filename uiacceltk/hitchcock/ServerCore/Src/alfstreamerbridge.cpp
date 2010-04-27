@@ -29,8 +29,8 @@
 #endif
 
 
-
-#define ALF_DRAW_FRAME_BEFORE_END_CALLBACK    
+// From MMP macro nowadays
+//#define ALF_DRAW_FRAME_BEFORE_END_CALLBACK    
 
 // ---------------------------------------------------------------------------
 // constructor
@@ -257,7 +257,7 @@ void CAlfStreamerBridge::RunL()
             CAlfBridge* bridge = dynamic_cast<CAlfBridge*>(iObserver);
             if (bridge)
                 {
-                bridge->iHuiEnv->RefreshCallBack((TAny*)bridge->iHuiEnv);
+                bridge->RefreshNow(iMessages[iStatus.Int()].iInt2);
                 }
             } // fall through
 #endif
@@ -305,6 +305,15 @@ void CAlfStreamerBridge::RunL()
     switch ( operation2 )
             {
             case EAlfRequestCommitBatch:
+#ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK    
+            {
+            CAlfBridge* bridge = dynamic_cast<CAlfBridge*>(iObserver);
+            if (bridge)
+                {
+                bridge->RefreshNow(iMessages[iQueue[0]].iInt2);
+                }
+            } // fall through
+#endif
             case EAlfRequestCommandReadNotification:
             case EAlfReleaseTemporaryChunk:
                 {
@@ -365,12 +374,12 @@ void CAlfStreamerBridge::DoCancel()
 // 
 // ---------------------------------------------------------------------------
 // 
-void CAlfStreamerBridge::StartNewBlock()
+void CAlfStreamerBridge::StartNewBlock(TBool aCompositionModified)
     {
     // Queue marker. Basically we could use one new member to assert that there can
     // be only one marker
     //__ALFLOGSTRING1("CAlfStreamerBridge:: Request command read notification, swap active: %d", iSwapActive );    
-    AddData(EAlfRequestCommitBatch,0,0,0);
+    AddData(EAlfRequestCommitBatch,0,aCompositionModified,0);
     }
 
 // ---------------------------------------------------------------------------

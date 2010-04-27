@@ -295,7 +295,9 @@ void CAlfCompositionCntrlClient::HandleEventL(TInt aEventType, TAny* aEventData)
             }
         case KAlfCompOpBindSourceToToken:
             {
+#ifdef _ALF_LOGGING
             RDebug::Print(_L("ptr0: %d, Target %d, Flags %d, combinedtarget"), ptr[0], ptr[1], ptr[2]);
+#endif // #ifdef _ALF_LOGGING
             if( ptr[1] != 0) // add binding information for new host to given target with permitted operations
                 {
                 iHostBindingsHash.Insert(*ptr, ptr[1]);
@@ -479,7 +481,9 @@ EXPORT_C CAlfCompositionSource::~CAlfCompositionSource()
 void CAlfCompositionSource::ConstructL(TInt aWsHandle, TInt aGroupHandle, TInt aScreenNumber)
     {
     iData = CAlfCompositionSourceData::NewL();
+#ifdef _ALF_LOGGING
     RDebug::Print(_L("CAlfCompositionClientBase::ConstructL - %d"), iData );
+#endif // #ifdef _ALF_LOGGING
 
     User::LeaveIfError( SendEvent(KAlfCompositionSourceScreenNumber, &aScreenNumber, sizeof(TInt)));
     
@@ -698,7 +702,9 @@ EXPORT_C CAlfCompositionHost* CAlfCompositionHost::NewL(TInt aToken, TInt aKey)
 void CAlfCompositionHost::ConstructL(TInt aToken, TInt aKey)
     {
     iData = CAlfCompositionSourceData::NewL();
+#ifdef _ALF_LOGGING
     RDebug::Print(_L("CAlfCompositionClientBase::ConstructL - %d"), iData );
+#endif // #ifdef _ALF_LOGGING
 
     TInt array[] = { 0, aToken, aKey }; 
     TInt result  = SendEvent(KAlfCompOpBindSourceToToken, array, sizeof(array));   

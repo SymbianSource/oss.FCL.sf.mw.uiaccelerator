@@ -62,10 +62,11 @@ const TUint KNoEffectApps[] =
 		0x101F8681, // VideoTelUi
 		0x101F875A, // KSWInstSvrUid, prevent fullscreen effect on installing
 		0x101F8543, // Voice Commands, no effects when pressing send key long
-		0x10281855  // touch input server , no effects when the first time start up
+		0x10281855, // touch input server , no effects when the first time start up
 		// startup blocked because startup exit leaves the screen black.
 		// must be debugged
-        , 0x100058F4 // startup blocked for the time being
+        0x100058F4, // startup blocked for the time being
+        0x101f857A // camera
         // Application shell is Ok, folder open and close have KAknApplicationShellViewId
         // as both to and from ids. There is only one visual, so some sort of blur effect works...
 		//, KAknApplicationShellViewId
@@ -82,6 +83,9 @@ const TUint KNoEffectPairs[][2] =
 const TUint KCustomNoEffectApps[] = 
     {
 	0x0, // DO NOT REMOVE 0x0! this is here for compile reasons, it will not be included in the AllowedCustomUid check
+    0x101f857A, // camera
+    0x2002A540  // conversation.exe , other launchable from messaging don't have effect either
+
   //0xUID //Add UIds of applications that shouldn't have effects here
 	};
 

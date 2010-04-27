@@ -51,6 +51,9 @@ public: // effect cache
     IMPORT_C void SetVisual( MHuiEffectable *aVisual );
 
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
+    void SetFxmlUsesOpaqueHint(TBool aValue);
+    TBool FxmlUsesOpaqueHint() const;
+    
 protected:
     IMPORT_C void ConstructL(MHuiEffectable* aVisual);
     
@@ -93,7 +96,7 @@ private:
     
     HBufC* iExtBitmapFile;
     TReal32 iOpacity;
-
+    TBool iOpaqueHint;
     };
 
 #endif /*HUIFXVISUALLAYER_*/

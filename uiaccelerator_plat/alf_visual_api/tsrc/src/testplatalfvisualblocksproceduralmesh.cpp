@@ -41,6 +41,10 @@ TInt CTestPlatAlfVisual::TestProMeshMakeMethodsL( CStifItemParser& /*aItem*/ )
     // Print to log file
     iLog->Log( KTestProMeshMakeMethodsL );
     
+    // Mesh not supported at the moment
+    STIF_ASSERT_LEAVES_WITH( KErrNotSupported,
+                             CAlfMeshVisual::AddNewL( *iAlfCtl ) );
+/* Not supported at the moment
     CAlfMeshVisual* meshVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );
     meshVisual->CreateMeshL( EAlfMeshTypeProcedural );
     CAlfProceduralMesh* proMesh = meshVisual->ProceduralMesh();
@@ -48,7 +52,7 @@ TInt CTestPlatAlfVisual::TestProMeshMakeMethodsL( CStifItemParser& /*aItem*/ )
     proMesh->MakeCubeL( 1, 1, 1, 1 );
     proMesh->MakeSphereL( 1, 1, 1 );
     proMesh->MakeTorusL( 1, 1, 1, 1, 1 );
-    
+*/    
     return KErrNone;
     }
 
@@ -65,13 +69,17 @@ TInt CTestPlatAlfVisual::TestProMeshMaterialMethodsL( CStifItemParser& /*aItem*/
     // Print to log file
     iLog->Log( KTestProMeshMaterialMethodsL );
     
+    // Mesh not supported at the moment
+    STIF_ASSERT_LEAVES_WITH( KErrNotSupported,
+                             CAlfMeshVisual::AddNewL( *iAlfCtl ) );
+/* Not supported at the moment
     CAlfMeshVisual* meshVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );
     meshVisual->CreateMeshL( EAlfMeshTypeProcedural );
     CAlfProceduralMesh* proMesh = meshVisual->ProceduralMesh();
     STIF_ASSERT_NOT_NULL(  proMesh );
     TAlfMaterial material = proMesh->Material();
     proMesh->SetMaterial( material );
-    
+*/    
     return KErrNone;
     }
 

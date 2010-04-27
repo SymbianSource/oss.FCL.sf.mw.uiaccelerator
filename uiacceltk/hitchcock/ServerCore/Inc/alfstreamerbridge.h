@@ -253,7 +253,7 @@ public:
      *
      * @since S60 5.0
      */
-    void StartNewBlock();
+    void StartNewBlock(TBool aCompositionModified);
 
     /**
      * StartNewBlock

@@ -81,12 +81,12 @@ EXPORT_C CHuiFxEffect::~CHuiFxEffect()
     ReleaseCachedRenderTarget();
     
     iEngine->RemoveEffect(this);
-    if (iEngine && iGroupId != KErrNotFound && !iNotifiedEffectReady)
+    if (iEngine && iGroupId != KErrNotFound && !(iFlags & KHuiReadyToDrawNotified))
         {
         // if effect was deleted before it was drawn, the group must be notified. If this was the last effect in the group
         // the group will be removed by the EffectReadyToStart
-        // effect group does not not know, which effects have notified about themselves. thus iNotifiedEffectReady flag is used.
-        iNotifiedEffectReady = ETrue;
+        // effect group does not not know, which effects have notified about themselves.
+        SetEffectFlag(KHuiReadyToDrawNotified);
         iEngine->NotifyEffectReady(iGroupId);
         }
     
@@ -95,12 +95,17 @@ EXPORT_C CHuiFxEffect::~CHuiFxEffect()
 #endif
     }
 
-void CHuiFxEffect::NotifyEffectEndObserver()
+TBool CHuiFxEffect::NotifyEffectEndObserver()
     {
+    if (iFlags & KHuiEffectObserverNotified)
+        {
+        return ETrue;
+        }
+    SetEffectFlag(KHuiEffectObserverNotified); // prevent extra notifier calls calls
 	// fade effect should not have observers
     if (iFlags & KHuiFadeEffectFlag)
         {
-        return;
+        return ETrue; // fade effect does not have observer that would need notification
         }
     if (iEffectEndObserver)
         {
@@ -109,7 +114,14 @@ void CHuiFxEffect::NotifyEffectEndObserver()
         iEffectEndObserver = NULL;
         // Note: The call below may synchronously delete me (CHuiFxEffect instance)
         effectEndObserver->AlfGfxEffectEndCallBack( iHandle );
-        }    
+        return ETrue; // end observer notified
+        }
+    else
+        {
+		// must be notified without destroying the effect first. gives alf apps chance
+		// to do their own cleanup
+        return EFalse; 
+        }
     }
 
 EXPORT_C void CHuiFxEffect::AddLayerL(const CHuiFxLayer* aLayer)
@@ -507,7 +519,6 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
 #endif
     // KHuiFxDelayRunUntilFirstFrameHasBeenDrawn flag is for giving effect chance to run
     // its whole timeline by starting the time only when first frame has been drawn.
-    iElapsedTime += aElapsedTime;
     if (iFlags & KHuiFxDelayRunUntilFirstFrameHasBeenDrawn)
         {
         // Sometimes the effect does not get any frames. Force the time to start, because
@@ -536,7 +547,7 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
 				// NotifyEffectReady will clear KHuiFxReadyAndWaitingGroupToStartSyncronized flag
 				// if all items in the group are ready.
                 iEngine->NotifyEffectReady(iGroupId);
-                iNotifiedEffectReady = ETrue;
+                SetEffectFlag(KHuiReadyToDrawNotified);
                 return;
                 }
 
@@ -552,6 +563,7 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
         {
         iRoot->AdvanceTime(aElapsedTime);
         }
+    iElapsedTime += aElapsedTime;
     }
     
 EXPORT_C TBool CHuiFxEffect::IsAnimated() const
@@ -630,4 +642,9 @@ TBool CHuiFxEffect::IsSemitransparent() const
 void CHuiFxEffect::FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray)
     {
     iRoot->FxmlVisualInputs(aArray);
+    }
+
+TBool CHuiFxEffect::FxmlUsesOpaqueHint() const
+    {
+    return iRoot->FxmlUsesOpaqueHint();
     }

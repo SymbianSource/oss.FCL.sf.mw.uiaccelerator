@@ -28,8 +28,6 @@ void CSensorListener::ConstructL(TUint32 aSensorType)
     if (channelInfoList.Count())
         {
         iSensrvChannel = CSensrvChannel::NewL(channelInfoList[0]);
-        iSensrvChannel->OpenChannelL();
-        iSensrvChannel->StartDataListeningL( iDataListener, 1,1,0);
         }
  
     channelInfoList.Close();
@@ -43,14 +41,33 @@ CSensorListener::CSensorListener(MSensrvDataListener* aDataListener) : iDataList
     
 CSensorListener::~CSensorListener()
     {
-    if (iSensrvChannel)
-        {
-        iSensrvChannel->StopDataListening(); 
-        iSensrvChannel->CloseChannel();
-        }
-        
+    StopListening();        
     delete iSensrvChannel;
+    
+    iSensrvChannel = NULL;
     }
+
+void CSensorListener::StopListening()
+    {
+    if (iSensrvChannel && iListening)
+        {
+        iSensrvChannel->StopDataListening();
+        iSensrvChannel->CloseChannel();
+        iListening = EFalse;
+        }
+    }
+    
+void CSensorListener::StartListeningL()
+    {
+    if (iSensrvChannel && !iListening)
+        {
+        iSensrvChannel->OpenChannelL();    
+        iSensrvChannel->StartDataListeningL( iDataListener, 5,10,0);
+        iListening = ETrue;
+        }
+    }
+    
+
         
 
 

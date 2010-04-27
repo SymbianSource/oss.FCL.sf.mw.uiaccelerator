@@ -282,9 +282,12 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
                 iGOomActionList->MemoryGood();
             }
         */
-        iServer->CloseAppsFinished(freeMemory, ETrue);
-        WaitAndSynchroniseMemoryState();
-        return;
+        if(!iGOomActionList->UseSwRendering())
+            {
+            iServer->CloseAppsFinished(freeMemory, ETrue);
+            WaitAndSynchroniseMemoryState();
+            return;
+            }
         }
 
     // update wg list only when actually about to use it 
@@ -478,7 +481,10 @@ void CMemoryMonitor::ResetTargets(TInt aTarget)
     iCurrentTarget = aTarget;
     iGOomActionList->SetCurrentTarget(iCurrentTarget);
     if(!aTarget)
+        {
         iTrigger = EGOomTriggerNone;    //reset the trigger condition
+        }
+    iGOomActionList->SetUseSwRendering(EFalse);
     }
 
 void CMemoryMonitor::SetPriorityBusy(TInt aWgId)

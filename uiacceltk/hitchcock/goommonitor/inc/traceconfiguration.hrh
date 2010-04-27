@@ -25,11 +25,11 @@
 //
 
 // just to make it easier to enable traces on rel builds also
-//#ifdef _DEBUG
+#ifdef _DEBUG
     #define _GOOM_DEBUG
     #define __GOOM_INFO_TRACE__
     #define __GOOM_FUNC_TRACE__
-//#endif
+#endif
 
 /**
 * Error trace enabled

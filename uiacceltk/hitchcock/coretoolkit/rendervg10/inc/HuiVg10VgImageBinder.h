@@ -88,7 +88,14 @@ private:    // Data
 
     EGLContext iContext;
     EGLContext iSavedContext;
+
+    // Array for maintaining vgImages
+    RArray<VGImage> iGroupOpacityImages;
+    // Array for maintaining vgImages
+    RArray<EGLSurface> iGroupOpacitySurfaces;
+
     };
+    
 
 #endif /* HUIVG10VGIMAGEBINDER_H_ */
 

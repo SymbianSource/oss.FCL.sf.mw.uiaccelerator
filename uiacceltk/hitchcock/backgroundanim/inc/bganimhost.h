@@ -70,6 +70,8 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         void HandleScreenSaverEvent();
         TBool GetPluginConfigurationL();
         static TInt ScreenSaverCallback(TAny* aPtr);
+        void StartSensorsL();
+        void StopSensors();
         
     private:
         // windowing stuff
@@ -97,6 +99,7 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         
         TBool iEGLInitialized;
         TBool iSurfaceInitialized;
+        TBool iHiddenDueSC;
         
         // composition API
         CAlfCompositionSource* iCompSource;

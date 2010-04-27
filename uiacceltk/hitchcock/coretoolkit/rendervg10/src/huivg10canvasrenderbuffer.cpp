@@ -450,3 +450,39 @@ void CHuiVg10CanvasRenderBuffer::ReadBackground(TPoint aPosition)
         }
     }
 
+void CHuiVg10CanvasRenderBuffer::InitializeL(const TSize& aSize, TBool aForceClear)
+    {
+    if (!IsInitialized())
+        {
+        InitializeL(aSize);
+        }
+    else
+        {
+        if (aForceClear)
+            {
+            CHuiVg10RenderPlugin& renderer = CHuiStatic::Vg10Renderer();
+
+            // Reinitialize the context
+            PushEGLContext();
+        
+            Bind();
+            iGc->InitState();
+        
+            VGfloat color[] = 
+                {
+                0.f, 0.f, 0.f, 0.f
+                };
+            vgSetfv(VG_CLEAR_COLOR, sizeof(color) / sizeof(VGfloat), color);
+            vgClear(0, 0, iSize.iWidth, iSize.iHeight);
+            UnBind();
+
+            // Let renderer know that we have been fiddlling with OpenVg state directly
+            // "iGc->InitState" confuses scissoring setting, so lets notify it.
+            renderer.AddRestoreStateFlags(EHuiVg10GcStateFlagDirtyScissor);    
+            renderer.AddRestoreStateFlags(EHuiVg10GcStateFlagDirtyBlendMode);    
+    
+            PopEGLContext();
+            }
+        }
+    }
+

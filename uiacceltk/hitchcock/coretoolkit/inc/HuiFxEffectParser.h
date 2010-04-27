@@ -92,6 +92,7 @@ private:
     THuiFxFilterType GetFilterTypeL( CMDXMLNode* aNode );
     THuiFxReferencePoint GetReferencePointL( CMDXMLNode* aNode, TReal32& aRefValue, TBool& aNeedRefValue );
     THuiFxVisualSrcType GetSrcTypeL( CMDXMLNode* aNode, TPtrC16& aBitmap );
+    TBool GetOpaqueHintL( CMDXMLNode *aNode );
     TReal32 ParseFloatValueL(CMDXMLNode* aNode);
     TRgb ParseColorValueL(CMDXMLNode* aNode);
     TReal32 ParseFloatAttributeL(CMDXMLNode* aNode, const TDesC& aName, TBool aMustExist = ETrue);

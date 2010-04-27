@@ -107,9 +107,13 @@ TInt CTestPlatAlfVisual::TestAlfMeshVisualAddNewL( CStifItemParser& /*aItem*/ )
     // Print to log file
     iLog->Log( KTestAlfMeshVisualAddNewL );
     
-    CAlfMeshVisual* vVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );
+    // Mesh not supported at the moment
+    STIF_ASSERT_LEAVES_WITH( KErrNotSupported,
+                             CAlfMeshVisual::AddNewL( *iAlfCtl ) );
+/* Not supported at the moment
+    CAlfMeshVisual* vVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );    
     STIF_ASSERT_NOT_NULL( vVisual );
-    
+*/
     return KErrNone;
     }
 
@@ -125,6 +129,10 @@ TInt CTestPlatAlfVisual::TestAlfMeshVisualSetAndGetL( CStifItemParser& /*aItem*/
     // Print to log file
     iLog->Log( KTestAlfMeshVisualSetAndGetL );
     
+    // Mesh not supported at the moment
+    STIF_ASSERT_LEAVES_WITH( KErrNotSupported,
+                             CAlfMeshVisual::AddNewL( *iAlfCtl ) );
+/* Not supported at the moment
     CAlfMeshVisual* vVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );
     vVisual->CreateMeshL( EAlfMeshTypeM3G );
     TUid vUid = { 0x00000000 };
@@ -154,7 +162,7 @@ TInt CTestPlatAlfVisual::TestAlfMeshVisualSetAndGetL( CStifItemParser& /*aItem*/
     vVisual->PitchAngle();
     vVisual->SetScale( vValue );
     vVisual->Scale();
-    
+*/
     return KErrNone;
     }
 
@@ -170,13 +178,17 @@ TInt CTestPlatAlfVisual::TestAlfMeshVisualForVisualL( CStifItemParser& /*aItem*/
     // Print to log file
     iLog->Log( KTestAlfMeshVisualForVisualL );
     
+    // Mesh not supported at the moment
+    STIF_ASSERT_LEAVES_WITH( KErrNotSupported,
+                             CAlfMeshVisual::AddNewL( *iAlfCtl ) );
+/* Not supported at the moment
     CAlfMeshVisual* vVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );
     _LIT8( KTest, "tset" );
     TBuf8<KBufSize> vBuf( KTest );
     vVisual->FindTag( vBuf );
     vVisual->UpdateChildrenLayout();
     vVisual->RemoveAndDestroyAllD();
-    
+*/
     return KErrNone;
     }
 

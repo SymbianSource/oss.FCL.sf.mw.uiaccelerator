@@ -83,7 +83,7 @@ public:
     
     void RequestPacketEndCallback( TInt aOffset );
     
-    void RequestFrameEndCallback();
+    void RequestFrameEndCallback(TBool aCompositionModified);
 
     RHashMap<TUint32,CNodeHashStruct> iNodeHashArray;
     
@@ -144,7 +144,7 @@ private:
      *
      * @since S60 ?S60_version
      */
-    void ExecuteCommandsL();
+    void ExecuteCommandsL(TBool aCompositionModified = EFalse);
     
     // Commands from window tree oberver at renderstage
     void DoNodeCreatedL();

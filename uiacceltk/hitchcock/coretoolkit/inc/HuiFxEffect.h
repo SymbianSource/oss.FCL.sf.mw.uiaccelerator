@@ -74,6 +74,17 @@ const TInt KHuiFxWaitGroupToStartSyncronized = 0x400;
  */
 const TInt KHuiFxReadyAndWaitingGroupToStartSyncronized = 0x800;
 
+/**
+ * This applies only to group effects. Visual has drawn one frame after the 
+ * effect was added to the visual.
+ */
+const TInt KHuiReadyToDrawNotified = 0x1000;
+
+/**
+ * Effect observer has been called once. 
+ */
+const TInt KHuiEffectObserverNotified = 0x2000;
+
 class MAlfGfxEffectObserver
     {
     public:
@@ -96,7 +107,15 @@ public:
     IMPORT_C TBool VisualArea(TRect& aRect) const;
     IMPORT_C TBool Changed();
     IMPORT_C void SetEffectEndObserver( MAlfGfxEffectObserver* aEffectEndObserver, TInt aHandle );
-    void NotifyEffectEndObserver();
+
+    /**
+	 * NotifyEffectEndObserver
+	 *
+	 * @return	ETrue, if effect observer was notified.
+	 *			EFalse, if effect does not have observer, but other notification is required (alf application
+	 *                  effects.
+	 */
+    TBool NotifyEffectEndObserver();
 
     IMPORT_C TBool IsAnimated() const;
     IMPORT_C TBool IsTransformed() const;
@@ -153,7 +172,9 @@ public: // effect cache methods
     TBool CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque);
 
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
-
+    
+	TBool FxmlUsesOpaqueHint() const;
+	
     TInt Handle() const
         {
         return iHandle;    
@@ -189,7 +210,6 @@ protected:
 	
     TInt iFramesDrawn;
     TReal32 iElapsedTime;
-    TBool iNotifiedEffectReady;
     };
 
 #endif /*HUIFXEFFECT_H_*/

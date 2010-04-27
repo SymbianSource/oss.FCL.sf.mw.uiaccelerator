@@ -25,6 +25,9 @@ class CMemoryMonitor;
 class RFs;
 class RWsSession;
 
+// temp support for migration
+#define __GOOM_PLUGIN_API_V2
+
 enum TGOomMonitorFlags
 	{
 	KGOomNone = 0,

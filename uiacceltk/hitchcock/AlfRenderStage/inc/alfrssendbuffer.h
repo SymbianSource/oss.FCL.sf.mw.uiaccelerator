@@ -399,6 +399,11 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
          */
         void Synchronize(TInt aId);
         
+        void SetCompositionModified()
+            {
+            iCompositionModified = ETrue;    
+            }
+        
     public: // From CActive
 
 	    void RunL();
@@ -818,5 +823,6 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
         TBool iLayersEnabled;
 #endif        
         TInt iOrientation;
+        TBool iCompositionModified;
 	};
 #endif /*CALFSENDBUFFER_H_*/

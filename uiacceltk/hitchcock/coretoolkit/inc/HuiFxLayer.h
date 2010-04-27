@@ -56,6 +56,7 @@ public: // effect cache
     IMPORT_C virtual void SetExtRect( TRect *aExtRect )=0;
     IMPORT_C virtual void SetVisual( CHuiVisual *aVisual )=0;
     IMPORT_C virtual void SetVisual( MHuiEffectable *aVisual )=0;
+    virtual TBool FxmlUsesOpaqueHint() const { return EFalse; }
     IMPORT_C void CopyFromL(const CHuiFxLayer *aOldLayer);
 
 

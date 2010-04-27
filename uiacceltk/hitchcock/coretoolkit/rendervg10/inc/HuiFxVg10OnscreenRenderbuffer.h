@@ -46,6 +46,10 @@ public:
 protected:
     void ConstructL(CHuiVg10RenderPlugin& aPlugin, CHuiVg10RenderSurface& aSurface);
     void PrepareForReuse(const TSize& /* aReusedRect */);
+    
+    void CreateVgImage();
+    void ReleaseVgImage();
+    
 private:
     CHuiVg10RenderPlugin*   iPlugin;
     CHuiVg10RenderSurface*  iSurface;

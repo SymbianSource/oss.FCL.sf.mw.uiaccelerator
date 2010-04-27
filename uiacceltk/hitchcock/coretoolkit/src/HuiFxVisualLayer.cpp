@@ -174,6 +174,7 @@ EXPORT_C CHuiFxVisualLayer *CHuiFxVisualLayer::CloneL() const
     else
         layer->iExtBitmapFile = NULL;
     layer->iOpacity = iOpacity;
+    layer->iOpaqueHint = iOpaqueHint;
     return layer;
 }
 EXPORT_C void CHuiFxVisualLayer::SetExtRect( TRect * /*aExtRect*/ )
@@ -446,7 +447,17 @@ void CHuiFxVisualLayer::FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray)
     {
     aArray.Append(iSrcType);
     }
-    
+
+TBool CHuiFxVisualLayer::FxmlUsesOpaqueHint() const
+    {
+    return iOpaqueHint;
+    }
+
+void  CHuiFxVisualLayer::SetFxmlUsesOpaqueHint(TBool aValue)
+    { 
+    iOpaqueHint = aValue; 
+    }
+
 TBool CHuiFxVisualLayer::IsSemitransparent() const
     {
     if (iOpacity < 1.f)

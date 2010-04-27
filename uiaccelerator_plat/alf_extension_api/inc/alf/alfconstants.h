@@ -1061,6 +1061,7 @@ struct TAlfVisualEffectParams
     {
     TFileName   iFileName;
     TInt 		iGroupHandle;
+    TInt        iHandle;
     };
 /**
  * Use the following functions to serialize the RArray<T> objects so

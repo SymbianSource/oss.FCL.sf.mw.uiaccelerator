@@ -191,6 +191,12 @@ public:
      */   
     void SetUseSwRendering(TBool aUseSwRendering);
     
+    /**
+     * Returns the flag to free memory using sw rendering. For Alf and other plugins that use sw rendering to reduces gpu mem usage.
+     * @since S60 5.0
+     */ 
+    TBool UseSwRendering();
+    
 // from MGOomActionObserver
 
     /**

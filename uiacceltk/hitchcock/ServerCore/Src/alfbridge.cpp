@@ -91,13 +91,17 @@ const TReal32 KAlfVisualDefaultOpacity = 1.0f;
 const TInt KEffectCleanupDelayInMs = 10;
 
 const TInt KPreventingCollisionOfIdsInSynchDrawRequests = 35;
+const TInt KRequestFrameSynchForComposition = -1; // bogus
 
+const TInt KAlfFSTaskSwapperAppStart = 1507;
 _LIT8(KAlfWindowGroupContainerControlTag, "WGROUP");
 
 #define USE_APPLICATION_ENDFULLSCREEN_TIMEOUT
 // This debug option shows window groups in a grid
 //#define ALF_DEBUG_VISUALIZE_WINDOWGROUP_ORDER
 
+// Timeout for manual refresh
+const TInt KAlfManualRefreshTimeout = 35000;
 
 const TInt KFadeAction = 6000;
 
@@ -174,6 +178,7 @@ CAlfBridge::~CAlfBridge()
 #endif
     delete iCursorTimer;
     delete iLayoutSwitchEffectCoordinator;
+    delete iManualRefreshTimer;
 	}
     
 
@@ -215,6 +220,8 @@ void CAlfBridge::ConstructL(CHuiEnv* aEnv)
     iOrphanStorage->ConstructL();
 	
     RegisterFadeEffectL();
+    
+    iManualRefreshTimer = CPeriodic::NewL(CActive::EPriorityStandard);
     }
 
 // ---------------------------------------------------------------------------
@@ -787,6 +794,7 @@ CHuiControlGroup& CAlfBridge::CreateControlGroupL(
             
             
             // First HandleGfxEvent, then clear iWaitingWindowGroup.
+            __ALFFXLOGSTRING1("CAlfBridge::CreateControlGroupL - try triggering effect 0x%x", layout);
             TBool failed = HandleGfxEventL( *iFullScreenEffectData, layout, fromLayout );
             if ( iFullScreenEffectData )
                 {
@@ -795,6 +803,7 @@ CHuiControlGroup& CAlfBridge::CreateControlGroupL(
             if ( failed )
                 {
                 // Effect failed, reset state
+                __ALFFXLOGSTRING1("CAlfBridge::CreateControlGroupL - effect failed on layout 0x%x", layout);
                 HandleGfxStopEvent( EFalse ); // destroys iFullScreenEffectData
                 }
             }     
@@ -1355,7 +1364,7 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
     
     CAlfScreen* screen = iAlfScreens[aScreenNumber];
     TRect fullscreen = TRect(TPoint(0,0), screen->Size());
-    TBool fadeEffectInScreen = EFalse;
+    TBool checkFadeEffectInScreen = EFalse;
     
     
     // Prepare SW render target (if needed)
@@ -1445,18 +1454,25 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
                 // clear inactive flag if client has not made this controlgroup hidden
                 if(!(flags&EHuiVisualFlagUnderOpaqueHint))
                     {
-                    alfWindowGroupFoundVisible = ETrue;
                     if(iAppUi)
                         {
                         topMostAlfSrvSession = iAppUi->SrvSessionForControlGroup(controlgroup);
+                        
+                        TInt clientWindowGroupId = topMostAlfSrvSession->ClientWindowGroup();
+                        __ALFLOGSTRING1("Alf Application: clientWindowGroupId %d", clientWindowGroupId);
+                        // checking the case if there are multiple alf application openend.
+                        if (clientWindowGroupId == iAppUi->GetLastActiveClient())
+                            {
+                            __ALFLOGSTRING1("Alf Application: GetLastActiveClient %d", iAppUi->GetLastActiveClient());
+                            alfWindowGroupFoundVisible = ETrue;
+                            hostContainer->ClearFlags(EHuiVisualFlagInactive);
+                            // just add the rect to covered region because alf draws solid background
+                            iTempRegion.AddRect(fullscreen);
+                            iTempRegion.Tidy();
+                            fullscreenCovered = ETrue;
+                            alfClientWindowGroupVisible = EFalse;  // change flag so that we don't go in this branch again
+                            }
                         }
-                    hostContainer->ClearFlags(EHuiVisualFlagInactive);
-
-                    // just add the rect to covered region because alf draws solid background
-                    iTempRegion.AddRect(fullscreen);
-                    iTempRegion.Tidy();
-                    fullscreenCovered = ETrue;
-                    alfClientWindowGroupVisible = EFalse;  // change flag so that we don't go in this branch again
                     }
                 else // else put as inactive
                     {
@@ -1501,21 +1517,12 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
 #endif
             }
         
-		// if native alf app is found visible we can assume it should cover whole screen with alfcontent
-		// this is for embedded native alf application cases. Otherwise chained window groups tend to
-		// flicker from time to time
-        if(!fullscreenCovered && controlgroup.iAlfApp)
-            {
-            alfClientWindowGroupVisible = ETrue;
-            }
-        
-        
         TBool subTreeCovered = EFalse;
         TBool hasLayers = EFalse;
         
         TBool hasActiveVisualsInVisualTree(EFalse);
         
-        //embedded native alf application assumes that it should cover whole screen with alfcontent
+        // native alf application assumes that it should cover whole screen with alfcontent
         // it makes alfeventwindowgroup as inactive and fading is not done on alf content
         // this call is exculsive for alfeventwindowgroup 
         if (alfClientWindowGroupVisible && (controlgroup.ResourceId() == iAlfWindowGroupNodeId))
@@ -1525,7 +1532,6 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
                    hasActiveVisualsInVisualTree, fullscreen, screen, 
                    subTreeCovered, hasLayers, IsVisualOpaque(*layout),alfClientWindowGroupVisible );
             }
-        
         else
             {
             hasActiveVisualsInVisualTree = 
@@ -1537,11 +1543,21 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
 
         TBool hasFadeEffectsInVisualTree = (layout->CanvasFlags() & EHuiCanvasFlagExternalFadeExistsInsideVisualTree);        
 
-        if(!fullscreenCovered && alfClientWindowGroupVisible)
+        // if native alf app is found visible and the client it self is not covering whole screen, we can assume that alf content
+        // fills the rest. 
+        // this is for embedded native alf application cases. Otherwise chained window groups tend to
+        // flicker from time to time
+        // also if alfcontent is not hided below avkon content the fading effect would reveal alfconent
+        if(controlgroup.iAlfApp)
             {
-            iTempRegion.AddRect(fullscreen);
-            iTempRegion.Tidy();
-            fullscreenCovered = ETrue;
+            fullscreenCovered = IsRectCoveredByRegion(fullscreen, iTempRegion); 
+            if(!fullscreenCovered )
+                {
+                iTempRegion.AddRect(fullscreen);
+                iTempRegion.Tidy();
+                fullscreenCovered = ETrue;
+                alfClientWindowGroupVisible = ETrue;
+                }
             }
         
         // If root visuals effect is marked as opaque, then add whole screen area as covered.
@@ -1560,7 +1576,7 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
 		// are no more needed get removed.
         if (hasActiveVisualsInVisualTree || (!hasActiveVisualsInVisualTree && hasFadeEffectsInVisualTree))
             {
-            fadeEffectInScreen = ETrue;
+            checkFadeEffectInScreen = ETrue;
             
             // Prepare fade effects to whole visual tree  below layout
             PrepareFadeEffects( *layout );
@@ -1656,7 +1672,7 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
     // Finally, if there are fadeeffects applied to windowgroups, make sure first one does not
     // blend itself, but other windowgroups do blend. Otherwise windowgrouops above others
     // would clear the screen areas where they do not really draw.
-    if (fadeEffectInScreen)
+    if (checkFadeEffectInScreen)
         {
         TBool firstFadedWindowGroupFound = EFalse;
         for (TInt j=0; j<screen->iDisplay->Roster().Count() - screen->FixedControlGroupCount(); j++) // skip the topmost (effect) layer 
@@ -2428,6 +2444,7 @@ void CAlfBridge::DoDispatchL(TInt aStatus)
 	                {
                     HandleSetLayoutSwitchEffectL();
 	                iAlfScreens[0]->iDisplay->SetOrientation(huiOrientation);
+	                UpdateRootVisualsToFullscreen();
 	                if (iAppUi)
 	                	{
 	                	iAppUi->AdjustWindowGroupPositionL(0,CAlfAppServer::EAlfWindowSize); // hackish, but one way to enforce alf window resizing
@@ -2471,6 +2488,8 @@ void CAlfBridge::DoDispatchL(TInt aStatus)
               __ALFLOGSTRING1("CAlfBridge::DoDispatchL: Received Unknown op: %d",data.iOp);
               }
             }
+        
+        AsynchRefresh();
         }
    }
 
@@ -4008,6 +4027,37 @@ TBool CAlfBridge::HasActiveFadedChildren( CHuiCanvasVisual& aVisual )
     return has;
     }
 
+// ---------------------------------------------------------------------------
+//
+// ---------------------------------------------------------------------------
+//
+void CAlfBridge::UpdateRootVisualsToFullscreen()
+    {
+    if (!iAlfScreens.Count())
+        {
+        return;    
+        }
+    
+    // update all the layouts even inactive ones.
+    CAlfScreen* screen = iAlfScreens[0];
+    TRect fullscreen = TRect(TPoint(0,0), screen->Size());
+    for (TInt j=screen->iDisplay->Roster().Count() - screen->FixedControlGroupCount(); j>=0; j--)
+        {                
+        CHuiControlGroup& controlgroup = screen->iDisplay->Roster().ControlGroup(j);
+        CHuiControl& control = controlgroup.Control(0);
+
+        if( control.Role() == EAlfWindowGroupContainer)
+            {
+            // Only update layout which are made to correspond window groups. 
+            // Layouts that fullscreen effects are applied to
+            CHuiCanvasVisual* layout = (CHuiCanvasVisual*)&control.Visual(0);
+            layout->SetPos(fullscreen.iTl);
+            layout->SetSize(fullscreen.Size());
+            }
+        }
+    }
+
+
 
 // ---------------------------------------------------------------------------
 // SetupFadeEffectL
@@ -4353,6 +4403,10 @@ TBool NeedsStoredBuffers(CHuiFxEngine *aEngine, const TDesC &aFileName)
     {
     return aEngine->FxmlUsesInput1(aFileName);
     }
+TBool FxmlHasOpaqueHint(CHuiFxEngine *aEngine, const TDesC &aFileName)
+    {
+    return aEngine->FxmlUsesOpaqueHint(aFileName);
+    }
 
 // ---------------------------------------------------------------------------
 // StoreLayoutIfRequiredByEffectL
@@ -4441,6 +4495,7 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                     case AknTransEffect::EApplicationStartRect:
                     case AknTransEffect::EApplicationStartSwitch:
                     case AknTransEffect::EApplicationStartSwitchRect:
+                    case KAlfFSTaskSwapperAppStart:
                         {
                         aToLayout->iOpacity.Set(0.0f);    // these are meant for applications that are not yet ready to be drawn, but possible already on the foreground
                         FreezeLayoutUntilEffectDestroyedL(aFromLayout, aEvent.iHandle);
@@ -4545,7 +4600,7 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                                 }
                             __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - Active effect group: %d", activeEffectGroup);
                             effectFlags = KHuiFxDelayRunUntilFirstFrameHasBeenDrawn; 
-                            if (NeedsStoredBuffers(iHuiEnv->EffectsEngine(), *aEvent.iEffectName))
+                            if (FxmlHasOpaqueHint(iHuiEnv->EffectsEngine(), *aEvent.iEffectName))
                                 {
                                 // Performance improvement, but this would be better to be a special hint param in the fxml
                                 effectFlags |= KHuiFxOpaqueHint;
@@ -4747,16 +4802,12 @@ void CAlfBridge::HandleGfxEffectsL( TAlfBridgerData data )
 				__ALFFXLOGSTRING("CAlfBridge::HandleGfxEffectsL - WARNING - Another fullscreen effect to different app. Deleting the previous ongoing effect"); 
                 RemoveEffectFromApp(iFullScreenEffectData->iToSecureId, iFullScreenEffectData->iToWg);// Fullscreen effect for another app has arrived, and the previous has not finished and abort effect was not called.
                 RemoveEffectFromApp(iFullScreenEffectData->iFromSecureId, iFullScreenEffectData->iFromWg);
+                __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEffectsL - Effect request has changed from appUid 0x%x to 0x%x. Cancel previous effect.", iFullScreenEffectData->iToAppId, fxData->iToAppId);
+                RemoveEffectFromApp(iFullScreenEffectData->iToAppId);
                 // Fullscreen effect for another 
                 }
 
-            if (iFullScreenEffectData && iFullScreenEffectData->iToAppId != fxData->iToAppId)
-                {
-                // effected application has changed. Only single begin - end request supported at a time.
-                __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEffectsL - Effect request has changed from appUid 0x%x to 0x%x. Cancel previous effect.", iFullScreenEffectData->iToAppId, fxData->iToAppId);
-                RemoveEffectFromApp(iFullScreenEffectData->iToAppId);
-                }
-            delete iFullScreenEffectData;
+               delete iFullScreenEffectData;
             iFullScreenEffectData = fxData;
             iFullScreenEffectData->iAppStartScreenshotItemHandle = fxData->iHandle;
             
@@ -4891,6 +4942,7 @@ TBool CAlfBridge::GfxTriggerEffectWhenFullScreenDrawn(CHuiControlGroup* aToGroup
     CHuiLayout* toLayout = control.VisualCount() > 0 ? (CHuiLayout*)&control.Visual(0) : NULL;
     if (!toLayout)
         {
+        // no point starting effect, if the layout is still inactive.
         return EFalse;
         }
     TBool opaque = ETrue; // in app start case the layout is propably not opaque. Fake it.
@@ -5113,7 +5165,13 @@ void CAlfBridge::AddToEffectLayoutContainerL(
                CHuiLayout& layout = static_cast<CHuiLayout&> (aSourceLayout->Visual(i));
                AddToEffectLayoutContainerL(aEffectHandle, &layout, NULL, aEffectControl, aItemsDestroyed, EFalse,aIsExitEffect, aCanDestroyOrHideImmediately );
                }
+           TInt oldItemsDestroyed = aItemsDestroyed;
            AddEffectItemL(aEffectHandle, &sourceVisual, aTargetLayout, aEffectControl, EFalse, aItemsDestroyed, aIsExitEffect, aCanDestroyOrHideImmediately);
+           if (oldItemsDestroyed != aItemsDestroyed)
+               {
+               // Visual was destroyed. If so, then we must adjust index.
+               --i;
+               }
            }
     __ALFFXLOGSTRING2("CAlfBridge::AddToEffectLayoutContainerL 0x%x end of children", aSourceLayout, aSourceLayout->Count());
     }
@@ -5269,6 +5327,11 @@ void CAlfBridge::HandleGfxControlEventL(CControlEffectState& aEvent,
             
             // effect will start delayed anyway when it is syncronized. this flag would break syncronization between effects.
             effectFlags = KHuiFxDelayRunUntilFirstFrameHasBeenDrawn; 
+            if (FxmlHasOpaqueHint(iHuiEnv->EffectsEngine(), *aEvent.iEffectName))
+                {
+                effectFlags |= KHuiFxOpaqueHint;
+                }
+
             TInt activeEffectGroup = engine->ActiveGroupEffect();
             if (activeEffectGroup != KErrNotFound)
                 {
@@ -5972,15 +6035,26 @@ void CAlfBridge::EnableSwRenderingL(TBool aEnable)
             iAlfScreens[i]->iDisplay->SetForegroundBitmapL( iAlfScreens[i]->iSwRenderingTarget );
             CleanupStack::Pop(texture);
             iAlfScreens[i]->iDisplay->SetForegroundTexture(texture);
+#ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
+            iHuiEnv->SetRefreshMode(EHuiRefreshModeManual);
+#endif // #ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
             }
         else
             {
             iAlfScreens[i]->iDisplay->SetForegroundBitmapL(NULL);            
             iAlfScreens[i]->iDisplay->SetForegroundTexture(NULL);
+#ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
+            iHuiEnv->SetRefreshMode(EHuiRefreshModeAutomatic);
+#endif // #ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
             }
             
         // SetCapturingBufferL is called from HandleVisualVisibility.
         iAlfScreens[i]->SetVisualTreeVisibilityChanged(ETrue);
+        }
+
+    if (!iSwRenderingEnabled && iManualRefreshTimer)
+        {
+        iManualRefreshTimer->Cancel();
         }
     }
 
@@ -6195,7 +6269,11 @@ TInt CAlfBridge::ReadPixels(CFbsBitmap* aBitmap)
 // 
 void CAlfBridge::Synchronized(TInt aId)
     {
-    if(aId == iIdForLayoutSwitchFrameSync)
+    if (aId == KRequestFrameSynchForComposition)
+        {
+        return;    
+        }    
+    else if (aId == iIdForLayoutSwitchFrameSync)
         {
         // send notification to alfstreamer server about
         if (iActivated)
@@ -6334,48 +6412,7 @@ TBool CAlfBridge::IsFullScreenDrawn( TInt aOrientation)
         // Dont mess with alf control group visuals, alf session handling does it for us
         if (control.Role() == EAlfSessionContainer)
             {
-            CHuiLayout* hostContainer = control.ContainerLayout( NULL );
-            TInt flags = hostContainer->Flags();            
-            if (!fullscreenCovered)
-                {
-                
-                if(!(flags&EHuiVisualFlagUnderOpaqueHint))
-                    {
-                    alfWindowGroupFoundVisible = ETrue;
-                    if(iAppUi)
-                        {
-                        topMostAlfSrvSession = iAppUi->SrvSessionForControlGroup(controlgroup);
-                        }
-
-                    // just add the rect to covered region because alf draws solid background
-                    iTempRegion.AddRect(fullscreen);
-                    iTempRegion.Tidy();
-                    fullscreenCovered = ETrue;
-                    }
-                }
-            else if(!alfWindowGroupFoundVisible || flags&EHuiVisualFlagUnderOpaqueHint)
-                {
-                // this alf session control group should not be visible anymore because avkon application is on top
-                // -> change to inactive
-                
-                }
-            else if(!(flags&EHuiVisualFlagUnderOpaqueHint)) // alf app covers full screen
-                {
-                // check if current controlgroup belongs to same srvsession as the topmost visible alf session container
-                CAlfAppSrvSessionBase* alfsrvsession = NULL;
-                if(iAppUi)
-                    {
-                    alfsrvsession = iAppUi->SrvSessionForControlGroup(controlgroup);
-                    }
-                if(topMostAlfSrvSession!=NULL && topMostAlfSrvSession == alfsrvsession)
-                    {
-                
-                    }
-                else
-                    {
-                
-                    }
-                }
+            // Skip alf session containers until we have better heuristic implement for them
             continue;
             }
         
@@ -6540,8 +6577,9 @@ void CAlfBridge::MarkAllLayersHiddenRecursive(CHuiLayout* aLayout)
     
             if (!canvasVisual->LayerExtent().IsEmpty())
                 {
-                canvasVisual->ClearCanvasFlags(EHuiCanvasFlagSurfaceVisible);
-                canvasVisual->SetCanvasFlags(EHuiCanvasFlagSurfaceInvisible);
+                // Force update
+                canvasVisual->ClearCanvasFlags( EHuiCanvasFlagSurfaceInvisible );
+                canvasVisual->ClearCanvasFlags( EHuiCanvasFlagSurfaceVisible );
                 }
             }
         }
@@ -6588,5 +6626,39 @@ RAlfBridgerClient* CAlfBridge::BridgerClient()
     return 0;      
     }
 
+void CAlfBridge::RefreshNow(TBool aSyncWait)
+    {
+    if (!iHuiEnv)
+        {
+        return;
+        }
+
+    if (iSwRenderingEnabled && iManualRefreshTimer)
+        {
+        iManualRefreshTimer->Cancel();
+        }
+
+    if (aSyncWait)
+        {
+        iHuiEnv->Synchronize( KRequestFrameSynchForComposition, this );
+        }
+        
+    iHuiEnv->RefreshCallBack((TAny*)iHuiEnv);
+    }
+
+static TInt DoAlfBridgeRefreshNow(TAny* aAny)
+    {
+    CAlfBridge* bridge = static_cast<CAlfBridge*>(aAny);
+    bridge->RefreshNow(EFalse);
+    return KErrNone;
+    }
+
+void CAlfBridge::AsynchRefresh()
+    {
+    if (iSwRenderingEnabled && iManualRefreshTimer && !iManualRefreshTimer->IsActive())
+        {
+        iManualRefreshTimer->Start(KAlfManualRefreshTimeout, KAlfManualRefreshTimeout, TCallBack(DoAlfBridgeRefreshNow, this));
+        }
+    }
 
 // end of file

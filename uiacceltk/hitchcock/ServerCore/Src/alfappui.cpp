@@ -148,30 +148,42 @@ NONSHARABLE_CLASS(CAlfEventCatcher): public CActive
     void RunL()
         {
         iSema.Wait();
+        TInt position = iPosition;
+        TInt parentId = iParentIdentifier;
+        iSema.Signal();
+        TBool goOn = EFalse;
         if (iStatus.Int() == KErrNone)
             {
-            TRAPD(err, DoAdjustPositionL());
-            if (err)
-                {
-                __ALFLOGSTRING1("ALF: WG Parent not found, err %d", err);
-                }
-            }
+            do {
+                TRAPD(err, DoAdjustPositionL(position, parentId));
+                if (err)
+                    {
+                    __ALFLOGSTRING1("ALF: WG Parent not found, err %d", err);
+                    }
+                iSema.Wait();        
+                goOn = (iPosition != position || iParentIdentifier != parentId);
+                position = iPosition;
+                parentId = iParentIdentifier;
+                iSema.Signal();
+                } while(goOn);
+    		}
+        iSema.Wait();
         DoActivate();
         iSema.Signal();
         }
 
-    void DoAdjustPositionL()
+    void DoAdjustPositionL(TInt aPosition, TInt aParentIdentifier)
         {
-         __ALFLOGSTRING1("ALF: DoAdjustPositionL() %d", iPosition);
+         __ALFLOGSTRING1("ALF: DoAdjustPositionL() %d", aPosition);
                   
-        if (iPosition == CAlfAppServer::EAbsoluteBackground) // just for convenience
+        if (aPosition == CAlfAppServer::EAbsoluteBackground) // just for convenience
             {
             __ALFLOGSTRING("CAlfEventCatcher::DoAdjustPositionL - CAlfAppServer::EAbsoluteBackground");
             iWindowGroup.SetOrdinalPosition(-1,ECoeWinPriorityNeverAtFront);
             iWsSession.Flush();
             return;
             }
-        else if (iPosition == CAlfAppServer::EAlfWindowSize ) // just for developer convenience
+        else if (aPosition == CAlfAppServer::EAlfWindowSize ) // just for developer convenience
             {
             __ALFLOGSTRING("CAlfEventCatcher::DoAdjustPositionL - CAlfAppServer::EAlfWindowSize");
              // update window size when layout changes    
@@ -183,7 +195,7 @@ NONSHARABLE_CLASS(CAlfEventCatcher): public CActive
      
             
         TInt parentPriority = 
-            iWsSession.GetWindowGroupOrdinalPriority(iParentIdentifier);
+            iWsSession.GetWindowGroupOrdinalPriority(aParentIdentifier);
 
         // perhaps we should maintain wg-list elsewhere
         CArrayFixFlat<TInt>* wgs = new (ELeave) CArrayFixFlat<TInt>(1); 
@@ -195,9 +207,9 @@ NONSHARABLE_CLASS(CAlfEventCatcher): public CActive
         TInt wgCount = wgs->Count();
         for (TInt i = 0; i < wgCount; i++)
             {
-            if (iParentIdentifier == wgs->At(i))
+            if (aParentIdentifier == wgs->At(i))
                 {
-                if ( iPosition == CAlfAppServer::EOnTopOfParent )
+                if ( aPosition == CAlfAppServer::EOnTopOfParent )
                     {
                     pos = i;
                     }
@@ -432,11 +444,7 @@ NONSHARABLE_CLASS(CAlfEventFetcher): public CActive
         {
         iWsSession.ComputeMode(RWsSession::EPriorityControlDisabled);
         RThread thread; 
-#if defined(__EPOC32__)
-    thread.SetProcessPriority(EPriorityForeground);    
-#else
-    thread.SetPriority(EPriorityAbsoluteForegroundNormal);    
-#endif
+        thread.SetPriority(EPriorityAbsoluteForegroundNormal);    
         iScreenDevice =new(ELeave) CWsScreenDevice(iWsSession);
         iScreenDevice->Construct(0); // For main display only
 
@@ -861,11 +869,7 @@ EXPORT_C void CAlfAppUi::ConstructL()
     CHuiStatic::WsSession().ComputeMode(RWsSession::EPriorityControlDisabled);
 
     RThread thread; 
-#if defined(__EPOC32__)
-    thread.SetProcessPriority(EPriorityForeground);    
-#else
-    thread.SetPriority(EPriorityAbsoluteForegroundNormal);    
-#endif
+    thread.SetPriority(EPriorityAbsoluteForeground);    
 
     // delegates..
     iData->iResourceManager = CAlfSrvResourceManager::NewL( *iData->iHuiEnv );
@@ -1492,6 +1496,12 @@ CAlfAppSrvSessionBase* CAlfAppUi::SrvSessionForControlGroup(CHuiControlGroup& aG
     return iData->iServer->SrvSessionForControlGroup(aGroup);
     }
 
+
+TInt CAlfAppUi::GetLastActiveClient()
+    {
+    return iData->iServer->GetLastActiveClient();
+    }
+	
 void CAlfAppUi::DoBlankScreen(const RMessage2& aMessage)
     {
     __ALFLOGSTRING("CAlfAppUi::DoBlankScreen >>");

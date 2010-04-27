@@ -1997,4 +1997,6 @@ EXPORTS
 	_ZN16CHuiControlGroup8SecureIdEv @ 1996 NONAME
 	_ZNK16CHuiCanvasVisual19HasTransParentClearEv @ 1997 NONAME
 	_ZN12CHuiFxEngine16AddEffectToGroupEi @ 1998 NONAME
+	_ZN12CHuiFxEngine18FxmlUsesOpaqueHintERK7TDesC16 @ 1999 NONAME
+	_ZN22CHuiCanvasRenderBuffer11InitializeLERK5TSizei @ 2000 NONAME
 

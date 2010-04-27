@@ -345,9 +345,11 @@ void CHuiFxEffectParser::ParseNodeL( CMDXMLNode* aNode, CHuiFxLayer* aLayer)
 #endif
             TPtrC16 extBitmap;
             THuiFxVisualSrcType srcType = GetSrcTypeL( aNode, extBitmap );
+            TBool opaqueHint = GetOpaqueHintL(aNode);
             CHuiFxVisualLayer* visual = CHuiFxVisualLayer::NewL( iVisual );
             CleanupStack::PushL( visual );
             visual->SetSourceType( srcType );
+            visual->SetFxmlUsesOpaqueHint( opaqueHint );
             if ( srcType == EVisualSrcBitmap && extBitmap.Length() > 0 )
                 {
                 visual->SetExtBitmapFileL( extBitmap );
@@ -1158,6 +1160,35 @@ THuiFxReferencePoint CHuiFxEffectParser::GetReferencePointL( CMDXMLNode* aNode, 
     __ALFFXLOGSTRING1("CHuiFxEffectParser::GetReferencePointL - return %d",ref);
 #endif
     return ref;
+    }
+TBool CHuiFxEffectParser::GetOpaqueHintL( CMDXMLNode *aNode )
+    {
+    if (aNode->NodeType() != CMDXMLNode::EElementNode)
+        {
+        FAIL(KErrGeneral, _L("Text node expected while reading visual source type"));
+        }
+    TInt attributeIndex = ((CMDXMLElement*)aNode)->FindIndex( KLitOpaque );
+    if (attributeIndex == KErrNotFound)
+        {
+        // If src not found, the source defaults to visual itself
+        return EFalse;
+        }
+      
+    TPtrC attributeValue;
+    TPtrC attributeName;
+    User::LeaveIfError(((CMDXMLElement*)aNode)->AttributeDetails( attributeIndex, attributeName, attributeValue ));
+  
+    if( attributeValue.Compare( KLitTrue ) == 0 )
+        {
+        return ETrue;
+        }
+    
+    if( attributeValue.Compare( KLitFalse ) == 0 )
+        {
+        return EFalse;
+        }
+
+    return EFalse;
     }
 
 THuiFxVisualSrcType CHuiFxEffectParser::GetSrcTypeL( CMDXMLNode* aNode, TPtrC16& aBitmap )
