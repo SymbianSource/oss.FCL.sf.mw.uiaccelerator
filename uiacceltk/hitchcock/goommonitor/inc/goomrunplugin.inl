@@ -31,7 +31,12 @@ inline CGOomActionConfig& CGOomRunPlugin::GetConfig()
 
 inline TBool CGOomRunPlugin::IsRunning()
     {
-    return iPluginWaiter->IsActive();
+    if(iPluginWaiter)
+        {
+        return iPluginWaiter->IsActive();
+        }
+    
+    return EFalse;
     }
 
 inline void CGOomRunPlugin::WaitCompleted()

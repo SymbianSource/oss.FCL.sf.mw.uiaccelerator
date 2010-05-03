@@ -234,7 +234,7 @@ MHuiFxEffectCacheNode *CHuiFxEffectCache::FindDup(const TDesC &aId)
 	   }
     return 0;
     }
-MHuiFxEffectCacheNode *CHuiFxEffectCache::FindCached(const TDesC &aId)
+MHuiFxEffectCacheNode *CHuiFxEffectCache::FindCached(const TDesC &aId) const
     {
     TInt size2 = iCachedEffects.Count();
     for(TInt i=0;i<size2;i++)
@@ -256,6 +256,16 @@ TBool CHuiFxEffectCache::FxmlUsesInput1(const TDesC &aFileName)
     else
         return EFalse;
     }
+
+TBool CHuiFxEffectCache::FxmlUsesOpaqueHint(const TDesC &aFileName) const
+    {
+    MHuiFxEffectCacheNode *node = FindCached(aFileName);
+    if (node)
+        return node->FxmlUsesOpaqueHint();
+    else
+        return EFalse;
+    }
+
 
 
 void CHuiFxEffectCache::Remove(RHashMap<TInt, MHuiFxEffectCacheNode*> & /*aMap*/, MHuiFxEffectCacheNode * /*aNode*/)
@@ -430,4 +440,10 @@ TBool CHuiFxEffectCacheEffectNode::FxmlUsesInput1()
         }
     array.Close();
     return EFalse;
+    }
+
+TBool CHuiFxEffectCacheEffectNode::FxmlUsesOpaqueHint() const
+    {
+    CHuiFxEffect *effect = iEffect;
+    return effect->FxmlUsesOpaqueHint();
     }

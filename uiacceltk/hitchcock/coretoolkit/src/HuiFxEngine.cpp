@@ -16,7 +16,6 @@
 */
 
 
-
 #include "HuiFxEngine.h"
 #include "HuiFxEffectParser.h"
 #include "HuiFxEffect.h"
@@ -66,6 +65,7 @@ EXPORT_C void CHuiFxEngine::ConstructL(THuiFxEngineType aEngineType)
 #endif
 #endif
     CHuiStatic::Env().AddMemoryLevelObserver(this);
+    iActiveEffectGroups.Reserve(2);
     }
 
 EXPORT_C TBool CHuiFxEngine::FxmlUsesInput1(const TDesC &aFileName)
@@ -76,6 +76,15 @@ EXPORT_C TBool CHuiFxEngine::FxmlUsesInput1(const TDesC &aFileName)
 #ifndef HUIFX_EFFECTCACHE_ENABLED
     return EFalse;
 #endif
+    }
+EXPORT_C TBool CHuiFxEngine::FxmlUsesOpaqueHint(const TDesC &aFileName)
+    {
+#ifdef HUIFX_EFFECTCACHE_ENABLED
+    return iCache->FxmlUsesOpaqueHint(aFileName);
+#endif
+#ifndef HUIFX_EFFECTCACHE_ENABLED
+    return EFalse;
+#endif    
     }
 
 TBool CHuiFxEngine::FxmlUsesInput1(CHuiFxEffect& aEffect)
@@ -282,8 +291,11 @@ void CHuiFxEngine::NotifyEffectEndObservers()
     for ( TInt i = iActiveEffects.Count() - 1; i >= 0; i-- )
         {
         CHuiFxEffect* effect = iActiveEffects[i];
-        if (!effect->Changed())
+        if (!(effect->EffectFlags() & KHuiFadeEffectFlag) && !effect->Changed())
             {
+#ifdef HUIFX_TRACE
+            RDebug::Printf("void CHuiFxEngine::NotifyEffectEndObservers() calling NotifyEffectEndObserver");
+#endif
             effect->NotifyEffectEndObserver();
             }
         }    
@@ -295,13 +307,14 @@ EXPORT_C void CHuiFxEngine::AdvanceTime(TReal32 aElapsedTime)
     TInt i;
     TBool refreshRequired = EFalse;
 #ifdef HUIFX_TRACE    
-    RDebug::Print(_L("CHuiFxEngine::AdvanceTime - 0x%x "), this);   
+    RDebug::Print(_L("CHuiFxEngine::AdvanceTime - 0x%x, effect count: %d"), this, iActiveEffects.Count());   
 #endif
     // Go through the list in reverse order.
 // If the effect has ended, and has the callback set,
 // the effect will be removed, and will no longer be part of iActiveEffects set.
 // We must check if the effect is still in our list, but the indices change
 // if something is removed from the middle of the list
+    TInt skipGroup = KErrNotFound;
     for ( i = iActiveEffects.Count() - 1; i >= 0; i-- )
         {
         CHuiFxEffect* effect = iActiveEffects[i];
@@ -309,10 +322,26 @@ EXPORT_C void CHuiFxEngine::AdvanceTime(TReal32 aElapsedTime)
             {
             refreshRequired = ETrue;
             }
-        if ( i < iActiveEffects.Count() && effect == iActiveEffects[i] && !(effect->EffectFlags() & KHuiFxWaitGroupSyncronization))
+        TInt flags = effect->EffectFlags();
+        if ( !(flags & KHuiFxWaitGroupSyncronization)
+                && !(flags & KHuiFadeEffectFlag) // fade is not animated. Note, if animated effect would be used, remove this!
+                && (skipGroup == KErrNotFound || skipGroup != effect->GroupId())
+               )
             {
             // The effect is still in its place, it did not go away yet
+            TBool waitingGroupBefore = flags & KHuiFxWaitGroupToStartSyncronized;
             effect->AdvanceTime(aElapsedTime);
+            
+            if (waitingGroupBefore)
+                {
+                flags = effect->EffectFlags();
+                if (!(flags & KHuiFxReadyAndWaitingGroupToStartSyncronized) && !(flags & KHuiFxWaitGroupToStartSyncronized))
+                    {
+                    // effects in this group are all ready to start drawing. Skip this group in AdvanceTime, 
+					// that they can start syncronized on the next round
+                    skipGroup = effect->GroupId();
+                    }
+                }
             }
         }
     
@@ -332,6 +361,10 @@ EXPORT_C void CHuiFxEngine::AddEffectL(CHuiFxEffect* aEffect)
 #endif // #ifdef HUIFX_TRACE    
 
     iActiveEffects.AppendL(aEffect);
+    if (iEffectObserver)
+        {
+        iEffectObserver->EffectAdded(aEffect);    
+        }
     }
 
 EXPORT_C void CHuiFxEngine::RemoveEffect(CHuiFxEffect* aEffect)
@@ -343,6 +376,10 @@ EXPORT_C void CHuiFxEngine::RemoveEffect(CHuiFxEffect* aEffect)
     if (i >= 0)
         {
         iActiveEffects.Remove(i);
+        if (iEffectObserver)
+            {
+            iEffectObserver->EffectComplete(aEffect);
+            }
         }
     }
 
@@ -489,7 +526,7 @@ EXPORT_C void CHuiFxEngine::ReleaseRenderbuffer(CHuiFxRenderbuffer* aBuffer)
     ASSERT((aBuffer) && (iBuffersInUse > 0));
 
 #ifdef HUIFX_RBCACHE_ENABLED
-    if(iLowGraphicsMemoryMode || IsCacheFull())
+    if(iLowGraphicsMemoryMode < EHuiMemoryLevelReduced || IsCacheFull())
         {
 #ifdef HUIFX_TRACE            
         RDebug::Print(_L("CHuiFxEngine::ReleaseRenderbuffer() --- Renderbuffer cache full! Suspectible for memory fragmentation! Cache size is %d entries."), CACHE_SIZE);
@@ -572,7 +609,7 @@ EXPORT_C void CHuiFxEngine::EnableLowMemoryState(TBool /*aEnable*/)
 EXPORT_C void  CHuiFxEngine::SetMemoryLevel(THuiMemoryLevel aLevel)
     {
     iLowGraphicsMemoryMode = aLevel;
-    if(iLowGraphicsMemoryMode) // != Normal
+    if(iLowGraphicsMemoryMode < EHuiMemoryLevelReduced)
         {
         ClearCache();
         }
@@ -585,17 +622,35 @@ EXPORT_C void CHuiFxEngine::Composite(CHuiGc& /*aGc*/, CHuiFxRenderbuffer& /*aSo
 
 TInt CHuiFxEngine::LowMemoryState()
     {
-    return iLowGraphicsMemoryMode;
+    return iLowGraphicsMemoryMode < EHuiMemoryLevelReduced;
     }
 
 TBool CHuiFxEngine::HasActiveEffects() const
     {
 	// Don't report active effects if in SW-rendering mode
-    if(iLowGraphicsMemoryMode) // != Normal
+    if(iLowGraphicsMemoryMode < EHuiMemoryLevelReduced) 
         {
         return EFalse;
         }
     return iActiveEffects.Count() > 0;
+    }
+
+TBool CHuiFxEngine::HasActiveFadeEffect() const
+    {
+    // Don't report active effects if in SW-rendering mode
+    if(iLowGraphicsMemoryMode < EHuiMemoryLevelReduced) 
+        {
+        return EFalse;
+        }
+    TInt effectCount = iActiveEffects.Count();
+    for (TInt count  = 0; count < effectCount; count++)
+        {
+        if (iActiveEffects[count]->EffectFlags() & KHuiFadeEffectFlag)
+            {
+            return ETrue;
+            }
+        }
+    return EFalse;
     }
 
 void CHuiFxEngine::ClearCache()
@@ -626,48 +681,142 @@ void CHuiFxEngine::ClearCache()
     
     ASSERT(iBuffersInCache == 0);    
     }
-	
+
+TInt CHuiFxEngine::FindEffectGroup(TInt aGroup)
+    {
+    for (TInt i=0 ; i < iActiveEffectGroups.Count();i++)
+        {
+        if (iActiveEffectGroups[i].iGroup == aGroup)
+            {
+            return i; 
+            }
+        }
+    return KErrNotFound;
+    }
+
 EXPORT_C void CHuiFxEngine::BeginGroupEffect(TInt aGroup)
 	{
-	TInt index = iActiveEffectGroups.Find(aGroup);
+#ifdef HUIFX_TRACE   
+	RDebug::Printf("CHuiFxEngine::BeginGroupEffect(TInt aGroup %d) >>", aGroup);
+#endif
+	// Multiple grouped effects at the same time are not supported. 
+    // Same visual might participate different groups, which will mess up the effect
+    if (iActiveEffectGroups.Count()>0)
+        {
+        // delete previous groups
+        while(iActiveEffectGroups.Count())
+            {
+            TInt groupId = iActiveEffectGroups[0].iGroup;
+            for ( TInt i = iActiveEffects.Count() - 1; i >= 0; i-- )
+                {
+                if (iActiveEffects[i]->GroupId() == groupId)
+                    {
+                    iActiveEffects[i]->ClearEffectFlag(KHuiFxReadyAndWaitingGroupToStartSyncronized);
+                    iActiveEffects[i]->ClearEffectFlag(KHuiFxWaitGroupToStartSyncronized);
+                    iActiveEffects[i]->ClearEffectFlag(KHuiFxWaitGroupSyncronization);
+                    }
+                
+                }
+            iActiveEffectGroups.Remove(0);
+            }
+        }
+	
+	TInt index = FindEffectGroup(aGroup);
+	
 	if (index == KErrNotFound)
 		{
-		iActiveEffectGroups.Append(aGroup);
-		}
-	else
-		{
-		// group already exists
+        const TEffectGroupStruct item(aGroup);
+		iActiveEffectGroups.Append(item);
 		}
 	}
 
+// This will add effect to this group. Do not call this function more than once for single effect 
 EXPORT_C TInt CHuiFxEngine::ActiveGroupEffect()
 	{
-	if (iActiveEffectGroups.Count() > 0)
-		{
-		return iActiveEffectGroups[iActiveEffectGroups.Count()-1];
-		}
-	else
-		{
-		return KErrNotFound;
-		}
+	TInt index = iActiveEffectGroups.Count();
+	if (index == 0)
+	    {
+        return KErrNotFound;
+	    }
+	while(--index >= 0)
+        {
+		// group is alive until all its effects have been drawn once. .iEndCalled is to prevent
+		// another effect entering into this group
+        const TEffectGroupStruct& item = iActiveEffectGroups[index];
+        if (!item.iEndCalled) 
+            { 
+			return iActiveEffectGroups[index].iGroup;
+            }
+        }
+    return KErrNotFound;
 	}
+
+EXPORT_C TBool CHuiFxEngine::AddEffectToGroup(TInt aGroup)
+    {
+    TInt index = FindEffectGroup(aGroup);
+    if (index != KErrNotFound)
+        {
+        // keep count of effects in this group. All must draw atleast once, before
+        // syncronized group effect may start
+        iActiveEffectGroups[index].iWaiting++;
+#ifdef HUIFX_TRACE
+        RDebug::Printf("CHuiFxEngine::AddEffectToGroup - %d, waiting in group: %d", aGroup, iActiveEffectGroups[index].iWaiting);
+#endif
+        return ETrue;
+        }
+    return EFalse;
+    }
 
 EXPORT_C void CHuiFxEngine::StartGroupEffect(TInt aGroup)
 	{
-	TInt index = iActiveEffectGroups.Find(aGroup);
+#ifdef HUIFX_TRACE
+    RDebug::Printf("CHuiFxEngine::StartGroupEffect(TInt aGroup %d) >>", aGroup);
+#endif	    
+	TInt index = FindEffectGroup(aGroup);
 	if (index != KErrNotFound)
 		{
-		iActiveEffectGroups.Remove(index);
-	
+		iActiveEffectGroups[index].iEndCalled = ETrue; // this group will not take any more participants
 		for ( TInt i = iActiveEffects.Count() - 1; i >= 0; i-- )
 			{
 			CHuiFxEffect* effect = iActiveEffects[i];
 			TInt flags = effect->EffectFlags();
 			if ((flags & KHuiFxWaitGroupSyncronization) && (effect->GroupId() == aGroup))
 				{
-				flags &= ~KHuiFxWaitGroupSyncronization;
-				effect->SetEffectFlags(flags);
+                effect->ClearEffectFlag(KHuiFxWaitGroupSyncronization);
+                effect->SetEffectFlag(KHuiFxWaitGroupToStartSyncronized);
 				}
 			}
 		}
 	}
+
+void CHuiFxEngine::NotifyEffectReady(TInt aGroupId)
+    {
+#ifdef HUIFX_TRACE    
+    RDebug::Print(_L("CHuiFxEngine::NotifyEffectReady - %d"), aGroupId);
+#endif
+    TInt index = FindEffectGroup(aGroupId);
+    if (index != KErrNotFound)
+        {
+        iActiveEffectGroups[index].iWaiting--;    
+#ifdef HUIFX_TRACE
+        RDebug::Print(_L("CHuiFxEngine::NotifyEffectReady - waiting %d in group %d"), iActiveEffectGroups[index].iWaiting , aGroupId);
+#endif        
+        if (iActiveEffectGroups[index].iWaiting == 0)
+            {
+            // set in motion all effects in this group
+	        iActiveEffectGroups.Remove(index);
+            for ( TInt i = iActiveEffects.Count() - 1; i >= 0; i-- )
+                {
+                CHuiFxEffect* effect = iActiveEffects[i];
+                TInt flags = effect->EffectFlags();
+#ifdef HUIFX_TRACE
+                RDebug::Print(_L("CHuiFxEngine::NotifyEffectReady - effect 0x%x, group: %d, flags 0x%x"), effect, effect->GroupId(), effect->EffectFlags());
+#endif                
+                if ((flags & KHuiFxReadyAndWaitingGroupToStartSyncronized) && (effect->GroupId() == aGroupId))
+                    {
+                    effect->ClearEffectFlag(KHuiFxReadyAndWaitingGroupToStartSyncronized);
+                    }
+                }
+            }
+        }
+    }

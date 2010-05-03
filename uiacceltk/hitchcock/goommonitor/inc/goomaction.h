@@ -46,7 +46,7 @@ public:
      * @since S60 5.0
      * @param aBytesRequested ?description
      */ 
-    virtual void FreeMemory(TInt aBytesRequested) = 0;
+    virtual void FreeMemory(TInt aBytesRequested, TBool aUseSwRendering) = 0;
     
     /**
      * @since S60 5.0

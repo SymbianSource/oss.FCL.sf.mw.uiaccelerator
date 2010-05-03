@@ -221,7 +221,7 @@ void CHuiFxGenericParameter<TYPE, TIMELINE_TYPE, TYPE_CODE>::SetEndMultiplier(TR
 template <typename TYPE, typename TIMELINE_TYPE, THuiFxParameterType TYPE_CODE>
 void CHuiFxGenericParameter<TYPE, TIMELINE_TYPE, TYPE_CODE>::AdvanceTime(TReal32 aElapsedTime)
     {
-    if (!iTimeLine)
+    if (!iTimeLine || iAnimationFinished)
         {
         return;
         }

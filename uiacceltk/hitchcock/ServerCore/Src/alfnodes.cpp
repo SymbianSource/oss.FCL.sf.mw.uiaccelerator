@@ -1082,9 +1082,18 @@ TAny* CAlfNode::CreateWindowAttributes(TInt& aIndex, TInt aSize )
                 //                           ^^^ 
                 // if iterNode gets to NULL, then we must have found both matches 
                 // - i.e. either the new or current/old position is the rightmost node   
-                ASSERT(oldPrevNode!=NULL && newPrevNode!=NULL); 
+                if (oldPrevNode == NULL || newPrevNode == NULL )
+                    {
+                    // Fatal error! Node tree is corrupted.
+                    __ALFLOGSTRING4("CAlfNode::SiblingOrderChanged(). Fatal error! Node tree is corrupted. oldPrevNode=0x%x, newPrevNode=0x%x, iterNodePosition=%d, aNewPos=%d", 
+                            oldPrevNode, newPrevNode, iterNodePosition, aNewPos);                    
+                    __ALFLOGSTRING4("CAlfNode::SiblingOrderChanged(). This node=0x%x, type = %d, parent node=0x%x, parent type=%d", this, Type(), iParent, iParent->Type());
+                    __ALFLOGSTRING2("CAlfNode::SiblingOrderChanged(). This node id=0x%x, parent node id=0x%x", iId, iParent->iId);
+                    __ASSERT_ALWAYS(EFalse, USER_INVARIANT());    
+                    //__ASSERT_DEBUG(EFalse, USER_INVARIANT()); 
+                    return;  
+                    }
                 } 
-
             ASSERT(iterPrevNode!=NULL);                 
         } // end while loop 
 
@@ -1720,6 +1729,8 @@ void CAlfNodeWindow::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream* aSt
     ResolveParent( iNodeWindowConstructionStruct.iParentId, iId );
     CreateWindowL( iNodeWindowConstructionStruct.iWindowGroupHandle, iNodeWindowConstructionStruct.iWindowHandle, iNodeWindowConstructionStruct.iParentId );
     UpdateOrdinalPosition();
+    
+    AMT_MAP_STREAMER_NODE_WINDOW_CONSTRUCT();
 	}
 
 // ---------------------------------------------------------------------------
@@ -1900,6 +1911,8 @@ void CAlfNodeGroup::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream* aStr
             iGroupId, 
             iId, 
             (TAny*)offset );
+    
+    AMT_MAP_STREAMER_NODE_GROUP_CONSTRUCT();
 	}
 
 // ---------------------------------------------------------------------------
@@ -2133,6 +2146,8 @@ void CAlfNodeTextCursor::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream*
             (TAny*)offset );
     
     UpdateOrdinalPosition();
+    
+    AMT_MAP_STREAMER_TEXT_CURSOR_CONSTRUCT();
     }
 
 // ---------------------------------------------------------------------------
@@ -2151,6 +2166,8 @@ CAlfNodeTextCursor* CAlfNodeTextCursor::NewL( CAlfHierarchyModel* aModel, RMemRe
 
 void CAlfNodeTextCursor::AttributeChangedL( RMemReadStream* aStream )
     {
+    AMT_MAP_BRIDGE_ADD_TEXT_CURSOR();
+    
     // TODO: PASS FORWARD!!!
     TInt attribute = aStream->ReadInt32L();
     switch ( attribute )
@@ -2189,6 +2206,8 @@ void CAlfNodeTextCursor::AttributeChangedL( RMemReadStream* aStream )
                iGroupId, 
                iId, 
                (TAny*)offset );
+       
+   AMT_MAP_STREAMER_TEXT_CURSOR_CHANGE();
     }
 CAlfNodeTextCursor::~CAlfNodeTextCursor( )
     {
@@ -2203,6 +2222,51 @@ CAlfNodeTextCursor::~CAlfNodeTextCursor( )
         iModel->RemoveNode( iId );
         }
     }
+
+#ifdef __WINS__
+// ---------------------------------------------------------------------------
+// 
+// ---------------------------------------------------------------------------
+//
+void CAlfNode::Debug_CheckSiblingOrder(const TDesC16& aContext)
+   {
+   if (!iParent || Type() != MWsWindowTreeNode::EWinTreeNodeClient)
+       {
+       return;
+       }
+   
+   TBool foundMyself = EFalse;
+   TInt iterNodePosition = 0; 
+   
+   // Search for myselk in iParent sibling list
+   for(CAlfNode* iterNode = iParent->iChild; iterNode != NULL; iterNode = iterNode->iSibling, iterNodePosition++)
+       {
+       if (iterNode == this) 
+           {
+           foundMyself = ETrue;
+           }  
+       }
+   
+   if(!foundMyself)
+       {
+       // Did not find myself from the parent sibling list ==> error!
+       __ALFLOGSTRING2("CAlfNode::Test_CheckSiblingOrder(). Fatal error! Node tree is corrupted.  at %S: iId=0x%x", &aContext, iId );                    
+       __ALFLOGSTRING3("CAlfNode::Test_CheckSiblingOrder(). iterNodePosition=%d, iChild=0x%x, iSibling=0x%x", iterNodePosition, iChild, iSibling );                    
+       __ALFLOGSTRING3("CAlfNode::Test_CheckSiblingOrder(). iSpriteChild=0x%x, iAnimChild=0x%x, iTextCursor=0x%x", iSpriteChild, iAnimChild, iTextCursor );                    
+       __ALFLOGSTRING4("CAlfNode::Test_CheckSiblingOrder(). This node=0x%x, type = %d, parent node=0x%x, parent type=%d", this, Type(), iParent, iParent->Type());
+       // Print sibling list
+       iterNodePosition=0;     
+       __ALFLOGSTRING("CAlfNode::Test_CheckSiblingOrder(). SIBLINGS:");
+       for(CAlfNode* iterNode2 = iParent->iChild; iterNode2!=NULL; iterNode2 = iterNode2->iSibling, iterNodePosition++)
+           {
+           __ALFLOGSTRING4("CAlfNode::Test_CheckSiblingOrder(). *** iterNodePosition=%d, id=%d, this=0x%x, iChild=0x%x", iterNodePosition, iterNode2->iId, iterNode2, iterNode2->iChild );                    
+           __ALFLOGSTRING3("CAlfNode::Test_CheckSiblingOrder(). iSpriteChild=0x%x, iAnimChild=0x%x, iTextCursor=0x%x", iterNode2->iSpriteChild, iterNode2->iAnimChild, iterNode2->iTextCursor );                    
+           }                 
+       
+       __ASSERT_ALWAYS(EFalse, USER_INVARIANT());   
+       }
+   }
+#endif
 
 // end of file
 

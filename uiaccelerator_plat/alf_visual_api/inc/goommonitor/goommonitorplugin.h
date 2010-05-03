@@ -25,6 +25,14 @@ class CMemoryMonitor;
 class RFs;
 class RWsSession;
 
+// temp support for migration
+#define __GOOM_PLUGIN_API_V2
+
+enum TGOomMonitorFlags
+	{
+	KGOomNone = 0,
+	KGOomUseSwRendering
+	};
 
 /**
 * Panic codes with category "OomMonitorPlugin"
@@ -66,8 +74,8 @@ public:
 	* FreeRam is called when the system RAM level becomes
 	* low. This plugin is requested to help free some RAM.
 	*/
-	virtual void FreeRam(TInt aBytesToFree) = 0;
-
+	//virtual void FreeRam(TInt aBytesToFree);
+	virtual void FreeRam(TInt aBytesToFree, TInt aFlags) = 0;
 	/**
 	* MemoryGood is called when the system RAM level becomes
 	* good after being low.The plugin may take this opportunity
@@ -77,7 +85,8 @@ public:
 	* used over time, otherwise the plugin may cause oscillation
 	* between low and good memory states.
 	*/
-	virtual void MemoryGood() = 0;
+	//virtual void MemoryGood();
+	virtual void MemoryGood(TInt aFlags) = 0;
 
 public:
     /**
@@ -114,8 +123,8 @@ public:	// From CGOomMonitorPluginBase
     * @param aBytesToFree The minimum number of bytes of free memory that the plugin should try to free.
 	*/
 
-    virtual void FreeRam(TInt aBytesToFree) = 0;
-
+    virtual void FreeRam(TInt aBytesToFree, TInt aFlags) = 0;
+	
 	/**
 	* MemoryGood is called when the system RAM level becomes
 	* good after being low.The plugin may take this opportunity
@@ -125,7 +134,8 @@ public:	// From CGOomMonitorPluginBase
 	* used over time, otherwise the plugin may cause oscillation
 	* between low and good memory states.
 	*/
-	virtual void MemoryGood() = 0;
+	virtual void MemoryGood(TInt aFlags) = 0;
+	
 	};
 
 
@@ -170,8 +180,11 @@ public:
 private:
 	CAppGOomMonitorPlugin(TUid aAppUid);
 
-	void FreeRam(TInt aFreeMemory);
+	/*void FreeRam(TInt aFreeMemory);
 	void MemoryGood();
+	*/
+	void FreeRam(TInt aBytesToFree, TInt aFlags);
+	void MemoryGood(TInt aFlags);
 
     void SendMessageToApp(TInt aMessage);
 

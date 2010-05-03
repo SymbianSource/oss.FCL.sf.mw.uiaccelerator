@@ -76,12 +76,20 @@ EXPORT_C CHuiFxEffect::~CHuiFxEffect()
     {
     delete iRoot;
     iRoot = NULL;
-    
     NotifyEffectEndObserver();
     
     ReleaseCachedRenderTarget();
     
     iEngine->RemoveEffect(this);
+    if (iEngine && iGroupId != KErrNotFound && !iNotifiedEffectReady)
+        {
+        // if effect was deleted before it was drawn, the group must be notified. If this was the last effect in the group
+        // the group will be removed by the EffectReadyToStart
+        // effect group does not not know, which effects have notified about themselves. thus iNotifiedEffectReady flag is used.
+        iNotifiedEffectReady = ETrue;
+        iEngine->NotifyEffectReady(iGroupId);
+        }
+    
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxEffect::~CHuiFxEffect - 0x%x"), this);
 #endif
@@ -89,12 +97,18 @@ EXPORT_C CHuiFxEffect::~CHuiFxEffect()
 
 void CHuiFxEffect::NotifyEffectEndObserver()
     {
-    if ( iEffectEndObserver )
+	// fade effect should not have observers
+    if (iFlags & KHuiFadeEffectFlag)
+        {
+        return;
+        }
+    if (iEffectEndObserver)
         {
         // The callback can be called only once when the effect finishes
-        iEffectEndObserver->AlfGfxEffectEndCallBack( iHandle );
+        MAlfGfxEffectObserver* effectEndObserver = iEffectEndObserver;
         iEffectEndObserver = NULL;
-        iHandle = 0;
+        // Note: The call below may synchronously delete me (CHuiFxEffect instance)
+        effectEndObserver->AlfGfxEffectEndCallBack( iHandle );
         }    
     }
 
@@ -308,10 +322,9 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
                 }
             
             // Write cached buffer to the display
-            if (cachedRenderTargetNeedsRefresh)
-                {
-                iEngine->Composite(aGc, *iCachedRenderTarget, targetRect.iTl, aOpaque && !(EffectFlags() & KHuiFxAlwaysBlend), aAlpha);
-                }
+           
+	       iEngine->Composite(aGc, *iCachedRenderTarget, targetRect.iTl, aOpaque && !(EffectFlags() & KHuiFxAlwaysBlend), aAlpha);
+           
 
             if (aClipRegion.Count())
                 {
@@ -437,12 +450,32 @@ EXPORT_C TBool CHuiFxEffect::Changed()
 EXPORT_C void CHuiFxEffect::SetEffectEndObserver( MAlfGfxEffectObserver* aEffectEndObserver, TInt aHandle )
     {
     iEffectEndObserver = aEffectEndObserver;
-    iHandle = aHandle;
+    
+    if (aHandle != 0) // override handle only if someone is interested
+        {
+        iHandle = aHandle;
+        }    
     }
 
 EXPORT_C void CHuiFxEffect::SetEffectFlags( TInt aFlags )
     {
     iFlags = aFlags;
+    }
+
+void CHuiFxEffect::SetEffectFlag( TInt aFlag )
+    {
+#ifdef HUIFX_TRACE
+    RDebug::Printf("CHuiFxEffect::SetEffectFlag - Setting flag 0x%x for 0x%x, before: iFlags: 0x%x", aFlag, this, iFlags);
+#endif
+    iFlags |= aFlag;
+    }
+
+void CHuiFxEffect::ClearEffectFlag( TInt aFlag )
+    {
+#ifdef HUIFX_TRACE
+    RDebug::Printf("CHuiFxEffect::ClearEffectFlag - Clearing flag 0x%x for 0x%x, before: iFlags: 0x%x", aFlag, this, iFlags);
+#endif    
+    iFlags &= ~aFlag;
     }
 
 EXPORT_C void CHuiFxEffect::SetEffectGroup(TInt aGroupId)
@@ -462,25 +495,63 @@ EXPORT_C TInt CHuiFxEffect::GroupId()
 
 EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
     {
+#ifdef HUIFX_TRACE
+    RDebug::Printf("CHuiFxEffect::AdvanceTime 0x%x, aElapsed time: %f, Total elapsed time: %f, Frames drawn: %d, iFlags: 0x%x, iGroup %d, iHandle: %d", 
+            this, 
+            aElapsedTime, 
+            iElapsedTime, 
+            iFramesDrawn, 
+            iFlags,
+            iGroupId,
+            iHandle);
+#endif
+    // KHuiFxDelayRunUntilFirstFrameHasBeenDrawn flag is for giving effect chance to run
+    // its whole timeline by starting the time only when first frame has been drawn.
     if (iFlags & KHuiFxDelayRunUntilFirstFrameHasBeenDrawn)
         {
-        if (iFramesDrawn)
+        // Sometimes the effect does not get any frames. Force the time to start, because
+        // otherwise will jam itself and possible the group, where the effect is.
+        if (iElapsedTime > 0.2 && iFramesDrawn == 0)
             {
+            iFramesDrawn = 1;
+#ifdef HUIFX_TRACE            
+            RDebug::Printf("CHuiFxEffect::AdvanceTime - Not drawn, but cannot wait. release 0x%x in time %f", this, iElapsedTime);
+#endif
+            }
+        
+        if (iFramesDrawn)
+            { 
+            if (iFlags & KHuiFxReadyAndWaitingGroupToStartSyncronized)
+                {
+	            // this has drawn atleast once, but all the effect in this group have not drawn. Must hang on little more.
+                return;
+                }
+        
+            if (iFlags & KHuiFxWaitGroupToStartSyncronized)
+                {
+				// Group has been started, waiting the others in the group to be drawn
+                ClearEffectFlag(KHuiFxWaitGroupToStartSyncronized);
+                SetEffectFlag(KHuiFxReadyAndWaitingGroupToStartSyncronized);
+				// NotifyEffectReady will clear KHuiFxReadyAndWaitingGroupToStartSyncronized flag
+				// if all items in the group are ready.
+                iEngine->NotifyEffectReady(iGroupId);
+                iNotifiedEffectReady = ETrue;
+                return;
+                }
+
             if (iFramesDrawn == 1)
                 {
                 aElapsedTime = 0;
                 iFramesDrawn++;
                 }
-            iRoot->AdvanceTime(aElapsedTime);
-            }
-        else
-            {
+                iRoot->AdvanceTime(aElapsedTime);
             }
         }
     else
         {
         iRoot->AdvanceTime(aElapsedTime);
         }
+    iElapsedTime += aElapsedTime;
     }
     
 EXPORT_C TBool CHuiFxEffect::IsAnimated() const
@@ -559,4 +630,9 @@ TBool CHuiFxEffect::IsSemitransparent() const
 void CHuiFxEffect::FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray)
     {
     iRoot->FxmlVisualInputs(aArray);
+    }
+
+TBool CHuiFxEffect::FxmlUsesOpaqueHint() const
+    {
+    return iRoot->FxmlUsesOpaqueHint();
     }

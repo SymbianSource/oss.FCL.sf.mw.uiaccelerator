@@ -21,6 +21,7 @@
 #include <coemain.h>
 #include "alfstreamerbridge.h"
 #include "alfstreamerserver.h"
+#include "alfbridge.h"
 #include "alflogger.h"
 
 #ifdef ALF_DEBUG_TRACK_DRAWING
@@ -28,7 +29,8 @@
 #endif
 
 
-// #define EGL_TALKS_TO_WINDOW_SERVER
+// From MMP macro nowadays
+//#define ALF_DRAW_FRAME_BEFORE_END_CALLBACK    
 
 // ---------------------------------------------------------------------------
 // constructor
@@ -83,7 +85,6 @@ void CAlfStreamerBridge::ConstructL()
 #ifdef ALF_DEBUG_TRACK_DRAWING
     iCommandDebugger = CAlfCommandDebug::NewL();
 #endif
-    CHuiEnv::Static()->iSwapObserver = this;
     }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +94,6 @@ void CAlfStreamerBridge::ConstructL()
 // 
 CAlfStreamerBridge::~CAlfStreamerBridge()
     {
-    CHuiEnv::Static()->iSwapObserver = 0;
     iDataBuf.Close();
     iQueueSema.Close();
 #ifdef ALF_DEBUG_TRACK_DRAWING
@@ -173,21 +173,14 @@ TInt CAlfStreamerBridge::Trigger(TInt aStatus)
 // 
 TInt CAlfStreamerBridge::AddData( TAlfDecoderServerBindings aOp,TInt aI1,TInt aI2 ,TAny* aPtr )
     {
-    if (iSwapActive && aOp == EAlfRequestCommitBatch)
-        {
-        __ALFLOGSTRING("CAlfStreamerBridge::AddData() just release window server");    
-        iBatchObserver->BridgerCallback(KRELEASEWINDOWSERVER,KRELEASEDBEFOREQUEUE);
-        return KErrNone;
-        }
-    
     TInt err = KErrNotFound;
         {    
 #ifdef ALF_DEBUG_TRACK_DRAWING    
         iCommandDebugger->SetDescription( aOp, R_ALF_BRIDGE_COMMAND_DESCRIPTION_ARRAY );
         __ALFLOGSTRING2("CAlfStreamerBridge::AddData op %S, iQueue.Length = %d", &iCommandDebugger->Text(), iQueue.Count());
-    #else
+#else
         __ALFLOGSTRING2("CAlfStreamerBridge::AddData op %d, iQueue.Length = %d", aOp, iQueue.Count());    
-    #endif
+#endif
         err = KErrNone;
         for(TInt i = 0; i < iMessages.Count(); i++ )
             {
@@ -229,56 +222,6 @@ TAlfBridgerData CAlfStreamerBridge::GetData(TInt aIndex)
     return data;    
     }
 
-void CAlfStreamerBridge::PrepareSwap()
-    {
-#ifdef EGL_TALKS_TO_WINDOW_SERVER
-    __ALFLOGSTRING("CAlfStreamerBridge:: Prepare swap, flush the queue");    
-    iSwapActive = ETrue;
-    if (iStatus.Int() >=0 && iMessages.Count() > iStatus.Int() )
-        {
-        Cancel(); // remove from scheduler
-        RunL(); // run manually (and activate)
-        }
-    __ALFLOGSTRING("CAlfStreamerBridge:: Prepare swap, the queue emptied");    
-#endif //#ifdef EGL_TALKS_TO_WINDOW_SERVER
-    }
-
-void CAlfStreamerBridge::SwapComplete()
-    {
-#ifdef EGL_TALKS_TO_WINDOW_SERVER
-    __ALFLOGSTRING("CAlfStreamerBridge:: Swap buffers complete");    
-    iSwapActive = EFalse;
-#endif // #ifdef EGL_TALKS_TO_WINDOW_SERVER
-
-    }
-	
-#ifdef EGL_TALKS_TO_WINDOW_SERVER
-void CAlfStreamerBridge::ReleaseWindowServer(TBool aRelease)
-    {
-    __ALFLOGSTRING1("CAlfStreamerBridge::ReleaseWindowServer: %d",aRelease);    
-    if (aRelease)
-        {
-        iMakeCurrentActive = ETrue;    
-        if (iBatchObserver && !iSwapActive)    
-            {
-            iBatchObserver->BridgerCallback(KRELEASEWINDOWSERVER);
-            }
-        }
-    else
-        {
-        iMakeCurrentActive = EFalse;
-        }                
-#else
-void CAlfStreamerBridge::ReleaseWindowServer(TBool)
-	{
-#endif
-    }
-
-void CAlfStreamerBridge::SetWgIdArray(TInt* aArray)
-    {
-    iWgArray = aArray;
-    }
-
 EXPORT_C TUid CAlfStreamerBridge::FindAppUidForWgId(TInt /*aWgId*/)
     {
     __ASSERT_DEBUG(EFalse, User::Leave(KErrNotSupported));
@@ -308,8 +251,16 @@ void CAlfStreamerBridge::RunL()
 #endif
     switch ( operation )
         {
-        // Just call back to Alf decoder thread
         case EAlfRequestCommitBatch:
+#ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK    
+            {
+            CAlfBridge* bridge = dynamic_cast<CAlfBridge*>(iObserver);
+            if (bridge)
+                {
+                bridge->iHuiEnv->RefreshCallBack((TAny*)bridge->iHuiEnv);
+                }
+            } // fall through
+#endif
         case EAlfRequestCommandReadNotification:
         case EAlfReleaseTemporaryChunk:
             {
@@ -324,6 +275,7 @@ void CAlfStreamerBridge::RunL()
             {
             // Handle command
             __ALFLOGSTRING("CAlfStreamerBridge:: calling observer callback");
+            __ASSERT_ALWAYS(iObserver, User::Invariant());
             iObserver->HandleCallback(iStatus.Int());
             
             // For "getters" also call back to Alf decoder thread
@@ -353,6 +305,15 @@ void CAlfStreamerBridge::RunL()
     switch ( operation2 )
             {
             case EAlfRequestCommitBatch:
+#ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK    
+            {
+            CAlfBridge* bridge = dynamic_cast<CAlfBridge*>(iObserver);
+            if (bridge)
+                {
+                bridge->iHuiEnv->RefreshCallBack((TAny*)bridge->iHuiEnv);
+                }
+            } // fall through
+#endif
             case EAlfRequestCommandReadNotification:
             case EAlfReleaseTemporaryChunk:
                 {
@@ -368,6 +329,7 @@ void CAlfStreamerBridge::RunL()
                 {
 	            // Handle command
                 __ALFLOGSTRING("CAlfStreamerBridge:: calling observer callback");
+                __ASSERT_ALWAYS(iObserver, User::Invariant());
 	            iObserver->HandleCallback(iQueue[0]);
 	            
 	            // For "getters" also call back to Alf decoder thread
@@ -416,13 +378,7 @@ void CAlfStreamerBridge::StartNewBlock()
     {
     // Queue marker. Basically we could use one new member to assert that there can
     // be only one marker
-    __ALFLOGSTRING1("CAlfStreamerBridge:: Request command read notification, swap active: %d", iSwapActive );    
-   if ( iSwapActive || iMakeCurrentActive )
-        {
-        __ALFLOGSTRING("CAlfStreamerBridge::StartNewBlock() just release window server");    
-        iBatchObserver->BridgerCallback(KRELEASEWINDOWSERVER,KRELEASEDBEFOREQUEUE);
-        return;
-        }
+    //__ALFLOGSTRING1("CAlfStreamerBridge:: Request command read notification, swap active: %d", iSwapActive );    
     AddData(EAlfRequestCommitBatch,0,0,0);
     }
 
@@ -502,22 +458,4 @@ EXPORT_C const TAny* CAlfStreamerBridge::AppendEffectsDataL( TInt aSize, TInt& a
 const TAny* CAlfStreamerBridge::GetEffectsDataL( TInt aIndex )
     {
     return GetVarDataL(aIndex);
-    }
-
-// ---------------------------------------------------------------------------
-// SetStreamerServer
-// ---------------------------------------------------------------------------
-// 
-void CAlfStreamerBridge::SetStreamerServer( CAlfStreamerServer& aStreamerServer )
-    {
-    iStreamerServer = &aStreamerServer;   
-    }
-
-// ---------------------------------------------------------------------------
-// StreamerServer
-// ---------------------------------------------------------------------------
-// 
-CAlfStreamerServer* CAlfStreamerBridge::StreamerServer()
-    {
-    return iStreamerServer;
     }

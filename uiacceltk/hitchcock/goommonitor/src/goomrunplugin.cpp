@@ -36,7 +36,7 @@ CGOomRunPlugin* CGOomRunPlugin::NewL(TUint aPluginId, CGOomRunPluginConfig& aCon
 
 // Run the GOOM plugin in order to free memory
 // Call the CGOomAction::MemoryFreed when it is done
-void CGOomRunPlugin::FreeMemory(TInt aBytesRequested)
+void CGOomRunPlugin::FreeMemory(TInt aBytesRequested, TBool aUseSwRendering)
     {
     FUNC_LOG;
     TRACES1("CGOomRunPlugin::FreeMemory: iPluginId = 0x%x", iPluginId);
@@ -47,12 +47,25 @@ void CGOomRunPlugin::FreeMemory(TInt aBytesRequested)
     TInt clientId = iStateChangeObserver.ClientId();
     TAny* anyp = (TAny*) &clientId;
     iPlugin.ExtensionInterface(TUid::Uid(KGoomClientSecureId), anyp);
-    iPlugin.FreeRam(aBytesRequested);
+    
+    if(aUseSwRendering && iConfig.IsSwRendSupported())
+        {
+		TInt flags = KGOomUseSwRendering;
+        iPlugin.FreeRam(aBytesRequested, flags);
+        iFreeMemoryWithSwRenderingCalled = ETrue;
+        }
+    else
+        {
+        iPlugin.FreeRam(aBytesRequested, 0);
+        }
 
     iFreeMemoryCalled = ETrue;
 
     // Wait for the required time before we signal completion.
-    iPluginWaiter->Start();
+    if(iPluginWaiter)
+        {
+        iPluginWaiter->Start();
+        }
     }
 
 // Call the memory good function on the plugin but...
@@ -63,8 +76,12 @@ void CGOomRunPlugin::MemoryGood()
 
     if (iFreeMemoryCalled)
         {
-        iPlugin.MemoryGood();
+		TInt flags = 0;
+		if(iFreeMemoryWithSwRenderingCalled)
+			flags = KGOomUseSwRendering;
+        iPlugin.MemoryGood(flags);
         iFreeMemoryCalled = EFalse;
+        iFreeMemoryWithSwRenderingCalled = EFalse;
         }
     }
 
@@ -86,13 +103,15 @@ void CGOomRunPlugin::ConstructL(CGOomRunPluginConfig& aPluginConfig)
 
     TInt waitDuration = CMemoryMonitor::GlobalConfig().iDefaultWaitAfterPlugin;
 
-    if (aPluginConfig.WaitAfterPluginDefined())
+    if(aPluginConfig.iSyncMode == ECheckRam)
         {
-        // If the wait duration for this plugin is overridden then use the overridden value
-        waitDuration = aPluginConfig.WaitAfterPlugin();
+        if (aPluginConfig.WaitAfterPluginDefined())
+            {
+            // If the wait duration for this plugin is overridden then use the overridden value
+            waitDuration = aPluginConfig.WaitAfterPlugin();
+            }
+         iPluginWaiter = CGOomPluginWaiter::NewL(waitDuration, *this);
         }
-
-    iPluginWaiter = CGOomPluginWaiter::NewL(waitDuration, *this);
     }
 
 TUint CGOomRunPlugin::Id()

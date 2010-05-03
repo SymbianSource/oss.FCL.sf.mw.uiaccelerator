@@ -22,6 +22,14 @@
 #define __HUISTATICTLSDATA_H__
 
 
+// For testing purposes, insert additional test data into TLS.
+// Notice, that TTlsData object is inserted into TLS. So, test
+// object needs to be added into TTLSData and not inserted directly
+// into TLS.
+#define AMT_CONTROL() static_cast<TTlsData*>(Dll::Tls())->iAlfModuleTestDataControl
+#include "alfmoduletest.h"
+
+
 LOCAL_D const TInt KMaxClocks = 10;
 
 
@@ -109,7 +117,12 @@ NONSHARABLE_STRUCT(TTlsData)
     RFs* iFs;
     
     CAppFwProxy* iAppFwProxy;
-   
+
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // For testing purposes, test data needs to be included into TLS object.
+    CAlfModuleTestDataControl* iAlfModuleTestDataControl;
+#endif
+
     CWsScreenDevice* WsScreenDevice(TInt aScreenNumber)
         {
         if (aScreenNumber < iScreenDevices.Count())
@@ -138,6 +151,13 @@ NONSHARABLE_STRUCT(TTlsData)
                 
      void DoInitL()
         {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // For testing purposes, test data needs to be included into TTlsData object because
+    // TTlsData object itself is inserted into TLS.
+    iAlfModuleTestDataControl = new(ELeave) CAlfModuleTestDataControl();
+    User::LeaveIfError( iAlfModuleTestDataControl->OpenGlobalObjects() );
+#endif
+
         CCoeEnv* coe = CCoeEnv::Static();
         if (coe)
             {
@@ -206,6 +226,11 @@ NONSHARABLE_STRUCT(TTlsData)
         iFs = 0;
 
         RFbsSession::Disconnect();
+        
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+        delete iAlfModuleTestDataControl;
+        iAlfModuleTestDataControl = NULL;
+#endif        
         }
     };
 

@@ -241,8 +241,12 @@ public:
 	 */
     IMPORT_C virtual TInt GetTexture(TInt aSkinTextureResource,
                                      const CHuiTexture*& aOutTexture);
-                                     
-                                     
+                                 
+    /**
+     * Release cached textures.
+     */                                     
+    void ReleaseCachedTextures();
+                                         
 public:
 
     /* Implementation of MHuiTextureContentObserver. */

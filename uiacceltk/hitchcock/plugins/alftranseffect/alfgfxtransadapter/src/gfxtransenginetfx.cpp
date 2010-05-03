@@ -145,6 +145,17 @@ public:
 
 	void IssueReq();
 	inline TType Type();
+	TPtr8** InBuf() { return &iInPtr; }
+	TPtr8** OutBuf() { return &iOutPtr; }
+	
+	void ResetBufs()
+		{
+		delete iInPtr;
+    	iInPtr = 0;
+		delete iOutPtr;
+    	iOutPtr = 0;	
+		}
+		
 private:
 	void RunL();
 	void DoCancel();
@@ -153,7 +164,8 @@ private:
 	MTfxServerObserver* iOwner;
 	CGfxTransAdapterTfx* iParent;
 	TType iType;
-	
+	TPtr8* iInPtr;
+	TPtr8* iOutPtr;
 };
 
 // ---------------------------------------------------------------------------
@@ -175,6 +187,7 @@ CAlfTransitionRequest::~CAlfTransitionRequest()
 	{
   	__ALFFXLOGSTRING("CAlfTransitionRequest - cancelling and deleting policy request" );
 	Cancel();
+	ResetBufs();
 	}
 	
 // ---------------------------------------------------------------------------
@@ -182,6 +195,8 @@ CAlfTransitionRequest::~CAlfTransitionRequest()
 //
 void CAlfTransitionRequest::RunL()
 	{
+	ResetBufs();
+
 	if ( iStatus.Int() == KErrCancel )
 	    {
 	    // If the request was cancelled, we are done
@@ -456,12 +471,11 @@ TInt CGfxTransAdapterTfx::HandleClientState( TClientState aState, const CCoeCont
 		case EPreBeginCapture:
 		    break;
 		case EPostBeginCapture:
-		    // If we get KGfxControlAppearAction, it is followed by StartTransition,
-		    // but disappear action is not. Therefore we must handle it byself
-		    // We use begin capture as trigger, as we assume that the control is still present
-		    // at that time. After EPostBeginCapture it will probably be already gone.
-		    // If we don't have plugin yet, there will be no transitions.
-		    if ( action == KGfxControlDisappearAction && iHasPlugin && aKey && aKey->DrawableWindow())
+			// Send control effect request to ALf. This is done immediately after call of 
+			// GfxTransEffect::Begin(). This makes it possible (NOT QUARANTEENED)
+			// that effect request arrives to Alf before possible visiblity changes are made to 
+			// the control.
+		    if ( iHasPlugin && aKey && aKey->DrawableWindow())
 		        {
 		        // We must generate our own transition as we won't be sending 
 		        // iClient->TransitionFinished back.
@@ -743,15 +757,7 @@ void CGfxTransAdapterTfx::StartTransition(TInt aHandle)
 
 	if( err == KErrNone ) 
 		{
-    	if ( transdata->iAction != KGfxControlDisappearAction )
-    	    {
-    	    // Disappear action was started by EPostBeginCapture event
-    		TRAP( err, DoStartTransitionL( aHandle, transdata ) );
-    	    }
-    	else
-    	    {
-            __ALFFXLOGSTRING( "CGfxTransAdapterTfx::StartTransition called for disappear action" );
-    	    }
+       __ALFFXLOGSTRING( "CGfxTransAdapterTfx::StartTransition called for disappear action. Do nothing." );
 		}
 		
     // always finish the caller		
@@ -885,6 +891,7 @@ TInt32 CGfxTransAdapterTfx::WindowGroupIdFromAppUid( TUid aAppUid )
         if ( iCachedUidMapping.iWindowGroupId > 0 )
             {
             result = iCachedUidMapping.iWindowGroupId;
+            iCachedUidMapping.iSecureId = 0;
             found = true;
             }
         }
@@ -1264,7 +1271,7 @@ void CGfxTransAdapterTfx::DoStartTransitionL( TInt /*aHandle*/, const CTransitio
 
 void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CTransitionData* aTransData)
     {
-    __ALFFXLOGSTRING("CGfxTransAdapterTfx::GenerateTransitionL >>");
+
     // We generate a transition call from begin capture for control exit transitions
 	TPtr8 inPtr = iTransferBuffer->Des();
 	inPtr.Zero();
@@ -1274,6 +1281,13 @@ void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CT
     TInt op = MAlfGfxEffectPlugin::EBeginComponentTransition;
     TInt windowGroup = aKey->DrawableWindow()->WindowGroupId();
     TInt windowHandle = aKey->DrawableWindow()->ClientHandle(); 
+    
+    __ALFFXLOGSTRING4("CGfxTransAdapterTfx::GenerateTransitionL - Operation: MAlfGfxEffectPlugin::EBeginComponentTransition Action: %d,  Uid: 0x%x, WindowGroup: %d, WindowHandle: %d  >>",
+        aTransData->iAction,
+        aTransData->iUid.iUid,
+        windowGroup,
+        windowHandle
+        );
     
     inBuf.WriteInt32L( op );
     inBuf.WriteUint32L( aTransData->iAction );
@@ -1373,10 +1387,15 @@ TInt CGfxTransAdapterTfx::RequestPolicyUpdates()
 		
     // send a request to plugin to start sending us policy updates
     // This is an asynchronous request
+	iPolicyReq->ResetBufs();	
 
-    TPtr8 inPtr = iAsyncTransferBuffer->Des();
+    *(iPolicyReq->InBuf())= new (ELeave) TPtr8(iAsyncTransferBuffer->Des());
+    TPtr8& inPtr = **iPolicyReq->InBuf();
     inPtr.Zero();
-    TPtr8 outPtr = iAsyncReturnBuffer->Des();
+
+    *(iPolicyReq->OutBuf())= new (ELeave) TPtr8(iAsyncReturnBuffer->Des());
+    TPtr8& outPtr = **iPolicyReq->OutBuf();
+
     outPtr.Zero();
 	RDesWriteStream inBuf( inPtr );
     TInt op = MAlfGfxEffectPlugin::ETfxServerOpControlPolicyRequest;
@@ -1393,9 +1412,6 @@ TInt CGfxTransAdapterTfx::RequestPolicyUpdates()
     __ALFFXLOGSTRING( "CGfxTransAdapterTfx::RequestPolicyUpdates" );
     iTfxServer.SendAsynchronousData( iPluginImplementation, inPtr, outPtr, iPolicyReq->iStatus );
     iPolicyReq->IssueReq();
-    // clear out used data    
-    inPtr.Zero();
-    outPtr.Zero();
     __ALFFXLOGSTRING("CGfxTransAdapterTfx::RequestPolicyUpdates <<");
     return KErrNone;
     

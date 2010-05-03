@@ -59,7 +59,7 @@ EXPORT_C void CHuiFxFilterLayer::SetVisual( CHuiVisual * /*aVisual*/ )
     {
     // iFilter does not need these
     }
-EXPORT_C void CHuiFxFilterLayer::SetVisual( MHuiEffectable *aVisual )
+EXPORT_C void CHuiFxFilterLayer::SetVisual( MHuiEffectable * /*aVisual*/ )
     {
     // iFilter does not need these
     }

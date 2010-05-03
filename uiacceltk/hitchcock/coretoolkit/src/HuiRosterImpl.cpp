@@ -106,6 +106,9 @@ TRect CHuiRosterImpl::Rect() const
     
 void CHuiRosterImpl::ShowL(CHuiControlGroup& aGroup, TInt aWhere)
     {
+    
+    // The group will automatically accept input events once shown.
+       aGroup.SetAcceptInput(ETrue);
     // If the group is already shown on the display, just adjust its position
     // according to the parameters.
     if(Find(&aGroup) != KErrNotFound)
@@ -142,8 +145,7 @@ void CHuiRosterImpl::ShowL(CHuiControlGroup& aGroup, TInt aWhere)
         InsertL(&aGroup, aWhere);
         }
 
-    // The group will automatically accept input events once shown.
-    aGroup.SetAcceptInput(ETrue);
+   
 
     // Show all the controls of the group.
     for(TInt i = 0; i < aGroup.Count(); ++i)

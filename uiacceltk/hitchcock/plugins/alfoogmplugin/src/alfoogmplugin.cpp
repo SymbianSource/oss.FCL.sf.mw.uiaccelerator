@@ -30,8 +30,8 @@ public:
     void ConstructL();
 
 public:
-    void FreeRam(TInt aBytesToFree);
-    void MemoryGood();
+    void FreeRam(TInt aBytesToFree, TInt  aFlags);
+    void MemoryGood(TInt  aFlags);
 
 private:
     RAlfDirectClient iAlfDirectClient;
@@ -68,18 +68,20 @@ void CAlfOogmMonitorPlugin::ConstructL()
 // Tries to free RAM.
 // -----------------------------------------------------------------------------
 //
-void CAlfOogmMonitorPlugin::FreeRam(TInt aBytesToFree)
+void CAlfOogmMonitorPlugin::FreeRam(TInt aBytesToFree, TInt  aFlags)
     {
- 	iAlfDirectClient.EnableLowMemoryState(aBytesToFree);
+	TBool useSwRend = aFlags & KGOomUseSwRendering;
+ 	iAlfDirectClient.EnableLowMemoryState(aBytesToFree, useSwRend);
     }
 
 // -----------------------------------------------------------------------------
 // CAlfOogmMonitorPlugin::MemoryGood
 // -----------------------------------------------------------------------------
 //
-void CAlfOogmMonitorPlugin::MemoryGood()
+void CAlfOogmMonitorPlugin::MemoryGood(TInt  aFlags)
     {
-    iAlfDirectClient.EnableLowMemoryState(EFalse);	
+	TBool useSwRend = aFlags & KGOomUseSwRendering;
+    iAlfDirectClient.EnableLowMemoryState(EFalse, useSwRend);	
     }
 
 // -----------------------------------------------------------------------------

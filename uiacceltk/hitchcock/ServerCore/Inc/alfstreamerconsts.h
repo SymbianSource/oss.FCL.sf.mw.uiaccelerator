@@ -42,7 +42,11 @@ enum
     EAlfPostDataToCompositionClient,
     EAlfPostDataToCompositionTarget,
     EAlfGetListOfWGsHavingInactiveSurfaces, 
-    EAlfQueueRequestBGSessions
+    EAlfQueueRequestBGSessions,
+    EAlfGetNumberOfActiveEffects,
+    EAlfRequestSignal,
+    EAlfCompleteSignal
+
     };
 
 enum TAlfCompOps{
@@ -82,6 +86,14 @@ struct TAlfNativeWindowData
     TInt  iScreenNumber;
     TInt  iAlfWindowGrpId;
     TUint iAlfWindowHandle;
+    };
+
+/* bitfield*/
+enum TAlfSignalFlags
+    {
+    EAlfSignalEffectStarted = 0x1,
+    EAlfSignalEffectComplete = 0x2,    
+    
     };
     
 #endif

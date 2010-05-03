@@ -21,8 +21,6 @@
 #include <alflogger.h>
 
 const TInt KRosterFreezeEndTimeoutInMs = 100;
-const TInt KFirstTimeoutForApplicationEndFullScreenInMs = 20;
-const TReal KMinimumPaintedAreaBeforeForcedEffect = 0.75;
 
 // ---------------------------------------------------------
 // CAlfRosterFreezeEndTimer
@@ -60,6 +58,7 @@ void CAlfRosterFreezeEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod, TCall
     __ALFLOGSTRING("CAlfRosterFreezeEndTimer::Start");
     if (!IsActive())
         {
+        iSafeCounter = 0;
         After( aPeriod );
         }
     }
@@ -657,7 +656,7 @@ AknTransEffect::TContext CAlfLayoutSwitchEffectCoordinator::NextLayoutSwitchCont
 //
 TBool CAlfLayoutSwitchEffectCoordinator::IsThemeEffectEnabled() const
     {
-    TBool memoryOk = !( iBridge.iHuiEnv->MemoryLevel() <= EHuiMemoryLevelLowest );
+    TBool memoryOk = !( iBridge.iHuiEnv->MemoryLevel() <= EHuiMemoryLevelLow );
     TBool tfxOn = CAknTransitionUtils::TransitionsEnabled(AknTransEffect::ELayoutswitchTransitionsOff );
     TBool tfxExists = LayoutSwitchEffectsExist();
 
@@ -845,46 +844,6 @@ void CFullScreenEffectState::ConstructL(
     ResolveFileNameL(aStream);
 
     iCompletionHandle = iHandle;
-    }
-
-TInt doNotifyDrawingTimeout( TAny* aPtr )
-    {
-    ((CFullScreenEffectState*)aPtr)->NotifyDrawingTimeout();
-    return 0; // must return something
-    }
-
-TBool CFullScreenEffectState::InitDelayedEffectL(CAlfBridge* aBridge, TSize aDisplaySize)
-    {
-    iBridge = aBridge;
-    iDisplaySize = aDisplaySize;
-    if (!iDrawingCompleteTimer)
-        {
-        iDrawingCompleteTimer = CPeriodic::NewL( EPriorityNormal );
-        iDrawingCompleteTimer->Start( 
-                KFirstTimeoutForApplicationEndFullScreenInMs * 1000 , 
-                KFirstTimeoutForApplicationEndFullScreenInMs * 1000 , TCallBack( doNotifyDrawingTimeout, this ));
-        return ETrue;
-        }
-    return EFalse;
-    }
-
-void CFullScreenEffectState::NotifyDrawingTimeout()
-    {
-    
-    iPaintedRegion.ClipRect(TRect(0,0, iDisplaySize.iWidth, iDisplaySize.iHeight));
-    iPaintedRegion.Tidy(); // remove overlapping regions
-    TInt size(0);
-    for(TInt i=0; i< iPaintedRegion.Count();i++ )
-        {
-        size += iPaintedRegion[i].Width()*iPaintedRegion[i].Height();
-        }
-    // lets continue, if the covered area is more than 75% of the screen. This is usually enough.
-    if ( size > KMinimumPaintedAreaBeforeForcedEffect  * (iDisplaySize.iWidth * iDisplaySize.iHeight))
-        {
-        iBridge->HandleGfxEndFullScreenTimeout(this);
-        delete iDrawingCompleteTimer;
-        iDrawingCompleteTimer = NULL;
-        }
     }
 
 void CControlEffectState::ConstructL(TInt aAction,

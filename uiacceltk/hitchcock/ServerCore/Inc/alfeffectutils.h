@@ -219,10 +219,6 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         
         void ConstructL(TInt aAction, RMemReadStream& aStream);
         
-        TBool InitDelayedEffectL(CAlfBridge* aBridge, TSize aDisplaySize);
-        
-        void NotifyDrawingTimeout();
-
         // Information from BeginFullScreen
         TInt iType;
         TInt iToWg;

@@ -134,7 +134,7 @@ public:
             CAlfScreen* aScreen,
             TBool& aSubtreeVisible,
             TBool& aHasVisualsWithLayers,
-            TBool aChildCanBeOpaque );
+            TBool aChildCanBeOpaque, TBool aOnlyForEmbeddedAlfApp = EFalse );
 
     /**
      * Updates layer visibilities.
@@ -211,6 +211,7 @@ public:
     
     void EnableSwRenderingL(TBool aEnable = ETrue);
     TBool PrepareSwRenderingTarget( CAlfScreen* aScreen );
+    void InitializeSwRenderingTarget(CFbsBitmap* aBitmap);
 
     /**
      * Sets memory level.
@@ -261,27 +262,42 @@ public:
       * Sets HuiControlGroup as Alf application window group
       */
     void SetWindowGroupAsAlfApp(TInt aId);
+
+    /**
+      * removes Alf application window group tag
+      */
+    void RemoveWindowGroupAsAlfApp(TInt aId);
     
     // From MHuiSynchronizationObserver
     void Synchronized(TInt aId);
     
     /*
-     * HandleGfxEndFullScreenTimeout
+     * GfxTriggerEndFullScreen
      * 
      * GfxTransEffect API gives EndFullScreen events too late. Thus there is a two stage process for triggering 
      * the EndFullScreen effect after BeginFullScreen event arrived.
      * 
-     * For application start effects we give N milliseconds timeout for application to finish drawing after
-     * the first drawing has arrived. If after N milliseconds application has not drawn 75% of the screen, it
-     * gets another N milliseconds. Most cases, the first N milliseconds is enough.
      */
-    void HandleGfxEndFullScreenTimeout(CFullScreenEffectState* aFullScreenEffectData);
+    void GfxTriggerEndFullScreen(CFullScreenEffectState* aFullScreenEffectData);
+    
+   /*
+	*	GfxTriggerEffectWhenFullScreenDrawn
+	*
+	*	Goes through the given CHuiControl (group which is supposed to show the effect). 
+	*   Triggers the effect, if  drawing buffers in group cover the whole screen in the 
+	*   current orientation.
+	*
+	*	@param	aToGroup	Group to be analyzed
+	*/
+    TBool GfxTriggerEffectWhenFullScreenDrawn(CHuiControlGroup* aToGroup = NULL);
     
 	// Experimental
     TBool IsFullScreenDrawn( TInt aOrientation);
 	
     void LayoutSwitchStart();
     void LayoutSwitchComplete();
+    
+    RAlfBridgerClient* BridgerClient();
     
 private:    
     
@@ -333,7 +349,17 @@ private:
     
     // component effect handling
     void HandleGfxControlEffectsL( TAlfBridgerData data );
-    
+
+   /**
+	*	StoreLayoutIfRequiredByEffectL
+	*
+	*   @param aNeededStoredLayout	Returns ETrue, if storing is required. Otherwise EFalse.
+    *
+	*	@return ETrue	If storing was required and could be done.
+    *					OR storing was not required. 
+	*/    
+    TBool StoreLayoutIfRequiredByEffectL(CHuiLayout* aLayout, CFullScreenEffectState& aEvent, TBool& aNeededStoredLayout);
+
     /**
      * Handles begin and end fullscreen events
      */
@@ -762,6 +788,13 @@ private:
     TBool HasActivePaintedAreas( CHuiCanvasVisual& aVisual, TBool aIncludeChildren );
     TBool HasActiveFadedChildren( CHuiCanvasVisual& aVisual );
 
+    /*
+     * This is for updating all the layout that are created to correspond the window server window groups.
+     * This should be called immediately when layout switch happens. Layout extents must be update then otherwise
+     * visibility calculations will clip to old sizes.
+     */
+    void UpdateRootVisualsToFullscreen();
+    
 private:
 
     RPointerArray<CAlfScreen> iAlfScreens;
@@ -954,6 +987,7 @@ private:
     mutable RRegionBuf<KAlfBridgeRegionGranularity> iTempRegion;
     TBool iBgSurfaceFound;
     TBool iInLowMemMode;
+    TBool iLayoutSwitchInProgress;
 
     TBool iHomeScreenWallpaperWindowFound;
     TBool iBgAnimHidden;
@@ -968,6 +1002,8 @@ private:
     
     TInt iIdForEAlfDSSynchronizeOp;
     TInt iIdForLayoutSwitchFrameSync;
+    
+    RArray<TInt> iAlfNativeClientsWgIds;
     
     #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
     TInt activevisualcount;

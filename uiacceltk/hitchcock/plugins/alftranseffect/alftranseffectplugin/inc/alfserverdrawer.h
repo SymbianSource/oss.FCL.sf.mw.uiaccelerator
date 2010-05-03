@@ -110,6 +110,7 @@ public:
     void DoSendBeginFullscreenL();
 	TInt SendBeginControlTransition();
 	TInt SendFinishControlTransition();
+	TInt DoSendFinishControlTransition(TInt aHandle);
 	
     TBool EffectFinishedFullScreen() const;
     
@@ -203,6 +204,8 @@ public:
     RFs iFs;
     TBool iFullScreenFxSent;
     TBool iFullScreenEndSent;
+
+    RArray<TInt> iActiveControlFx;
     };
 
 

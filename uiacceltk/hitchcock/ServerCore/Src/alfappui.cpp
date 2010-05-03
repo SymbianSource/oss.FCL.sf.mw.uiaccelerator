@@ -53,12 +53,12 @@
 #include "alfshareddisplaycoecontrol.h"
 #include "alfuids.h"
 
-#ifdef SYMBIAN_BUILD_GCE
 #include "alfbridge.h"
 #include "alfstreamerserver.h"
 #include "alfdecoderserverclient.h"
 #include "alfstreamerconsts.h"
-#endif // #ifdef SYMBIAN_BUILD_GCE
+#include "HuiFxEngine.h"
+#include "alfstreamerconsts.h"
 
 // DISABLE this if you want to use the AHDemoApp layout switch. If this is enabled
 // and switch is done through AHDemoApp, the layout will be rotated too much.
@@ -67,6 +67,31 @@
 #define ALF_USE_EMULATOR_LAYOUT_SWITCH_BUTTON
 #endif
 
+NONSHARABLE_CLASS(TAlfEffectObserver): public MHuiEffectObserver
+    {
+    public:    
+    TAlfEffectObserver(volatile TInt* aEffectCount, CAlfBridge& aBridge):iEffectCount((TInt*)aEffectCount), iBridge(aBridge){}
+    void EffectAdded(CHuiFxEffect* aEffect)
+        {
+        if (iBridge.BridgerClient() && aEffect && aEffect->Handle())
+            {    
+            __ALFFXLOGSTRING1("Effect about to start 0x%x", aEffect->Handle());
+            iBridge.BridgerClient()->SendBlind(EAlfCompleteSignal, TIpcArgs(aEffect->Handle(), EAlfSignalEffectStarted));
+            }
+        (*iEffectCount)++;
+        }   
+    void EffectComplete(CHuiFxEffect* aEffect)
+        {
+        if (iBridge.BridgerClient() && aEffect && aEffect->Handle())
+            {    
+            __ALFFXLOGSTRING1("Effect complete 0x%x", aEffect->Handle());
+            iBridge.BridgerClient()->SendBlind(EAlfCompleteSignal, TIpcArgs(aEffect->Handle(), EAlfSignalEffectComplete));
+            }
+        (*iEffectCount)--;    
+        }
+    TInt* iEffectCount;
+    CAlfBridge& iBridge;
+    };
 
 _LIT(KAlfEventThreadName,"alfevents");
 NONSHARABLE_CLASS(CAlfEventCatcher): public CActive
@@ -407,11 +432,7 @@ NONSHARABLE_CLASS(CAlfEventFetcher): public CActive
         {
         iWsSession.ComputeMode(RWsSession::EPriorityControlDisabled);
         RThread thread; 
-#if defined(__EPOC32__)
-    thread.SetProcessPriority(EPriorityForeground);    
-#else
-    thread.SetPriority(EPriorityAbsoluteForegroundNormal);    
-#endif
+        thread.SetPriority(EPriorityAbsoluteForegroundNormal);    
         iScreenDevice =new(ELeave) CWsScreenDevice(iWsSession);
         iScreenDevice->Construct(0); // For main display only
 
@@ -627,20 +648,22 @@ public:
             iEventAo->Cancel();
             }
         delete iEventAo; // before session is being terminated       
+        if (iHuiEnv && iHuiEnv->EffectsEngine())
+            {
+            iHuiEnv->EffectsEngine()->SetObserver(0);    
+            delete iAlfEffectObserver; // cannot exist if huienv was not present
+            }    
         delete iHuiEnv;
         delete iSharedWindow;
-#ifdef SYMBIAN_BUILD_GCE
         delete iBridgeObj;
-#endif // #ifdef SYMBIAN_BUILD_GCE
         }
     TBool iAllClientsClosed;
 
     // Boolean flag indicating if non-fading of shared window is enabled or disabled.
     TBool iSharedWindowNonFading;
-#ifdef SYMBIAN_BUILD_GCE
     CAlfBridge* iBridgeObj;
     CAlfStreamerBridge* iBridge;
-#endif // #ifdef SYMBIAN_BUILD_GCE
+    TAlfEffectObserver* iAlfEffectObserver;
     RWindow* iPlainWindow;
     CHuiDisplay* iMainDisplay;
     CHuiDisplay* iTVDisplay;
@@ -756,10 +779,6 @@ void CAlfAppUi::AllClientsClosed()
     {
 // In NGA master scene graph role, 
 // we must not close the server even there were no hitchcock app clients present
-#ifndef SYMBIAN_BUILD_GCE
-    iData->iAllClientsClosed = ETrue;
-    CAknEnv::Static()->RunAppShutter();
-#endif // #ifdef SYMBIAN_BUILD_GCE
     }
 
 // ---------------------------------------------------------------------------
@@ -838,11 +857,7 @@ EXPORT_C void CAlfAppUi::ConstructL()
     CHuiStatic::WsSession().ComputeMode(RWsSession::EPriorityControlDisabled);
 
     RThread thread; 
-#if defined(__EPOC32__)
-    thread.SetProcessPriority(EPriorityForeground);    
-#else
-    thread.SetPriority(EPriorityAbsoluteForegroundNormal);    
-#endif
+    thread.SetPriority(EPriorityAbsoluteForeground);    
 
     // delegates..
     iData->iResourceManager = CAlfSrvResourceManager::NewL( *iData->iHuiEnv );
@@ -868,11 +883,19 @@ EXPORT_C void CAlfAppUi::ConstructL()
         iData->iPlainWindow->SetBackgroundColor(~0);          
         }
 
-#ifdef SYMBIAN_BUILD_GCE    
+    iData->iBridge = CAlfStreamerBridge::NewL(0);
+    iData->iBridge->iAlfWindowData.iAlfWindowGrpId = mainWg.Identifier();
+    iData->iBridge->iAlfWindowData.iAlfWindowHandle =  iData->iPlainWindow->ClientHandle();
+    iData->iBridge->iAlfWindowData.iScreenNumber = 0; // TBD multiple screen support
 
     iData->iBridgeObj = CAlfBridge::NewL( &iData->iBridge, iData->iHuiEnv );
 	iData->iBridgeObj->iAppUi = this;
-		
+	
+	iData->iBridge->SetObserver(iData->iBridgeObj);
+	
+	iData->iAlfEffectObserver = new (ELeave) TAlfEffectObserver(&iData->iBridge->iActiveEffectCount, *iData->iBridgeObj);
+	iData->iHuiEnv->EffectsEngine()->SetObserver(iData->iAlfEffectObserver);
+			
     if( !iData->iPlainWindow)
         {
         // Create default CAlfScreen already now to be able to show controlgroups early enough... 
@@ -898,16 +921,10 @@ EXPORT_C void CAlfAppUi::ConstructL()
         }
 
     AppendDisplayOnSharedWindowL(*(iData->iBridgeObj->Display(0)));
-
-    iData->iBridge = CAlfStreamerBridge::NewL(iData->iBridgeObj);
-    iData->iBridge->iAlfWindowData.iAlfWindowGrpId = mainWg.Identifier();
-    iData->iBridge->iAlfWindowData.iAlfWindowHandle =  iData->iPlainWindow->ClientHandle();
-    iData->iBridge->iAlfWindowData.iScreenNumber = 0; // TBD multiple screen support
-        
+    
     TThreadId threadId;
   	CAlfStreamerServer::LaunchServer(threadId, iData->iBridge);
     
-#endif // #ifdef SYMBIAN_BUILD_GCE    
     // Inform texture manager that env has been created.
     iData->iServer->TextureManager().HandleEnvCreateL( *iData->iHuiEnv );
     
@@ -1335,9 +1352,7 @@ TTypeUid::Ptr CAlfAppUi::MopSupplyObject(TTypeUid aId)
 //
 TInt CAlfAppUi::FirstAlfControlGroupIndex( TInt aScreenNumber )
     {
-#ifdef SYMBIAN_BUILD_GCE
     return iData->iBridgeObj->FirstAlfControlGroupIndex( aScreenNumber );
-#endif // #ifdef SYMBIAN_BUILD_GCE
     }
 
 // ---------------------------------------------------------------------------
@@ -1346,9 +1361,7 @@ TInt CAlfAppUi::FirstAlfControlGroupIndex( TInt aScreenNumber )
 //
 TInt CAlfAppUi::LastAlfControlGroupIndex( TInt aScreenNumber )
     {
-#ifdef SYMBIAN_BUILD_GCE
     return iData->iBridgeObj->LastAlfControlGroupIndex( aScreenNumber );
-#endif // #ifdef SYMBIAN_BUILD_GCE
     }
 
 
@@ -1358,10 +1371,8 @@ TInt CAlfAppUi::LastAlfControlGroupIndex( TInt aScreenNumber )
 //
 void CAlfAppUi::ShowControlGroupL(CHuiRoster& aRoster, CHuiControlGroup& aGroup, TInt aWhere, TInt aScreenNumber )
     {
-#ifdef SYMBIAN_BUILD_GCE
     iData->iBridgeObj->ShowControlGroupL(aRoster, aGroup, aWhere, aScreenNumber);    
     iData->iBridgeObj->HandleVisualVisibility( aScreenNumber );    
-#endif // #ifdef SYMBIAN_BUILD_GCE
 
     }
 
@@ -1458,9 +1469,14 @@ TInt CAlfAppUi::ReadPixels(CFbsBitmap* aBitmap)
     return iData->iBridgeObj->ReadPixels(aBitmap);
     }
     
-void CAlfAppUi::SetAlfAppWindowGroup( TInt aID )
+void CAlfAppUi::SetAlfAppWindowGroup( TInt aId )
     {
-    iData->iBridgeObj->SetWindowGroupAsAlfApp( aID );
+    iData->iBridgeObj->SetWindowGroupAsAlfApp( aId );
+    }
+
+void CAlfAppUi::RemoveAlfAppWindowGroup( TInt aId )
+    {
+    iData->iBridgeObj->RemoveWindowGroupAsAlfApp( aId );
     }
 
 CAlfAppSrvSessionBase* CAlfAppUi::SrvSessionForControlGroup(CHuiControlGroup& aGroup)
@@ -1468,6 +1484,12 @@ CAlfAppSrvSessionBase* CAlfAppUi::SrvSessionForControlGroup(CHuiControlGroup& aG
     return iData->iServer->SrvSessionForControlGroup(aGroup);
     }
 
+
+TInt CAlfAppUi::GetLastActiveClient()
+    {
+    return iData->iServer->GetLastActiveClient();
+    }
+	
 void CAlfAppUi::DoBlankScreen(const RMessage2& aMessage)
     {
     __ALFLOGSTRING("CAlfAppUi::DoBlankScreen >>");

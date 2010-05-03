@@ -42,7 +42,7 @@ EXPORT_C void RAlfDirectClient::MeasureFPS( TInt32 aId, TBool aStart )
     Send( command, TIpcArgs(aId));
     }
 
-EXPORT_C void RAlfDirectClient::EnableLowMemoryState( TBool aMode )
+EXPORT_C void RAlfDirectClient::EnableLowMemoryState( TBool aMode , TBool aUseSwRendering)
     {
     if (!Handle())
         {

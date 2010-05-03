@@ -725,27 +725,22 @@ NONSHARABLE_CLASS( CSurfaceUpdateCallback ) : public CActive
 
         void RunL() 
             {
-            if( iStatus == KErrNone )
+            if( iStatus != KErrCancel )
                 {
                 SetActive();
                 if( !iPixelSource.DrawFrameL(iStatus, iBufferNumber) )
                     {
-                    __ALFLOGSTRING( "CSurfaceUpdateCallBack::RunL - DrawFrameL returned EFalse -> Pause");
-                    TRequestStatus* status = &iStatus;
-                    User::RequestComplete(status, KErrNone);
+                    __ALFLOGSTRING( "CSurfaceUpdateCallBack::RunL - DrawFrameL returned EFalse -> Pausing");
+                    TRequestStatus* status  = &iStatus;
+                    User::RequestComplete(status, KErrCancel);
                     Cancel();
-                   }
+                    }
                 }
-            else
-                {
-                __ALFLOGSTRING1("CSurfaceUpdateCallBack::RunL %d", iStatus.Int());
-                iPixelSource.Suspend();
-                }
-
-            
             };
-        void DoCancel() {  };
-        
+        void DoCancel() 
+            {
+            };
+
     private: // Data
         CAlfCompositionPixelSource& iPixelSource;
         TInt iBufferNumber;
@@ -907,7 +902,71 @@ EXPORT_C void CAlfCompositionPixelSource::ActivateL()
    
     // do nothing if content was already active
     }
-    
+
+// ---------------------------------------------------------------------------
+// CAlfCompositionPixelSource::ActivateSyncL
+// ---------------------------------------------------------------------------
+//
+EXPORT_C void CAlfCompositionPixelSource::ActivateSyncL()
+    {
+    if( !iData->iWindow && iData->iSurfaceId.IsNull() )
+        {
+        User::Leave(KErrNotReady);
+        }
+    TBool pause = EFalse;
+    if( iData->iSourceStatus == CAlfCompositionPixelSourceData::ESuspended )
+        {
+        MAlfBufferProvider::TBufferCreationAttributes& creationAttribs = iData->iProvider.BufferAttributes();
+        
+        iData->iSurfaceRect = TRect(TPoint(0,0), TSize(creationAttribs.iWidth, creationAttribs.iHeight));
+
+        ConstructSurfaceL(creationAttribs);
+
+        User::LeaveIfError( iData->iSurfaceUpdateSession.Connect() );     
+        
+        // update surface buffer before setting surface as background surface
+        if( !iData->iSurfaceUpdateWaiter )
+            {
+            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, iData->iWaiterAoPriority );
+            }
+
+        iData->iSurfaceUpdateWaiter->SetActive();
+        pause = !DrawFrameL(iData->iSurfaceUpdateWaiter->iStatus ,0);
+        if(pause && iData->iSurfaceUpdateWaiter->IsActive())
+            {
+            TRequestStatus* status  = &iData->iSurfaceUpdateWaiter->iStatus;
+            User::RequestComplete(status, KErrCancel);
+            iData->iSurfaceUpdateWaiter->Cancel();
+            }
+        
+        iData->iWindow->SetBackgroundSurface(iData->iSurfaceId);
+
+        TInt array[] = { 0, iData->iWindow->ClientHandle(), iData->iWindow->WindowGroupId() }; 
+        TInt handle = SendEvent(KAlfCompOpCreateSource, array, sizeof(array));
+        CAlfCompositionClientBase::SetHandleL( handle );
+        }
+  
+    if( iData->iSourceStatus != CAlfCompositionPixelSourceData::EActive && !pause )
+        {
+
+        if( !iData->iSurfaceUpdateWaiter )
+            {
+            iData->iSurfaceUpdateWaiter = new (ELeave) CSurfaceUpdateCallback( *this, 0, iData->iWaiterAoPriority );
+            }
+
+        if(!iData->iSurfaceUpdateWaiter->IsActive())
+            {
+            iData->iSurfaceUpdateWaiter->SetActive();
+            TRequestStatus* status = &iData->iSurfaceUpdateWaiter->iStatus;
+            User::RequestComplete(status, KErrNone);
+            }
+        iData->iProvider.OnActivation();
+        iData->iSourceStatus = CAlfCompositionPixelSourceData::EActive;
+        }
+   
+    // do nothing if content was already active and running    
+    }
+
 // --------------------------------------------------------------------------- 
 // CAlfCompositionPixelSource::Suspend
 // ---------------------------------------------------------------------------
@@ -1171,5 +1230,105 @@ void CAlfCompositionPixelSource::HandleEventL(TInt aEventType, TAny* aEventData)
     // call base class
     CAlfCompositionSource::HandleEventL( aEventType, aEventData );
     }
+
+class CAlfSignalObserver;
+
+class MAlfEffectObserverData
+    {
+    public:
+        virtual void Remove(CAlfSignalObserver* aObserver) = 0;
+    };
+
+NONSHARABLE_CLASS(CAlfEffectObserver::CAlfEffectObserverData): public CBase, public MAlfEffectObserverData
+    {
+    public:
+    void SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType = MAlfEffectObserver::EAlfEffectComplete );        
+    ~CAlfEffectObserverData();
+    void Remove(CAlfSignalObserver* aObserver);
+    
+    // data
+    RAlfBridgerClient iClient;
+    RPointerArray<CAlfSignalObserver> iObservers;
+    };
+
+
+NONSHARABLE_CLASS(CAlfSignalObserver):public CActive
+    {
+    public:    
+    CAlfSignalObserver(CAlfEffectObserver::MAlfEffectObserver* aObserver, MAlfEffectObserverData* aOwner, TInt aHandle, TInt aType):CActive(EPriorityStandard),
+        iOwner(aOwner), iObserver(aObserver), iHandle(aHandle), iType(aType), iArgs(aHandle,aType)
+        {   
+        CActiveScheduler::Add(this);
+        SetActive(); 
+        }
+                
+    void DoCancel(){} // do not...
+    
+    void RunL()
+        {    
+        iObserver->HandleEffectCallback(iType, iHandle, iStatus.Int());
+        iOwner->Remove(this);
+        }    
+    
+    MAlfEffectObserverData* iOwner;
+    CAlfEffectObserver::MAlfEffectObserver* iObserver;
+    TInt iHandle;        
+    TInt iType;
+    TIpcArgs iArgs;
+    };
+
+void CAlfEffectObserver::CAlfEffectObserverData::SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType)
+    {
+    CAlfSignalObserver* obs = new (ELeave) CAlfSignalObserver(aObserver, this, aHandle, aType);
+    CleanupStack::PushL(obs);
+    User::LeaveIfError(iObservers.Append(obs));
+    CleanupStack::Pop();
+    iClient.SendAsynchronous(EAlfRequestSignal, obs->iArgs, obs->iStatus);        
+    }
+        
+CAlfEffectObserver::CAlfEffectObserverData::~CAlfEffectObserverData()
+    {    
+    iClient.Close(); // destroys signals
+    iObservers.ResetAndDestroy();
+    }
+        
+void CAlfEffectObserver::CAlfEffectObserverData::Remove(CAlfSignalObserver* aObserver)
+    {
+    TInt index = iObservers.Find(aObserver);
+    iObservers.Remove(index);
+    delete aObserver;   
+    }    
+    
+EXPORT_C CAlfEffectObserver* CAlfEffectObserver::NewL()
+    {
+    CAlfEffectObserver* me = new (ELeave) CAlfEffectObserver();
+    CleanupStack::PushL(me);
+    me->iData = new (ELeave) CAlfEffectObserverData();
+    User::LeaveIfError(me->iData->iClient.Connect());
+    CleanupStack::Pop();
+    return me;    
+    }
+
+EXPORT_C CAlfEffectObserver::~CAlfEffectObserver()
+    {
+    delete iData;        
+    }
+
+EXPORT_C TInt CAlfEffectObserver::ActiveEffectsCount()
+    {
+    return iData->iClient.EffectsCount();
+    }
+
+EXPORT_C void CAlfEffectObserver::SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType)
+    {
+    iData->SubscribeCallbackL(aObserver, aHandle, aType ); 
+    }
+
+CAlfEffectObserver::CAlfEffectObserver()
+    {
+    }
+
+ 
+
 
 //end of file    

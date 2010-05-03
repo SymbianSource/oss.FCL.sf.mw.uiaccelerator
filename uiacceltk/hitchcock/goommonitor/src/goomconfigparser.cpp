@@ -57,6 +57,7 @@ KGOomErrBadLowThresholdValueForAppConfig,
 KGOomErrBadGoodThresholdValueForAppConfig,
 KGOomErrBadTargetFreeValueForAppConfig,
 KGOomErrBadSkipPluginValueForAppConfig,
+KGOomErrBadUseSwRenderingValueForAppConfig,
 KGOomErrSystemPluginSettingsMustComeAfterAppCloseSettings,
 KGOomErrAppPluginSettingsMustComeAfterSystemPluginSettings,
 KGOomErrAppPluginIdleTimeRulesMustComeAfterAppPluginSettings,
@@ -80,7 +81,8 @@ KGOomErrBadXml,
 KGOomErrAppCloseIdleRuleOutsideAppCloseElement,
 KGOomErrForegroundAppRuleOutsideAppCloseElement,
 KGOomErrPluginIdleRuleOutsideAppPluginElement,
-KGOomErrPluginForegroundRuleOutsidePluginElement
+KGOomErrPluginForegroundRuleOutsidePluginElement,
+KGOomErrInvalidSwRendConfig
 };
 
 
@@ -127,6 +129,9 @@ _LIT8(KGOomAttributeDefaultWaitAfterPlugin, "default_wait_after_plugin");
 //App specific
 _LIT8(KGOomAttributeTargetFreeOnStartup, "target_free_on_startup");
 _LIT8(KGOomAttributeSkipPlugin, "skip_plugin");
+_LIT8(KGOomAttributeUseSwRendering, "use_sw_rend");
+_LIT8(KGOomConfigUseSwRend, "Yes");
+_LIT8(KGOomConfigNotUseSwRend, "No");
 
 // System plugins 
 
@@ -172,6 +177,10 @@ _LIT8(KGOomConfigTargetAppValue, "TARGET_APP");
 
 _LIT8(KGOomConfigBusyAppUid, "BUSY_APP");
 _LIT8(KGOomConfigHighPriorityAppUid, "HIGH_PRIORITY_APP");
+
+_LIT8(KGOomAttibuteSwRend, "sw_rend");
+_LIT8(KGOomConfigSwRendSupported, "supported");
+_LIT8(KGOomConfigSwRendNotSupported, "not_supported");
 
 CGOomConfigParser::CGOomConfigParser(CGOomConfig& aConfig, RFs& aFs) : iConfig(aConfig), iFs(aFs), iState(EGOomParsingStateNone)
     {
@@ -501,7 +510,33 @@ void CGOomConfigParser::SetAppConfigL(const RAttributeArray& aAttributes)
                 ConfigError(KGOomErrBadSkipPluginValueForAppConfig);
             }
                 
-    
+        // Get the software rendering config
+        if (err == KErrNone)
+            {
+            TPtrC8 swrendString;
+            TInt err = GetValueFromAttributeList(aAttributes, KGOomAttributeUseSwRendering, swrendString);
+            if (err == KErrNone)
+                {
+                if (swrendString == KGOomConfigUseSwRend)
+                    {
+                    TRACES1("Sw Rend configured for App %x", uid); 
+                    appConfig->iUseSwRendering = ETrue;
+                    }
+                else
+                    {
+                    appConfig->iUseSwRendering = EFalse;
+                    }
+                }
+            else if (err == KErrNotFound)
+                {
+                err = KErrNone;
+                appConfig->iUseSwRendering = EFalse;
+                }
+            
+            if (err != KErrNone)
+                ConfigError(KGOomErrBadUseSwRenderingValueForAppConfig);
+            }
+        
     // Add the applciation config to the main config
     if ((err == KErrNone) && (appConfig))
         {
@@ -772,8 +807,21 @@ void CGOomConfigParser::SetSystemPluginConfigL(const RAttributeArray& aAttribute
          {
          // Get the config for the sync mode for this plugin (if one is specified) and set it
          SetPluginSyncMode(aAttributes, *pluginConfig);
+        
+         TPtrC8 swrendString;
+         TInt err = GetValueFromAttributeList(aAttributes, KGOomAttibuteSwRend, swrendString);
+         if (err == KErrNone)
+             {
+             if (swrendString == KGOomConfigSwRendSupported)
+                 pluginConfig->SetSwRend(ETrue);
+             else if (swrendString == KGOomConfigSwRendNotSupported)
+                 pluginConfig->SetSwRend(EFalse);
+             else
+                 ConfigError(KGOomErrInvalidSwRendConfig);
+             }
+         
          }
-
+          
      iConfig.AddPluginConfigL(pluginConfig);
      
      CleanupStack::Pop(pluginConfig);

@@ -198,10 +198,13 @@ public: // internal utilities
     TInt ForceSwRendering(TBool aEnabled);
     TInt GetSizeAndRotation(TSize& aSize, TInt& aRotation);
     TInt ReadPixels(CFbsBitmap* aBitmap);
-    void SetAlfAppWindowGroup( TInt aID );
+    void SetAlfAppWindowGroup( TInt aId );
+    void RemoveAlfAppWindowGroup( TInt aId );
     
     CAlfAppSrvSessionBase* SrvSessionForControlGroup(CHuiControlGroup& aGroup);
     void DoBlankScreen(const RMessage2& aMessage);
+    
+    TInt GetLastActiveClient();
 
 private:
 

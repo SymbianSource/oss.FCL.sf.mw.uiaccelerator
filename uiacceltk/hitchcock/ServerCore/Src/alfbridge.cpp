@@ -70,6 +70,7 @@
 #include "huicanvasrenderbuffer.h"
 #include "alfeffectutils.h"
 #include "alfrenderstageutils.h" // for KAlfPSUidSynchronizer & KAlfPSKeySynchronizer
+#include "alfdrawerinternal.h"
 
 #ifdef HUI_DEBUG_TRACK_DRAWING
 #include <alfcommanddebug.h>
@@ -100,7 +101,15 @@ _LIT8(KAlfWindowGroupContainerControlTag, "WGROUP");
 
 const TInt KFadeAction = 6000;
 
-// ======== MEMBER FUNCTIONS ========
+NONSHARABLE_CLASS( TAlfBridgeDrawerWrapper ) : public MAlfDrawerScreenInterface
+    {
+public:
+    TAlfBridgeDrawerWrapper(CAlfBridge& aBridge);
+    TInt GetSizeAndRotation(TSize& aSize, TInt& aRotation);
+    TInt ReadPixels(CFbsBitmap* aBitmap);
+private:
+    CAlfBridge& iBridge;
+    };
 
 // ======== MEMBER FUNCTIONS ========
 
@@ -141,6 +150,7 @@ CAlfBridge::CAlfBridge(CAlfStreamerBridge** aHost)
 // 
 CAlfBridge::~CAlfBridge()
 	{
+    iAlfNativeClientsWgIds.Close();
 	delete iOrphanStorage;
 	delete iFadeEffectFile;
 	iWindowHashArray.Close();
@@ -343,6 +353,8 @@ void CAlfBridge::AddVisual(
     iPreviouslySearchedVisual = aVisual;
 
     AMT_INC_COUNTER( iTotalVisualCount );
+    
+    AMT_MAP_BRIDGE_ADD_VISUAL();
     }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +367,10 @@ void CAlfBridge::RemoveVisual( TInt aWindowNodeId )
     iWindowHashArray.Remove( aWindowNodeId );
     iPreviouslySearchedVisualId = 0;
     
-    AMT_DEC_COUNTER( iTotalVisualCount );    
+    AMT_DEC_COUNTER( iTotalVisualCount );
+    
+    AMT_MAP_INC_VALUE( iIntMap, aWindowNodeId, EAlfModuleTestTypeBridgeReleaseWindow );
+    AMT_MAP_SET_VALUE( iBoolMap, aWindowNodeId, ETrue, EAlfModuleTestTypeBridgeReleaseWindow );
     }
     
 // ---------------------------------------------------------------------------
@@ -598,7 +613,7 @@ void CAlfBridge::ResolveAfterEffectAppearingApplicationL(CHuiControlGroup* aGrou
                         {
                         iFullScreenEffectData->iFromSecureId = iAlfScreens[0]->iControlGroups[j].iSecureId;
                         iFullScreenEffectData->iFromWg = iAlfScreens[0]->iControlGroups[j].iClientWindowGroupId;
-                        __ALFFXLOGSTRING2("CAlfBridge::ResolveAfterEffectAppearingApplicationL - Found underneath application uid: 0x%x, window group: %d -  Start track drawing for exit effect.", iFullScreenEffectData->iFromAppId, iFullScreenEffectData->iFromWg );
+                        __ALFFXLOGSTRING2("CAlfBridge::ResolveAfterEffectAppearingApplicationL - Found underneath application uid: 0x%x, window group: %d -  Start track drawing for exit effect.", iFullScreenEffectData->iFromSecureId, iFullScreenEffectData->iFromWg );
                         break;
                         }
                     }
@@ -619,6 +634,8 @@ void CAlfBridge::DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber
             {
             if (iAlfScreens[aScreenNumber]->iDisplay)
                 {
+                RemoveWindowGroupAsAlfApp(iAlfScreens[aScreenNumber]->iControlGroups[i].iClientWindowGroupId);
+
                 CHuiControlGroup* controlGroup = iAlfScreens[aScreenNumber]->iControlGroups[i].iControlGroup;
                 CHuiControl& control = controlGroup->Control(0);
                 CHuiLayout* layout = (CHuiLayout*)&control.Visual(0);
@@ -701,7 +718,10 @@ void CAlfBridge::DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber
             
             break;
             }
-        }        
+        }
+    
+    AMT_MAP_INC_VALUE( iIntMap, aWindowGroupNodeId,
+                       EAlfModuleTestTypeBridgeReleaseWindowGroup );
     }
 
 
@@ -736,6 +756,15 @@ CHuiControlGroup& CAlfBridge::CreateControlGroupL(
         // So that's why opaque flag is set to this layout.
         layout->SetFlag(EHuiVisualFlagOpaqueHint); 
         
+        for( TInt i = 0 ; i < iAlfNativeClientsWgIds.Count() ; i++ )
+            {
+            if(iAlfNativeClientsWgIds[i] == aClientWindowGroupId)
+                {
+                group->iAlfApp = ETrue;
+                break;
+                }
+            }
+       
         TAlfControlGroupEntry entry;
         entry.iControlGroup = group;
         entry.iWindowGroupNodeId = aWindowGroupNodeId;
@@ -780,7 +809,8 @@ CHuiControlGroup& CAlfBridge::CreateControlGroupL(
         
         AMT_INC_COUNTER( iTotalControlGroupCount );
         }
-    
+
+    AMT_MAP_BRIDGE_CREATE_CONTROL_GROUP();
 
     return *group;       
     }
@@ -892,6 +922,14 @@ void CAlfBridge::ShowSessionContainerControlGroupL(CHuiRoster& aRoster, CHuiCont
         TBool move = EFalse; // indicates that controlgroup is already in the roster somewhere below the new index.
         for (TInt i=FirstAlfControlGroupIndex(aScreenNumber); i<last; i++)
             {
+            CHuiLayout* hostContainer = aRoster.ControlGroup(i).Control(0).ContainerLayout(NULL);
+            if(hostContainer->Flags() & EHuiVisualFlagUnderOpaqueHint)
+                {
+                // If the visual is inactive, we should skip it so that alf control
+                // group ordering would be correct
+                continue;
+                }
+        
             if (index == aWhere)
                 {
                 if( move )
@@ -953,7 +991,24 @@ void CAlfBridge::ShowWindowGroupControlGroupL(CHuiRoster& aRoster, CHuiControlGr
                 TBool lSyncAlfAppAndAlfEventGroup = EFalse;
                 if ( i>0 &&  aRoster.ControlGroup(i).iAlfApp && aRoster.ControlGroup(i-1).ResourceId() == iAlfWindowGroupNodeId  && &aRoster.ControlGroup(i) != &aGroup)
                     {
-                    lSyncAlfAppAndAlfEventGroup = ETrue;
+                    // we still need to check that there are no other alf client window groups on top.
+					// if one native alf application is embedding another native alf application, WServ
+					// seems to update wg chains so that the following check must be done  
+                    TInt u = i+1;
+                    TBool clienWgFoundOntop =EFalse;
+                    for(;u < aRoster.Count() - screen->FixedControlGroupCount(); u++)
+                        {
+                        if(aRoster.ControlGroup(u).iAlfApp)
+                            {
+                            clienWgFoundOntop = ETrue;
+                            break;
+                            }
+                        }
+                    
+                    if(!clienWgFoundOntop)
+                        {
+                        lSyncAlfAppAndAlfEventGroup = ETrue;
+                        }
                     }
                 aRoster.ShowL(aGroup, i);
                 added = ETrue;
@@ -1319,11 +1374,9 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
     TBool fullscreenCovered = EFalse;
     CAlfAppSrvSessionBase* topMostAlfSrvSession = NULL;
     
-    //iActiveVisualCount = 0;
     iBgSurfaceFound = EFalse;
     iHomeScreenWallpaperWindowFound = EFalse;
-    //iPaintedArea = 0;  
-    
+   
     // Check if effect group has an effect with opaque hint.
     CHuiControlGroup& fxcontrolgroup = *(iAlfScreens[aScreenNumber]->iFullscreenEffectControlGroup);
     CHuiControl& fxcontrol = fxcontrolgroup.Control(0);
@@ -1341,7 +1394,8 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
     
 	
 	TBool alfWindowGroupFoundVisible = EFalse;
-
+	TBool alfClientWindowGroupVisible = EFalse;
+	
     AMT_SET_VALUE( iVisibleVisualCount, 0 );
 	
     // skip the topmost (effect) layer, start from floating sprite group
@@ -1386,22 +1440,29 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
             {
             CHuiLayout* hostContainer = control.ContainerLayout( NULL );
             TInt flags = hostContainer->Flags();            
-            if (!fullscreenCovered)
+            if (!fullscreenCovered || alfClientWindowGroupVisible)
                 {
                 // clear inactive flag if client has not made this controlgroup hidden
                 if(!(flags&EHuiVisualFlagUnderOpaqueHint))
                     {
-                    alfWindowGroupFoundVisible = ETrue;
                     if(iAppUi)
                         {
                         topMostAlfSrvSession = iAppUi->SrvSessionForControlGroup(controlgroup);
                         }
-                    hostContainer->ClearFlags(EHuiVisualFlagInactive);
+                    TInt clientWindowGroupId = topMostAlfSrvSession->ClientWindowGroup();
+                    __ALFLOGSTRING1("Alf Application: clientWindowGroupId %d", clientWindowGroupId);
+                    // checking the case if there are multiple alf application openend.
+                    if (clientWindowGroupId == iAppUi->GetLastActiveClient())
+                        {
+                        alfWindowGroupFoundVisible = ETrue;
+                        hostContainer->ClearFlags(EHuiVisualFlagInactive);
 
-                    // just add the rect to covered region because alf draws solid background
-                    iTempRegion.AddRect(fullscreen);
-                    iTempRegion.Tidy();
-                    fullscreenCovered = ETrue;
+                        // just add the rect to covered region because alf draws solid background
+                        iTempRegion.AddRect(fullscreen);
+                        iTempRegion.Tidy();
+                        fullscreenCovered = ETrue;
+                        alfClientWindowGroupVisible = EFalse;  // change flag so that we don't go in this branch again
+                        }
                     }
                 else // else put as inactive
                     {
@@ -1446,14 +1507,49 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
 #endif
             }
         
+		// if native alf app is found visible we can assume it should cover whole screen with alfcontent
+		// this is for embedded native alf application cases. Otherwise chained window groups tend to
+		// flicker from time to time
+        if(!fullscreenCovered && controlgroup.iAlfApp)
+            {
+            alfClientWindowGroupVisible = ETrue;
+            }
+        
+        
         TBool subTreeCovered = EFalse;
         TBool hasLayers = EFalse;
-        TBool hasActiveVisualsInVisualTree = 
-            HandleLayoutVisualVisibility( layout, controlgroup, control, 
-                fullscreenCovered, fullscreen, screen, 
-                subTreeCovered, hasLayers, IsVisualOpaque(*layout) );    
+        
+        TBool hasActiveVisualsInVisualTree(EFalse);
+        
+        //embedded native alf application assumes that it should cover whole screen with alfcontent
+        // it makes alfeventwindowgroup as inactive and fading is not done on alf content
+        // this call is exculsive for alfeventwindowgroup 
+        if (alfClientWindowGroupVisible && (controlgroup.ResourceId() == iAlfWindowGroupNodeId))
+            {
+            hasActiveVisualsInVisualTree = 
+               HandleLayoutVisualVisibility( layout, controlgroup, control, 
+                   hasActiveVisualsInVisualTree, fullscreen, screen, 
+                   subTreeCovered, hasLayers, IsVisualOpaque(*layout),alfClientWindowGroupVisible );
+            }
+        
+        else
+            {
+            hasActiveVisualsInVisualTree = 
+               HandleLayoutVisualVisibility( layout, controlgroup, control, 
+                   fullscreenCovered, fullscreen, screen, 
+                   subTreeCovered, hasLayers, IsVisualOpaque(*layout) );
+            }
+        
+
         TBool hasFadeEffectsInVisualTree = (layout->CanvasFlags() & EHuiCanvasFlagExternalFadeExistsInsideVisualTree);        
 
+        if(!fullscreenCovered && alfClientWindowGroupVisible)
+            {
+            iTempRegion.AddRect(fullscreen);
+            iTempRegion.Tidy();
+            fullscreenCovered = ETrue;
+            }
+        
         // If root visuals effect is marked as opaque, then add whole screen area as covered.
         if (!fullscreenCovered)
             {
@@ -1511,8 +1607,8 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
 #endif
             
         }
-    
-    if (iActivated)
+        
+    if (iActivated && !iLayoutSwitchInProgress)
         {
         if (iBgSurfaceFound || iHomeScreenWallpaperWindowFound)
             {
@@ -1521,6 +1617,11 @@ void CAlfBridge::HandleVisualVisibility( TInt aScreenNumber )
                 {
                 SetLowMemory(ETrue);
                 iInLowMemMode = ETrue;
+                }
+            else if (!iBgSurfaceFound && iInLowMemMode)
+                {
+                SetLowMemory(EFalse);
+                iInLowMemMode = EFalse;                
                 }
 
             // if the background animation is not hidden yet, hide it now
@@ -1601,7 +1702,8 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
         CAlfScreen* aScreen,
         TBool& aSubtreeVisible, 
         TBool& aHasVisualsWithLayers,
-        TBool aChildCanBeOpaque )
+        TBool aChildCanBeOpaque,
+        TBool aOnlyForEmbeddedAlfApp)
     {
     TBool visualTreeActive = EFalse;
     TRect visualDisplayRect;
@@ -1663,10 +1765,18 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
             visualDisplayRect = canvasVisual->DisplayRect();
     
             // Make sure we clip visual rect to visible screen area
+            ClipVisualRect(visualDisplayRect, aLayout->DisplayRect());
             ClipVisualRect(visualDisplayRect, aFullscreen);
             
-            // Check if this visual is covered by other opaque visuals which rects are in "covered" region           
-            visualRectIsCovered = IsRectCoveredByRegion(visualDisplayRect, iTempRegion);                    
+            
+            // Check if this visual is covered by other opaque visuals which rects are in "covered" region
+            // it should not check for alf event window group, when we have embedded alf application,
+            // because we have assumed that alf app will have full screen covered
+            if(!aOnlyForEmbeddedAlfApp)
+                {
+                visualRectIsCovered = IsRectCoveredByRegion(visualDisplayRect, iTempRegion);
+                }
+                                
             }
     
     /*            if ( layout->Effect() || canvasVisual->Effect() )
@@ -1762,12 +1872,22 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
                 canvasVisual->LayerExtent() != TRect() &&
                 !canvasVisual->LayerUsesAlphaFlag() )
                 {
-                // if paintedareacount is exactly one, it means that the window
+                // if paintedareacount is exactly one or two, it means that the window
                 // has background surface but no drawing commands
-                if (canvasVisual->PaintedAreaCount() == 1) 
+                TInt areaCount = canvasVisual->PaintedAreaCount();
+                // special handling for camera...
+                TBool incamera = aControlGroup.SecureId() == 0x101f857a;
+                if (areaCount == 1 || areaCount == 2 || incamera) 
                     {
-                    THuiCanvasPaintedArea pa = canvasVisual->PaintedArea(0);
-                    TRect r = pa.iPaintedRect.Round();
+                    TBool onlyFullScreenAreas = ETrue;
+                    for (TInt count = 0; count < areaCount; count++)
+                        {
+                        TRect area = canvasVisual->PaintedArea(count).iPaintedRect.Round();
+                        if (area != Display(0)->VisibleArea())
+                            {
+                            onlyFullScreenAreas = EFalse;
+                            }
+                        }
                     // if we found a fullscreen surface with no other drawing commands
                     // we can safely assume that it's about the only thing to be visible
                     // and we can release memory occupied by other parts of the system
@@ -1778,7 +1898,7 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
                     // memory state. We want to do it like this as otherwise
                     // we would be triggering for example background animation
                     // on / off quite rapidly........
-                    if ( r == Display(0)->VisibleArea())
+                    if ( onlyFullScreenAreas || incamera)
                         {
                         // Final test. Surface must not be ALF surface, but some other surface.                        
                         CHuiControlGroup* alfControlGroup = FindControlGroupBySecureId( iAlfSecureId );
@@ -1829,6 +1949,7 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
                 if ( !canvasVisual->HasCustomShape() )
                     {
                     TRect displayRect(canvasVisual->DisplayRect());
+                    ClipVisualRect(displayRect, aLayout->DisplayRect());
                     ClipVisualRect(displayRect, aFullscreen);
 
 #ifdef ALF_DEBUG_PRINT_WINDOWGROUP_ORDER
@@ -1893,7 +2014,20 @@ TBool CAlfBridge::HandleLayoutVisualVisibility(
         visualTreeActive |= visualIsActive;
         
         // iVisibleVisualCount is cleared in HandleVisualVisibility()
-        AMT_INC_COUNTER_IF( visualIsActive && !visualRectIsCovered , iVisibleVisualCount );
+        AMT_INC_COUNTER_IF( visualIsActive && visualIsOpaque && !visualRectIsCovered, iVisibleVisualCount );
+        
+        AMT_MAP_SET_VALUE_IF(
+                visualIsActive && visualIsOpaque && !visualRectIsCovered && (canvasVisual->CanvasFlags() & EHuiCanvasFlagIncludeToVisibilityCalculation),
+                iBoolMap,
+                AMT_MAP_CPTR_TO_KEY_CAST( canvasVisual ),
+                ETrue,
+                EAlfModuleTestTypeBridgeVisualVisibility);
+        AMT_MAP_SET_VALUE_IF(
+                !visualIsActive || !visualIsOpaque || visualRectIsCovered || !(canvasVisual->CanvasFlags() & EHuiCanvasFlagIncludeToVisibilityCalculation),
+                iBoolMap,
+                AMT_MAP_CPTR_TO_KEY_CAST( canvasVisual ),
+                EFalse,
+                EAlfModuleTestTypeBridgeVisualVisibility);
         } // for loop end : children checking loop
      
     return visualTreeActive;
@@ -2300,6 +2434,7 @@ void CAlfBridge::DoDispatchL(TInt aStatus)
 	                {
                     HandleSetLayoutSwitchEffectL();
 	                iAlfScreens[0]->iDisplay->SetOrientation(huiOrientation);
+	                UpdateRootVisualsToFullscreen();
 	                if (iAppUi)
 	                	{
 	                	iAppUi->AdjustWindowGroupPositionL(0,CAlfAppServer::EAlfWindowSize); // hackish, but one way to enforce alf window resizing
@@ -2658,9 +2793,9 @@ void CAlfBridge::HandleSetWindowPosL( TAlfBridgerData& aData )
 
     AMT_INC_COUNTER_IF( viz, iVisualPositionChangedCount );
     AMT_SET_VALUE_IF( viz, iLatestVisualExtentRect, TRect( windowAttributes->iPosition, windowAttributes->iSize ) );
-    AMT_MAP_SET_VALUE_IF( ( viz && iWindowHashArray.Find( windowNodeId ) ),
-                          iPositionMap, iWindowHashArray.Find( windowNodeId )->iClientSideId, 
-                          windowAttributes->iPosition, EAlfModuleTestTypeBridgeChangePosition );    
+    AMT_MAP_SET_VALUE_IF( viz, iPositionMap, windowNodeId,
+                          windowAttributes->iPosition, 
+                          EAlfModuleTestTypeBridgeChangeWindowPosition );    
 	}
 
 // ---------------------------------------------------------------------------
@@ -2692,9 +2827,10 @@ void CAlfBridge::HandleSetWindowSizeL( TAlfBridgerData& aData )
     
     AMT_INC_COUNTER_IF(viz, iVisualSizeChangedCount );
     AMT_SET_VALUE_IF(viz, iLatestVisualExtentRect, TRect( windowAttributes->iPosition, windowAttributes->iSize ) );
-    AMT_MAP_SET_VALUE_IF( ( viz && iWindowHashArray.Find( windowNodeId ) ), 
-                          iSizeMap, iWindowHashArray.Find( windowNodeId )->iClientSideId, 
-                          windowAttributes->iSize, EAlfModuleTestTypeBridgeChangeSize );
+    
+    AMT_MAP_SET_VALUE_IF( viz, iSizeMap, windowNodeId, 
+                          windowAttributes->iSize, 
+                          EAlfModuleTestTypeBridgeChangeWindowSize );
 	}
 
 // ---------------------------------------------------------------------------
@@ -3106,7 +3242,6 @@ void CAlfBridge::HandlePostCanvasBufferL( TAlfBridgerData& aData )
 	            && iFullScreenEffectData->iEffectType != CFullScreenEffectState::ENotDefinedEffect 
 	            && !iFullScreenEffectData->iEndFullScreen)
 	        {
-
 	        CHuiControlGroup *to_group = NULL;
             if (iFullScreenEffectData->iEffectType == CFullScreenEffectState::EExitEffect)
                 {
@@ -3122,22 +3257,10 @@ void CAlfBridge::HandlePostCanvasBufferL( TAlfBridgerData& aData )
 	        // 2. only the first drawing commands will trigger EndFullScreen
 	        // (this mechanism is here because we want to remove delay from fullscreen effects - and EndFullScreens are coming from application too late)
 	        
-	        if (viz->Owner().ControlGroup() == to_group)
+	        if (viz && viz->Owner().ControlGroup() == to_group)
 	            {
-                if (!iFullScreenEffectData->iDrawingCompleteTimer)
-                    {
-                    iFullScreenEffectData->InitDelayedEffectL(this, iAlfScreens[0]->Size());
-                    }
-                THuiCanvasPaintedArea p = viz->PaintedArea(0);
-	            iFullScreenEffectData->iPaintedRegion.AddRect( p.iPaintedRect.Round() );
-	            TRect b = iFullScreenEffectData->iPaintedRegion.BoundingRect();
-	            __ALFFXLOGSTRING3(
-	                    "CAlfBridge::HandlePostCanvasBufferL : Effect to visual 0x%x, Covered rect: iTl.iX: %d , iTl.iY: %d",
-	                    viz, 
-	                    b.iTl.iX, 
-	                    b.iTl.iY);
-	            __ALFFXLOGSTRING2("CAlfBridge::HandlePostCanvasBufferL : iBr.iX: %d, iBr.iY: %d", b.iBr.iX, b.iBr.iY);
-	                        }
+                GfxTriggerEffectWhenFullScreenDrawn(to_group);
+	            }
 	        }
 #endif
 	}
@@ -3146,7 +3269,7 @@ void CAlfBridge::HandlePostCanvasBufferL( TAlfBridgerData& aData )
 // HandleGfxEndFullScreenTimeout
 // ---------------------------------------------------------------------------
 // 
-void CAlfBridge::HandleGfxEndFullScreenTimeout(CFullScreenEffectState* aFullScreenEffectData)
+void CAlfBridge::GfxTriggerEndFullScreen(CFullScreenEffectState* aFullScreenEffectData)
     {
     if (aFullScreenEffectData->iEndFullScreen)
         {
@@ -3206,6 +3329,7 @@ void CAlfBridge::SetWindowActiveL(CHuiVisual* aVisual, TBool aActive)
         }
     else
         {
+        __ALFFXLOGSTRING2("CAlfBridge::SetWindowActiveL 0x%x has active effect. New state: %d", aVisual, aActive);
         // Has effect
 		// these flags are put to action in RemoveTemporaryPresenterItem
         if (aActive)
@@ -3213,8 +3337,11 @@ void CAlfBridge::SetWindowActiveL(CHuiVisual* aVisual, TBool aActive)
 			// this prevents windows appearing before their "effected" time
             if (!iEffectCleanupStack[effectIndex].iHideWhenFinished)
                 {
-                // this is appear effect. Lets show it
+                // this is appear effect. Lets show it. if effect would be stopped
+                // by some other effect, then EHuiVisualFlagShouldBeShown assures the correct state
+                // after cleanup.
                 aVisual->iOpacity.Set(KAlfVisualDefaultOpacity);
+                aVisual->SetFlag(EHuiVisualFlagShouldBeShown);
                 }
             else
                 {
@@ -3229,7 +3356,10 @@ void CAlfBridge::SetWindowActiveL(CHuiVisual* aVisual, TBool aActive)
             // will only break the "live view"
             if (iEffectCleanupStack[effectIndex].iCanDestroyOrHideImmediately && !aVisual->Effect())
                 {
-                aVisual->ClearFlags(EHuiVisualFlagShouldBeShown | EHuiVisualFlagShouldBeHidden);
+                aVisual->ClearFlags(EHuiVisualFlagShouldBeShown);
+                aVisual->SetFlag(EHuiVisualFlagShouldBeHidden);
+                //if effect would be stopped by some other effect, then EHuiVisualFlagShouldBeShown flag
+                // assures the correct state after cleanup.
                 aVisual->iOpacity.Set(0.0f);    
                 }
             else
@@ -3320,9 +3450,11 @@ void CAlfBridge::HandleSetWindowActiveL( TAlfBridgerData& aData )
     AMT_INC_COUNTER( iTotalVisualFlagChangedCount );
     AMT_INC_COUNTER_IF( windowAttributes->iActive, iActiveVisualCount );
     AMT_INC_COUNTER_IF( !windowAttributes->iActive, iPassiveVisualCount );
-    AMT_MAP_INC_VALUE_IF( ( iWindowHashArray.Find( windowNodeId ) ), 
-                          iIntMap, iWindowHashArray.Find( windowNodeId )->iClientSideId, 
-                          EAlfModuleTestTypeBridgeChangeFlag );    
+
+    AMT_MAP_SET_VALUE( iBoolMap, windowNodeId, windowAttributes->iActive,
+                       EAlfModuleTestTypeBridgeChangeWindowVisibility );
+    AMT_MAP_SET_VALUE( iBoolMap, windowNodeId, windowAttributes->iActive,
+                       EAlfModuleTestTypeBridgeActiveWindow );
 	}
 
 
@@ -3883,6 +4015,37 @@ TBool CAlfBridge::HasActiveFadedChildren( CHuiCanvasVisual& aVisual )
     return has;
     }
 
+// ---------------------------------------------------------------------------
+//
+// ---------------------------------------------------------------------------
+//
+void CAlfBridge::UpdateRootVisualsToFullscreen()
+    {
+    if (!iAlfScreens.Count())
+        {
+        return;    
+        }
+    
+    // update all the layouts even inactive ones.
+    CAlfScreen* screen = iAlfScreens[0];
+    TRect fullscreen = TRect(TPoint(0,0), screen->Size());
+    for (TInt j=screen->iDisplay->Roster().Count() - screen->FixedControlGroupCount(); j>=0; j--)
+        {                
+        CHuiControlGroup& controlgroup = screen->iDisplay->Roster().ControlGroup(j);
+        CHuiControl& control = controlgroup.Control(0);
+
+        if( control.Role() == EAlfWindowGroupContainer)
+            {
+            // Only update layout which are made to correspond window groups. 
+            // Layouts that fullscreen effects are applied to
+            CHuiCanvasVisual* layout = (CHuiCanvasVisual*)&control.Visual(0);
+            layout->SetPos(fullscreen.iTl);
+            layout->SetSize(fullscreen.Size());
+            }
+        }
+    }
+
+
 
 // ---------------------------------------------------------------------------
 // SetupFadeEffectL
@@ -4167,7 +4330,9 @@ void CAlfBridge::HandleSetCursorDataL( TAlfBridgerData& aData )
         __ALFLOGSTRING1("CAlfBridge::HandleSetCursorDataL - WARNING! Cursor node 0x%x not found!", windowNodeId);
         }
     
-    AMT_INC_COUNTER_IF(viz, iTotalVisualAttributeChangedCount);   
+    AMT_INC_COUNTER_IF(viz, iTotalVisualAttributeChangedCount);
+    
+    AMT_MAP_BRIDGE_TEXT_CURSOR_CHANGE();    
     }
 
 // ---------------------------------------------------------------------------
@@ -4226,9 +4391,48 @@ TBool NeedsStoredBuffers(CHuiFxEngine *aEngine, const TDesC &aFileName)
     {
     return aEngine->FxmlUsesInput1(aFileName);
     }
-	
+TBool FxmlHasOpaqueHint(CHuiFxEngine *aEngine, const TDesC &aFileName)
+    {
+    return aEngine->FxmlUsesOpaqueHint(aFileName);
+    }
+
+// ---------------------------------------------------------------------------
+// StoreLayoutIfRequiredByEffectL
+//
+// Certains effects require screenshot to be taken when BeginFullScreen event
+// is triggered. This method will take a screenshot (of the whole screen), if 
+// there is enough memory available.
+// ---------------------------------------------------------------------------
+//
+TBool CAlfBridge::StoreLayoutIfRequiredByEffectL(CHuiLayout* aLayout, CFullScreenEffectState& aEvent, TBool& aNeededStoredLayout)
+    {
+    aNeededStoredLayout = NeedsStoredBuffers(iHuiEnv->EffectsEngine(), *aEvent.iEffectName);
+    __ALFFXLOGSTRING2("CAlfBridge::StoreLayoutIfRequiredByEffectL - aHandle: %d, Take screenhot: %d", aEvent.iHandle, aNeededStoredLayout);
+    if (aNeededStoredLayout)
+        {
+        TRAPD(err,StoreRenderBufferStartL(aLayout));
+        __ALFFXLOGSTRING1("CAlfBridge::StoreLayoutIfRequiredByEffectL - Screenshot result: KErrNone == %d", err);
+        if (err == KErrNone)
+            {
+            aLayout->SetFreezeState(ETrue);
+            aEvent.iCanDestroyOrHideImmediately = ETrue; // if children of this layout are hidden or destroyed during effect, that can happen immediately
+            return ETrue; // storing of content requesteds, could store the content => success
+            }
+        else
+            {
+            return EFalse; // could not store the content => failed
+            }
+        }
+    else
+        {
+        __ALFFXLOGSTRING("CAlfBridge::StoreLayoutIfRequiredByEffectL - Storing not required");
+        return ETrue; // no storing requred, no screenshot required => success
+        }
+    }
+
 TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aToLayout, CHuiLayout *aFromLayout)
     {
+    __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEventL - To SecureUid: 0x%x, From SecureUid: 0x%x", aEvent.iToSecureId, aEvent.iFromSecureId);
     __ALFFXLOGSTRING4("CAlfBridge::HandleGfxEventL - To layout: 0x%x, From layout: 0x%x, Effect handle: %d, Action: %d", aToLayout, aFromLayout, aEvent.iHandle, aEvent.iAction);
     TInt err = KErrNone;
     TBool failed = EFalse;
@@ -4251,22 +4455,26 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
             case MAlfGfxEffectPlugin::EBeginFullscreen:
                 {
                 aToLayout->SetStoredRenderBufferModificationsEnabled(ETrue);
-                TBool needStoredBuffers = NeedsStoredBuffers(engine, *aEvent.iEffectName);
-                __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEventL - EBeginFullScreen: %d, Take screenhot: %d", aEvent.iHandle, needStoredBuffers);
-                if (needStoredBuffers)
+                TBool neededStoredBuffers;
+                TBool success = StoreLayoutIfRequiredByEffectL(aToLayout, aEvent, neededStoredBuffers);
+				
+				// if screenshot was requested and it was possible to take one, then add this layout
+				// to effectcleanup stack
+                if (neededStoredBuffers)
                     {
-                    TRAP(err,StoreRenderBufferStartL(aToLayout));
-                    __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - EBeginFullScreen: Screenshot result: KErrNone == %d", err);
-                    if (err == KErrNone)
-                        {
-                        aToLayout->SetFreezeState(ETrue);
-                        aEvent.iCanDestroyOrHideImmediately = ETrue; // if children of this layout are hidden or destroyed during effect, that can happen immediately
-                        }
-                    else
-                        {
-                        return ETrue; // failed, effect will be canceled
-                        }
+                    TInt dummy;
+					if (!HasActiveEffect(aToLayout, dummy))
+						{
+						__ALFFXLOGSTRING2("CAlfBridge::HandleGfxEventL - Add layout 0x%x with handle %d to cleanupstack", aToLayout, aEvent.iHandle);
+                    	AddEffectItemL(aEvent.iHandle, aToLayout, NULL, NULL, EFalse, dummy, EFalse);
+						}
                     }
+				// Screenshot was requested, but it could not be taken. Lets cancel the effect.	
+				if (!success)
+					{
+					return ETrue; // this will cause effect cleanup
+					}	
+					      
 
                 switch(aEvent.iAction)
                     {
@@ -4279,6 +4487,7 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                         aToLayout->iOpacity.Set(0.0f);    // these are meant for applications that are not yet ready to be drawn, but possible already on the foreground
                         FreezeLayoutUntilEffectDestroyedL(aFromLayout, aEvent.iHandle);
                         aEvent.iEffectType = CFullScreenEffectState::EStartEffect;
+                        aEvent.iCanDestroyOrHideImmediately = ETrue; // enable hiding of windows during application start/activate effects
                         break;
                         }
                     case AknTransEffect::EApplicationExit:
@@ -4299,8 +4508,18 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                             __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEventL - Found effect on layout 0x%x. Removing effect 0x%x", aToLayout, aToLayout->Effect());
                             aToLayout->SetEffect(NULL);
                             }
-                        if ( aEvent.iAction == AknTransEffect::EApplicationExit && !(aToLayout->Flags() & EHuiVisualFlagInactive)) 
+                        __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEventL - Layout 0x%x is active:  %d", aToLayout, !TBool(aToLayout->Flags() & EHuiVisualFlagInactive) );
+                        if (!(aToLayout->Flags() & EHuiVisualFlagInactive)) 
                             {
+                            TInt index;
+                            if (aToLayout->StoredRenderBuffer() && HasActiveEffect(aToLayout, index) && index != KErrNotFound)
+                                {
+	                            // a screenshot has been saved into the layout, and the layout was added to cleanupstack
+    	                        // for cleaning. SetupEffectLayoutContainerL will add the same layout 
+        	                    // to the cleanupstack, but double cleaning is not a good idea. Thus it is removed here. 
+                                __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - Removing the layout 0x%x with screenshot from iEffectCleanupStack", aToLayout);
+                                iEffectCleanupStack.Remove(index);
+                                }
                             // this will tag the visual, that they cannot be hidden by HandleVisualVisibility
                             // Initialize layout for the exit effect  
                             iLayoutInitializedForExitEffect = SetupEffectLayoutContainerL(aEvent.iHandle, aToLayout, ETrue, aEvent.iCanDestroyOrHideImmediately);
@@ -4311,6 +4530,7 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                             {
                             iLayoutInitializedForExitEffect = EFalse;
                             aEvent.iSetupDone = EFalse;
+							failed = ETrue;
                             }
                          return failed;
                          }
@@ -4337,21 +4557,37 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                             {
                             // Exit effect was initialized earlier with EBeginFullscreen event
 						    layoutEffectable = aEvent.iSetupDone;
-						    __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - EEndFullScreen: %d", layoutEffectable);
+						    __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - EEndFullScreen: iSetupDone: %d", layoutEffectable);
                             }
                         else
                         	{
                             // add visuals to visual cleanupstack
                             aToLayout->SetStoredRenderBufferModificationsEnabled(EFalse);
+                            TInt index;
+                            if (aToLayout->StoredRenderBuffer() && HasActiveEffect(aToLayout, index) && index != KErrNotFound)
+                                {
+	                            // a screenshot has been saved into the layout, and the layout was added to cleanupstack
+    	                        // for cleaning. SetupEffectLayoutContainerL will add the same layout 
+        	                    // to the cleanupstack, but double cleaning is not a good idea. Thus it is removed here. 
+                                __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - Removing the layout 0x%x with screenshot from iEffectCleanupStack", aToLayout);
+                                iEffectCleanupStack.Remove(index);
+                                }
                             layoutEffectable = SetupEffectLayoutContainerL(aEvent.iHandle,aToLayout, EFalse, aEvent.iCanDestroyOrHideImmediately);
                             aEvent.iSetupDone = layoutEffectable; 
                             aToLayout->SetStoredRenderBufferModificationsEnabled(ETrue);
                             }
 
                         if (layoutEffectable)
-                            {                        
-                            TInt effectFlags = KHuiFxDelayRunUntilFirstFrameHasBeenDrawn;
-                            if (NeedsStoredBuffers(iHuiEnv->EffectsEngine(), *aEvent.iEffectName))
+                            {
+                            TInt effectFlags = 0;
+                            TInt activeEffectGroup = engine->ActiveGroupEffect();
+                            if (activeEffectGroup != KErrNotFound)
+                                {
+                                engine->AddEffectToGroup(activeEffectGroup);
+                                }
+                            __ALFFXLOGSTRING1("CAlfBridge::HandleGfxEventL - Active effect group: %d", activeEffectGroup);
+                            effectFlags = KHuiFxDelayRunUntilFirstFrameHasBeenDrawn; 
+                            if (FxmlHasOpaqueHint(iHuiEnv->EffectsEngine(), *aEvent.iEffectName))
                                 {
                                 // Performance improvement, but this would be better to be a special hint param in the fxml
                                 effectFlags |= KHuiFxOpaqueHint;
@@ -4359,11 +4595,11 @@ TBool CAlfBridge::HandleGfxEventL(CFullScreenEffectState& aEvent, CHuiLayout* aT
                             
                             if (aEvent.iRect != TRect())
                                 {
-                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), engine->ActiveGroupEffect(), &aEvent.iRect, this, aEvent.iHandle, effectFlags ));
+                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), activeEffectGroup, &aEvent.iRect, this, aEvent.iHandle, effectFlags ));
                                 }
                             else
                                 {
-                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), engine->ActiveGroupEffect(), NULL, this, aEvent.iHandle, effectFlags ) );
+                                TRAP( err, engine->LoadGroupEffectL( *aEvent.iEffectName, effect, aToLayout->Effectable(), activeEffectGroup, NULL, this, aEvent.iHandle, effectFlags ) );
                                 }
                             effect = NULL;
                             // only use the effect if the effect file was correctly parsed
@@ -4419,6 +4655,8 @@ void CAlfBridge::HandleGfxStopEvent( TBool aClientRequest )
         {
         __ALFFXLOGSTRING("CAlfBridge::HandleGfxStopEvent - END: none");
         RemoveAllTemporaryPresenterVisuals();
+        delete iControlEffectData;
+        iControlEffectData = NULL;
         return;
         }
     
@@ -4426,7 +4664,7 @@ void CAlfBridge::HandleGfxStopEvent( TBool aClientRequest )
     iFullScreenEffectData = NULL;
     CleanupStack::PushL( fxData );
     
-     __ALFFXLOGSTRING2(" - handle: %d, toAppUid: 0x%x", fxData->iHandle, fxData->iToAppId);
+     __ALFFXLOGSTRING2("CAlfBridge::HandleGfxStopEvent - handle: %d, toAppUid: 0x%x", fxData->iHandle, fxData->iToAppId);
     
     // clean effects with this handle       
     RemoveTemporaryPresenterVisual(NULL, fxData->iHandle);
@@ -4439,6 +4677,9 @@ void CAlfBridge::HandleGfxStopEvent( TBool aClientRequest )
         }
     // abort ALL other possible control effects
     RemoveAllTemporaryPresenterVisuals();
+    
+    delete iControlEffectData;
+    iControlEffectData = NULL;
     
     iHuiEnv->ContinueRefresh();
     
@@ -4507,6 +4748,14 @@ void CAlfBridge::HandleGfxEffectsL( TAlfBridgerData data )
     // operation tells if this is begin full screen or end full screen
     TInt operation = stream.ReadInt32L();
     
+    // If we are in low memory state, we don't want to do any effects
+    if(iHuiEnv->MemoryLevel() < EHuiMemoryLevelReduced)
+        {
+        __ALFFXLOGSTRING("CAlfBridge::HandleGfxEffectsL - Returning because memory level below NORMAL");
+		stream.Release();
+        return;
+        }
+     
     if ( operation == MAlfGfxEffectPlugin::EBeginFullscreen )
         {
         if ( !iFullScreenEffectData || !iFullScreenEffectData->iSetupDone )
@@ -4542,7 +4791,13 @@ void CAlfBridge::HandleGfxEffectsL( TAlfBridgerData data )
                 RemoveEffectFromApp(iFullScreenEffectData->iFromSecureId, iFullScreenEffectData->iFromWg);
                 // Fullscreen effect for another 
                 }
-            
+
+            if (iFullScreenEffectData && iFullScreenEffectData->iToAppId != fxData->iToAppId)
+                {
+                // effected application has changed. Only single begin - end request supported at a time.
+                __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEffectsL - Effect request has changed from appUid 0x%x to 0x%x. Cancel previous effect.", iFullScreenEffectData->iToAppId, fxData->iToAppId);
+                RemoveEffectFromApp(iFullScreenEffectData->iToAppId);
+                }
             delete iFullScreenEffectData;
             iFullScreenEffectData = fxData;
             iFullScreenEffectData->iAppStartScreenshotItemHandle = fxData->iHandle;
@@ -4595,43 +4850,11 @@ void CAlfBridge::HandleGfxEffectsL( TAlfBridgerData data )
     __ALFFXLOGSTRING3("CAlfBridge::HandleGfxEffectsL - Operation: %d, handle: %d, type: %d", operation, fxData->iHandle, fxData->iType);
     __ALFFXLOGSTRING2("CAlfBridge::HandleGfxEffectsL - towg: %d, fromwg: %d", fxData->iToWg, fxData->iFromWg);
 
-    // find root nodes and attach effects to them
-    // First we need a windowgroup node id. So far we have a list of window ids
-
-    // wg2 is the window group that is supposed to disappear from view
-    // when a new application starts. We don't have any use for it now...
-
-    // This is the group that is disappearing
-    // Currently we don't add an effect to it.
-
-    // TODO: when ids available from wserv...
-    // if ( appUid2 )
-    //{
-    //	 group2 = FindControlGrouAppUId( appUid2, screen2, &alfGroup );
-    // }
-    //if ( toAppId2 )
-    //    {
-    //    group2 = FindControlGroupByAppId(toAppId2);
-    //    }
-    //if ( wg2 && wg2 != KErrNotFound )
-    //    {
-    //        group2 = FindControlGroupByWindowGroupId( wg2, screen2 );
-    //        }
-    //    if ( group2 )
-    //        {
-    //        CHuiControl& control = group2->Control(0);
-    //        layout2 = (CHuiLayout*)&control.Visual(0);
-    //        }
-
-    // This effect is triggered either by BeginFullScreen or by EndFullScreen
-    // depending on if we have an application that is already running or not
-
-    //    TAlfControlGroupEntry* alfGroup = NULL;
-
+    CHuiControlGroup* toGroup = NULL;
+    
     TBool failed = EFalse;
     if (fxData->iToAppId && fxData->iToAppId != KErrNotFound)
         {        
-        CHuiControlGroup* toGroup = NULL;
         CHuiLayout* toLayout = NULL; 
         toGroup = FindControlGroupByFullScreenToEffect();
 
@@ -4670,6 +4893,18 @@ void CAlfBridge::HandleGfxEffectsL( TAlfBridgerData data )
         // Effect failed, reset state
         HandleGfxStopEvent( EFalse ); // destroys iFullScreenEffectData
         }
+    else
+        {
+        // it might be that the application is already having drawing for the whole screen. 
+		// If so, then trigger EndFullScreen immediately.
+        if (fxData && 
+                toGroup 
+                && fxData->iOperation == MAlfGfxEffectPlugin::EBeginFullscreen 
+                && fxData->iEffectType == CFullScreenEffectState::EStartEffect)
+            {
+            GfxTriggerEffectWhenFullScreenDrawn(toGroup);
+            }
+        }
     
     for (TInt i = 0; i < iAlfScreens.Count(); i++)
         {
@@ -4679,6 +4914,37 @@ void CAlfBridge::HandleGfxEffectsL( TAlfBridgerData data )
     iHuiEnv->ContinueRefresh();
 
     __ALFFXLOGSTRING("CAlfBridge::HandleGfxEffectsL - END");
+    }
+
+TBool CAlfBridge::GfxTriggerEffectWhenFullScreenDrawn(CHuiControlGroup* aToGroup)
+    {
+    if (!aToGroup || (aToGroup && aToGroup->Count() == 0))
+        {
+        return EFalse;
+        }
+      iTempRegion.Clear();
+    
+    CAlfScreen* screen = iAlfScreens[0];
+    TRect fullscreen = TRect(TPoint(0,0), screen->Size());
+    TBool fullscreenCovered(EFalse);
+    TInt dummy = 0;
+    
+    CHuiControl& control = aToGroup->Control(0);
+    CHuiLayout* toLayout = control.VisualCount() > 0 ? (CHuiLayout*)&control.Visual(0) : NULL;
+    if (!toLayout)
+        {
+        return EFalse;
+        }
+    TBool opaque = ETrue; // in app start case the layout is propably not opaque. Fake it.
+    IsFullScreenDrawnRecursive(toLayout, *aToGroup, control, fullscreenCovered, fullscreen, screen, dummy, opaque, iAlfScreens[0]->iDisplay->Orientation());
+    fullscreenCovered = IsRectCoveredByRegion(fullscreen, iTempRegion);
+    __ALFFXLOGSTRING1("CAlfBridge::GfxTriggerEffectWhenFullScreenDrawn - Covered: %d", fullscreenCovered);
+    if (fullscreenCovered)
+        {
+        GfxTriggerEndFullScreen(iFullScreenEffectData);
+        return ETrue;
+        }
+    return EFalse;
     }
 
 // TODO: add effect type to effect struct. remove all fullscreen effects. currently some might hang around
@@ -4728,6 +4994,9 @@ void CAlfBridge::HandleGfxStopControlEffectsL(TAlfBridgerData data)
     TInt handle = stream.ReadInt32L();
     stream.Release();
 
+    delete iControlEffectData;
+    iControlEffectData = NULL;
+        
     if (handle != KErrNotFound)
         {
         __ALFFXLOGSTRING1("CAlfBridge::HandleGfxStopControlEffectsL - Remove effect with handle: %d", handle);
@@ -4886,7 +5155,13 @@ void CAlfBridge::AddToEffectLayoutContainerL(
                CHuiLayout& layout = static_cast<CHuiLayout&> (aSourceLayout->Visual(i));
                AddToEffectLayoutContainerL(aEffectHandle, &layout, NULL, aEffectControl, aItemsDestroyed, EFalse,aIsExitEffect, aCanDestroyOrHideImmediately );
                }
+           TInt oldItemsDestroyed = aItemsDestroyed;
            AddEffectItemL(aEffectHandle, &sourceVisual, aTargetLayout, aEffectControl, EFalse, aItemsDestroyed, aIsExitEffect, aCanDestroyOrHideImmediately);
+           if (oldItemsDestroyed != aItemsDestroyed)
+               {
+               // Visual was destroyed. If so, then we must adjust index.
+               --i;
+               }
            }
     __ALFFXLOGSTRING2("CAlfBridge::AddToEffectLayoutContainerL 0x%x end of children", aSourceLayout, aSourceLayout->Count());
     }
@@ -4947,6 +5222,15 @@ void CAlfBridge::HandleGfxControlEffectsL( TAlfBridgerData data )
         delete iControlEffectData;
         iControlEffectData = NULL;
         }
+    
+    // If we are in low memory state, we don't want to do any effects
+    if(iHuiEnv->MemoryLevel() < EHuiMemoryLevelReduced)
+        {
+        __ALFFXLOGSTRING("CAlfBridge::HandleGfxControlEffectsL - Returning because memory level below NORMAL");
+        stream.Release();
+        return;
+        }
+    
     CControlEffectState* fxData = new (ELeave) CControlEffectState;
     CleanupStack::PushL(fxData);
     fxData->ConstructL(action, stream);
@@ -4969,7 +5253,7 @@ void CAlfBridge::HandleGfxControlEffectsL( TAlfBridgerData data )
         }
     else
         {
-        __ALFFXLOGSTRING2("CAlfBridge::HandleGfxControlEffectsL - Control not found. iClientHandle 0x%x, iClientGroupHandle 0x%x", 
+        __ALFFXLOGSTRING2("CAlfBridge::HandleGfxControlEffectsL - Control not found. iClientHandle %d, iClientGroupHandle %d", 
                 iControlEffectData->iClientHandle, 
                 iControlEffectData->iClientGroupHandle);
         return;
@@ -5009,7 +5293,6 @@ void CAlfBridge::HandleGfxControlEventL(CControlEffectState& aEvent,
             RemoveTemporaryPresenterVisual(aCanvasVisual);
             }
         TBool layoutEffectable(EFalse);
-        aCanvasVisual->iOpacity.Set(KAlfVisualDefaultOpacity);
         if (aEvent.iAction == KGfxControlDisappearAction)
             { // TODO: revise
             // The control stays visible because the inactive flag is not set
@@ -5030,7 +5313,21 @@ void CAlfBridge::HandleGfxControlEventL(CControlEffectState& aEvent,
             }
         if (layoutEffectable)
             {
-            TRAP( err, engine->LoadGroupEffectL(*aEvent.iEffectName, effect, aCanvasVisual->Effectable(), engine->ActiveGroupEffect(), NULL, this, aEvent.iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn ) );
+            TInt effectFlags = 0;
+            
+            // effect will start delayed anyway when it is syncronized. this flag would break syncronization between effects.
+            effectFlags = KHuiFxDelayRunUntilFirstFrameHasBeenDrawn; 
+            if (FxmlHasOpaqueHint(iHuiEnv->EffectsEngine(), *aEvent.iEffectName))
+                {
+                effectFlags |= KHuiFxOpaqueHint;
+                }
+
+            TInt activeEffectGroup = engine->ActiveGroupEffect();
+            if (activeEffectGroup != KErrNotFound)
+                {
+                engine->AddEffectToGroup(activeEffectGroup);
+                }
+            TRAP( err, engine->LoadGroupEffectL(*aEvent.iEffectName, effect, aCanvasVisual->Effectable(), activeEffectGroup, NULL, this, aEvent.iHandle, effectFlags ) );
             }
         else
             {
@@ -5348,12 +5645,12 @@ void CAlfBridge::AlfGfxEffectEndCallBack(TInt aHandle)
     // iFinishedCleanupStackEffects.Append(aHandle);
     if (!iEffectEndTimer->IsActive())
         {
-        iEffectEndTimer->AddFinishedHandleL(aHandle);
+        TRAP_IGNORE(iEffectEndTimer->AddFinishedHandleL(aHandle));
         iEffectEndTimer->Start(KEffectCleanupDelayInMs * 1000);
         }
     else
         {
-        iEffectEndTimer->AddFinishedHandleL(aHandle);
+        TRAP_IGNORE(iEffectEndTimer->AddFinishedHandleL(aHandle));
         }
 
     // We should do visual visibility scan after effect is ended
@@ -5583,8 +5880,8 @@ void CAlfBridge::VisualizeControlGroupOrderL(CAlfScreen& /*aScreen*/, CHuiRoster
 void CAlfBridge::PostQTCommandBufferL( TAlfQtCommandBufferParams params )
     {       
     CHuiCanvasVisual* huiVisual = NULL;       
-    if ((*iHost))
-        {
+/*    if ((*iHost))
+        {  
         if( (*iHost)->StreamerServer() )
             { 
             if ((*iHost)->StreamerServer()->WindowMgr())
@@ -5606,7 +5903,7 @@ void CAlfBridge::PostQTCommandBufferL( TAlfQtCommandBufferParams params )
                 }
             }
         }
-    
+*/    
     if ( huiVisual )
        {
        TPtrC8 commands( (TUint8 *)params.iPtr, params.iLength );
@@ -5640,10 +5937,10 @@ void CAlfBridge::PostQTCommandBufferL( TAlfQtCommandBufferParams params )
 // visual
 // ---------------------------------------------------------------------------
 // 
-void CAlfBridge::SetClientWindowForDrawingL(TInt aWindowGroupId, TInt aClientWindowHandle, 
-	CHuiVisual* aExternalContentVisual)
+void CAlfBridge::SetClientWindowForDrawingL(TInt /*aWindowGroupId*/, TInt /*aClientWindowHandle*/, 
+	CHuiVisual* /*aExternalContentVisual*/)
 	{    	
-    RArray<TAlfWServInfo> winInfoList;
+  /*  RArray<TAlfWServInfo> winInfoList;
     CleanupClosePushL(winInfoList);
 
 	// Find canvas visual for the RWindow
@@ -5696,7 +5993,7 @@ void CAlfBridge::SetClientWindowForDrawingL(TInt aWindowGroupId, TInt aClientWin
 		}
 		
 	CleanupStack::PopAndDestroy(); // winInfoList
-	}
+*/	}
 
 void CAlfBridge::SetVisualTreeVisibilityChanged(TBool aChanged)
     {
@@ -5728,11 +6025,17 @@ void CAlfBridge::EnableSwRenderingL(TBool aEnable)
             iAlfScreens[i]->iDisplay->SetForegroundBitmapL( iAlfScreens[i]->iSwRenderingTarget );
             CleanupStack::Pop(texture);
             iAlfScreens[i]->iDisplay->SetForegroundTexture(texture);
+#ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
+            iHuiEnv->SetRefreshMode(EHuiRefreshModeManual);
+#endif // #ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
             }
         else
             {
             iAlfScreens[i]->iDisplay->SetForegroundBitmapL(NULL);            
             iAlfScreens[i]->iDisplay->SetForegroundTexture(NULL);
+#ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
+            iHuiEnv->SetRefreshMode(EHuiRefreshModeAutomatic);
+#endif // #ifdef ALF_DRAW_FRAME_BEFORE_END_CALLBACK 
             }
             
         // SetCapturingBufferL is called from HandleVisualVisibility.
@@ -5771,6 +6074,11 @@ TBool CAlfBridge::PrepareSwRenderingTarget( CAlfScreen* aScreen )
             // For tests
             //TUint32* data = aScreen->iSwRenderingTarget->DataAddress();
             }
+        
+        if (modified && aScreen->iSwRenderingTarget)
+            {
+            InitializeSwRenderingTarget(aScreen->iSwRenderingTarget);
+            }
         }
     else
         {
@@ -5780,6 +6088,18 @@ TBool CAlfBridge::PrepareSwRenderingTarget( CAlfScreen* aScreen )
         }
         
     return modified;
+    }
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 
+void CAlfBridge::InitializeSwRenderingTarget(CFbsBitmap* aBitmap)
+    {
+    __ALFLOGSTRING("CAlfBridge::InitializeSwRenderingTarget");
+    TAlfBridgeDrawerWrapper wrapper(*this);
+    AlfDrawerInternal::CopyScreenToBitmap(&wrapper, aBitmap, 
+        TRect(aBitmap->SizeInPixels()));
+    __ALFLOGSTRING("CAlfBridge::InitializeSwRenderingTarget ok");
     }
 
 // ---------------------------------------------------------------------------
@@ -5818,9 +6138,9 @@ TInt CAlfBridge::ForceSwRendering(TBool aEnabled)
 void CAlfBridge::DoUpdateMemoryLevel()
     {
     THuiMemoryLevel memoryLevel = iCurrentMemoryLevel;
-    if ( iLowMemoryMode && ( memoryLevel > EHuiMemoryLevelLow ) )
+    if ( iLowMemoryMode && ( memoryLevel > EHuiMemoryLevelReduced ) )
         {
-        memoryLevel = EHuiMemoryLevelLow;
+        memoryLevel = EHuiMemoryLevelReduced;
         }
     if ( iForcedSwRendering && ( memoryLevel > EHuiMemoryLevelLowest ) )
         {
@@ -5831,9 +6151,10 @@ void CAlfBridge::DoUpdateMemoryLevel()
     
     if ( memoryLevel != iHuiEnv->MemoryLevel() )
         {    
+
         __ALFLOGSTRING1("CAlfBridge::DoUpdateMemoryLevel -> %d", memoryLevel);
-        TBool nowGoodMemory = !(memoryLevel < EHuiMemoryLevelNormal);
-        TBool wasGoodMemory = !(iHuiEnv->MemoryLevel() < EHuiMemoryLevelNormal);
+        TBool nowGoodMemory = !(memoryLevel < EHuiMemoryLevelReduced);
+        TBool wasGoodMemory = !(iHuiEnv->MemoryLevel() < EHuiMemoryLevelReduced);
         
         if (iActivated)
             {
@@ -5851,7 +6172,7 @@ void CAlfBridge::DoUpdateMemoryLevel()
                 }
             }
         
-        if ( memoryLevel <= EHuiMemoryLevelLowest)
+        if ( memoryLevel < EHuiMemoryLevelReduced)
             {
             OnLowMemoryModifyAllEffects();
             }
@@ -5966,7 +6287,39 @@ void CAlfBridge::SetWindowGroupAsAlfApp(TInt aId)
             if ( lBreak )
                break;
             }
-            
+    TBool alreadyExists = EFalse;
+    for( TInt i = 0 ; i < iAlfNativeClientsWgIds.Count() ; i++ )
+        {
+        if(iAlfNativeClientsWgIds[i] == aId)
+            {
+            alreadyExists = ETrue;
+            }
+        }
+    if(!alreadyExists)
+        {
+        iAlfNativeClientsWgIds.Append(aId);
+        }
+    }
+
+void CAlfBridge::RemoveWindowGroupAsAlfApp( TInt aId )
+    {
+    for ( TInt j = 0; j < iAlfScreens.Count(); j++ )
+            {
+            for ( TInt i = 0; i < iAlfScreens[j]->iControlGroups.Count(); i++ )
+                {
+                if ( iAlfScreens[j]->iControlGroups[i].iClientWindowGroupId == aId )
+                    {
+                    iAlfScreens[j]->iControlGroups[i].iControlGroup->iAlfApp = EFalse;
+                    }
+                }   
+            }
+    for( TInt i = 0 ; i < iAlfNativeClientsWgIds.Count() ; i++ )
+        {
+        if(iAlfNativeClientsWgIds[i] == aId)
+            {
+            iAlfNativeClientsWgIds.Remove(i);
+            }
+        }
     }
 
 // ---------------------------------------------------------------------------
@@ -5990,11 +6343,7 @@ TBool CAlfBridge::IsFullScreenDrawn( TInt aOrientation)
     __ALFFXLOGSTRING3("CAlfBridge::IsFullScreenDrawn - new orientation %d, screen size: (%d,%d)", aOrientation, fullscreen.iBr.iX, fullscreen.iBr.iY );
     TBool fullscreenCovered = EFalse;
     CAlfAppSrvSessionBase* topMostAlfSrvSession = NULL;
-    
-    //iActiveVisualCount = 0;
-    iBgSurfaceFound = EFalse;
-    //iPaintedArea = 0;  
-    
+        
     // Check if effect group has an effect with opaque hint.
     CHuiControlGroup& fxcontrolgroup = *(iAlfScreens[0]->iFullscreenEffectControlGroup);
     CHuiControl& fxcontrol = fxcontrolgroup.Control(0);
@@ -6011,21 +6360,16 @@ TBool CAlfBridge::IsFullScreenDrawn( TInt aOrientation)
         }    
     
     TBool alfWindowGroupFoundVisible = EFalse;
+
+    AMT_SET_VALUE( iVisibleVisualCount, 0 );
     
     // skip the topmost (effect) layer, start from floating sprite group
     for (TInt j=screen->iDisplay->Roster().Count() - screen->FixedControlGroupCount(); j>=0; j--)
         {                
         CHuiControlGroup& controlgroup = iAlfScreens[0]->iDisplay->Roster().ControlGroup(j);
         CHuiControl& control = controlgroup.Control(0);
-
-            for (TInt ii=0; ii<iAlfScreens[0]->iControlGroups.Count();ii++)
-                {
-                if( iAlfScreens[0]->iControlGroups[ii].iControlGroup == &controlgroup )
-                    {
-                    __ALFFXLOGSTRING1("CAlfBridge::IsFullScreenDrawn : Group owner 0x%x", iAlfScreens[0]->iControlGroups[ii].iSecureId);
-                    break;
-                    }
-                }
+		__ALFFXLOGSTRING1("CAlfBridge::IsFullScreenDrawn : Group owner 0x%x", controlgroup.SecureId());
+                
         
         if (control.Role() == EAlfFpsIndicatorContainer)
             {
@@ -6043,7 +6387,6 @@ TBool CAlfBridge::IsFullScreenDrawn( TInt aOrientation)
             for(TInt ii=0;ii< iTempRegion.Count(); ii++)
                 {
                 __ALFFXLOGSTRING4("CAlfBridge::IsFullScreenDrawn (%d,%d)-(%d,%d)", iTempRegion[ii].iTl.iX, iTempRegion[ii].iTl.iY , iTempRegion[ii].iBr.iX, iTempRegion[ii].iBr.iY );
-                return ETrue;
                 }
             }
         
@@ -6205,6 +6548,9 @@ TBool CAlfBridge::IsFullScreenDrawnRecursive(
                 }
             }                                   
         visualTreeActive |= visualIsActive;
+        
+        // iVisibleVisualCount is cleared in HandleVisualVisibility()
+        AMT_INC_COUNTER_IF( visualIsActive && !visualRectIsCovered , iVisibleVisualCount );
         } // for loop end : children checking loop
     return visualTreeActive;
     }
@@ -6217,6 +6563,7 @@ void CAlfBridge::LayoutSwitchStart()
         {
         return;    
         }
+    iLayoutSwitchInProgress = ETrue;
     CAlfScreen* screen = iAlfScreens[0];
     // skip the topmost (effect) layer, start from floating sprite group
     for (TInt j=screen->iDisplay->Roster().Count() - screen->FixedControlGroupCount(); j>=0; j--)
@@ -6252,8 +6599,9 @@ void CAlfBridge::MarkAllLayersHiddenRecursive(CHuiLayout* aLayout)
     
             if (!canvasVisual->LayerExtent().IsEmpty())
                 {
-                canvasVisual->ClearCanvasFlags(EHuiCanvasFlagSurfaceVisible);
-                canvasVisual->SetCanvasFlags(EHuiCanvasFlagSurfaceInvisible);
+                // Force update
+                canvasVisual->ClearCanvasFlags( EHuiCanvasFlagSurfaceInvisible );
+                canvasVisual->ClearCanvasFlags( EHuiCanvasFlagSurfaceVisible );
                 }
             }
         }
@@ -6268,11 +6616,36 @@ void CAlfBridge::LayoutSwitchComplete()
         }
         */
     // request syncronized frame
+    iLayoutSwitchInProgress = EFalse;
     if ( iHuiEnv )
         {
         iIdForLayoutSwitchFrameSync = iIdForEAlfDSSynchronizeOp - KPreventingCollisionOfIdsInSynchDrawRequests;
         iHuiEnv->Synchronize( iIdForLayoutSwitchFrameSync, this );
         }
+    }
+
+TAlfBridgeDrawerWrapper::TAlfBridgeDrawerWrapper(CAlfBridge& aBridge)
+    : iBridge( aBridge )
+    {
+    }
+    
+TInt TAlfBridgeDrawerWrapper::GetSizeAndRotation(TSize& aSize, TInt& aRotation)
+    {
+    return iBridge.GetSizeAndRotation(aSize, aRotation);
+    }
+    
+TInt TAlfBridgeDrawerWrapper::ReadPixels(CFbsBitmap* aBitmap)
+    {
+    return iBridge.ReadPixels(aBitmap);
+    }
+
+RAlfBridgerClient* CAlfBridge::BridgerClient()
+    {
+    if (iActivated)
+        {
+        return &iBridgerClient;
+        }
+    return 0;      
     }
 
 

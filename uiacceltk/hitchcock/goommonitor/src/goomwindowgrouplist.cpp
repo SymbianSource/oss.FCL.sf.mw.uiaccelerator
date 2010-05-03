@@ -73,10 +73,14 @@ void CGOomWindowGroupList::RefreshL()
         User::LeaveIfError(iAlfClient.Connect());
         }
     iLowOnMemWgs.Reset();
-    User::LeaveIfError(iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&iLowOnMemWgs));
+    RArray<TInt> inactiveSurfaces;
 
-    RArray<TInt>& inactiveSurfaces = iLowOnMemWgs;
+    User::LeaveIfError(iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&inactiveSurfaces));    
+    User::LeaveIfError(iAlfClient.GetListOfWindowGroupsWSurfaces(&iLowOnMemWgs));
+        
     TRACES1("Inactive surfaces count %d", inactiveSurfaces.Count());     
+    TRACES1("Windowgroups w/ surfaces count %d", iLowOnMemWgs.Count());     
+
     RArray<TUint64> processIds;
     RArray<TUint> privMemUsed;
     RArray<TUint64> sparedProcessIds;
@@ -213,9 +217,9 @@ void CGOomWindowGroupList::RefreshL()
     TWsEvent event;
     event.SetType(KGoomMemoryLowEvent); // naive
 
-    for (TInt i = inactiveSurfaces.Count()-1; i>=0; i--)
+    for (TInt i = iLowOnMemWgs.Count()-1; i>=0; i--)
         {
-        iWs.SendEventToWindowGroup(inactiveSurfaces[i], event);
+        iWs.SendEventToWindowGroup(iLowOnMemWgs[i], event);
         }
         
 #endif    

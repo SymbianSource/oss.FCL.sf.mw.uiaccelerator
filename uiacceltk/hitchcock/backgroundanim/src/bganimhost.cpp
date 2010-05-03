@@ -21,7 +21,7 @@
 #include <AknsItemDef.h>
 
 #include "bganimhost.h"
-
+#include <platform/ssm/startupdomainpskeys.h>
 
 typedef void* (*plugingetinterfacefunc)(int);
 
@@ -31,7 +31,7 @@ _LIT(KExeCaption,"BG anim host");
 static const TUint KMaxGPUMemUsage = 1024*1024*4;
 
 
-CBgAnimHost::CBgAnimHost() 
+CBgAnimHost::CBgAnimHost():iIsUIReady(EFalse) 
     {
     }
     
@@ -516,6 +516,19 @@ void CBgAnimHost::NewFrame()
         {
         return;
         }
+    if (!iIsUIReady)
+        {
+        TInt lValOfNoUse;
+        TInt  err = RProperty::Get( KPSUidStartup,
+                                     KPSStartupUiPhase,
+                                     lValOfNoUse);
+        if (err == KErrNotFound)
+            {
+            iTimer->CallBack(500);
+            return;
+            }
+        }
+    iIsUIReady = ETrue;
     TTime start;
     start.UniversalTime();
     iPlugin->produceframe();

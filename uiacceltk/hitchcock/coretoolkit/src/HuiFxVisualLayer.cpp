@@ -25,7 +25,7 @@
 #include <e32math.h>
 #include "HuiCmdBufferBrush.h"
 
-EXPORT_C CHuiFxVisualLayer* CHuiFxVisualLayer::NewL(MHuiEffectable& aVisual)
+EXPORT_C CHuiFxVisualLayer* CHuiFxVisualLayer::NewL(MHuiEffectable* aVisual)
     {
     CHuiFxVisualLayer* e = new (ELeave) CHuiFxVisualLayer();
     CleanupStack::PushL(e);
@@ -34,14 +34,14 @@ EXPORT_C CHuiFxVisualLayer* CHuiFxVisualLayer::NewL(MHuiEffectable& aVisual)
     return e;
     }
 
-EXPORT_C void CHuiFxVisualLayer::ConstructL(MHuiEffectable& aVisual)
+EXPORT_C void CHuiFxVisualLayer::ConstructL(MHuiEffectable* aVisual)
     {
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxVisualLayer::ConstructL - 0x%x "), this);
 #endif
     CHuiFxLayer::ConstructL( ELayerTypeVisual );
     iParameterManager = CHuiFxParameterManager::NewL();
-    iVisual = &aVisual;
+    iVisual = aVisual;
     iSrcType = EVisualSrcVisual;
     iExtBitmapFile = NULL;
     
@@ -174,6 +174,7 @@ EXPORT_C CHuiFxVisualLayer *CHuiFxVisualLayer::CloneL() const
     else
         layer->iExtBitmapFile = NULL;
     layer->iOpacity = iOpacity;
+    layer->iOpaqueHint = iOpaqueHint;
     return layer;
 }
 EXPORT_C void CHuiFxVisualLayer::SetExtRect( TRect * /*aExtRect*/ )
@@ -446,7 +447,17 @@ void CHuiFxVisualLayer::FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray)
     {
     aArray.Append(iSrcType);
     }
-    
+
+TBool CHuiFxVisualLayer::FxmlUsesOpaqueHint() const
+    {
+    return iOpaqueHint;
+    }
+
+void  CHuiFxVisualLayer::SetFxmlUsesOpaqueHint(TBool aValue)
+    { 
+    iOpaqueHint = aValue; 
+    }
+
 TBool CHuiFxVisualLayer::IsSemitransparent() const
     {
     if (iOpacity < 1.f)

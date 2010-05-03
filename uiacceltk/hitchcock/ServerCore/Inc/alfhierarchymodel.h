@@ -197,6 +197,11 @@ public:
     
 	   CAlfNodeRoot* iRootNode;
     
+    #ifdef __WINS__
+	TInt iDebug_CheckNodeTableItegrityCounter;
+	void Debug_CheckNodeTableItegrity(const TDesC16& aContext);
+    #endif
+	
 private: // variables
 
     RChunk iChunk;

@@ -29,7 +29,7 @@ class CHuiFxParameterManager;
 class CHuiFxVisualLayer: public CHuiFxLayer
     {
 public:
-    IMPORT_C static CHuiFxVisualLayer* NewL(MHuiEffectable& aVisual);
+    IMPORT_C static CHuiFxVisualLayer* NewL(MHuiEffectable* aVisual); // param mandatory
     IMPORT_C ~CHuiFxVisualLayer();
     IMPORT_C TBool PrepareDrawL(CHuiFxEngine& aEngine);
     IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource);
@@ -51,8 +51,11 @@ public: // effect cache
     IMPORT_C void SetVisual( MHuiEffectable *aVisual );
 
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
+    void SetFxmlUsesOpaqueHint(TBool aValue);
+    TBool FxmlUsesOpaqueHint() const;
+    
 protected:
-    IMPORT_C void ConstructL(MHuiEffectable& aVisual);
+    IMPORT_C void ConstructL(MHuiEffectable* aVisual);
     
     void RegisterParameterL(const TDesC& aName, TRgb* aValue);
     void RegisterParameterL(const TDesC& aName, TReal32* aValue);
@@ -93,7 +96,7 @@ private:
     
     HBufC* iExtBitmapFile;
     TReal32 iOpacity;
-
+    TBool iOpaqueHint;
     };
 
 #endif /*HUIFXVISUALLAYER_*/

@@ -36,33 +36,12 @@ void CHuiFxVg10OnscreenRenderbuffer::ConstructL(CHuiVg10RenderPlugin& aPlugin, C
     iPlugin = &aPlugin;
     iSurface = &aSurface;
     iTextureUsage = ERenderbufferUsageReadWrite;
-    
-#ifndef __WINS__ // Should possibly query the supported mode instead?
-    VGImageFormat imageInternalFormat = VG_sARGB_8888_PRE;
-#else
-    VGImageFormat imageInternalFormat = VG_sARGB_8888;
-#endif
-    
-    iImage = vgCreateImage(imageInternalFormat, Size().iWidth, Size().iHeight, VG_IMAGE_QUALITY_NONANTIALIASED);
-    HUIFX_VG_INVARIANT();
-    
-    // Initialize the context
-    iGc = iPlugin->CreateGcL();
-    BindAsRenderTarget();
-    iGc->InitState();
-    UnbindAsRenderTarget();
-    
-    // Let renderer know that we have been fiddlling with OpenVg state directly
-    // "iGc->InitState" confuses scissoring setting, so lets notify it.
-    CHuiVg10RenderPlugin& renderer = CHuiStatic::Vg10Renderer();
-    renderer.AddRestoreStateFlags(EHuiVg10GcStateFlagDirtyScissor);    
-    renderer.AddRestoreStateFlags(EHuiVg10GcStateFlagDirtyBlendMode);        
     }
+
 
 CHuiFxVg10OnscreenRenderbuffer::~CHuiFxVg10OnscreenRenderbuffer()
     {
-    vgDestroyImage(iImage);
-    HUIFX_VG_INVARIANT();
+    ReleaseVgImage();
     
     delete iGc;
     }
@@ -87,6 +66,7 @@ void CHuiFxVg10OnscreenRenderbuffer::BindAsTexture(THuiFxRenderbufferUsage aUsag
     iTextureUsage = aUsage;
     if (aUsage == ERenderbufferUsageReadWrite || aUsage == ERenderbufferUsageReadOnly)
         {
+        CreateVgImage();
         BindAsRenderTarget();
         vgGetPixels(iImage, 0, 0, 0, 0, Size().iWidth, Size().iHeight);
         HUIFX_VG_INVARIANT();
@@ -103,6 +83,7 @@ void CHuiFxVg10OnscreenRenderbuffer::UnbindAsTexture()
         vgSetPixels(0, 0, iImage, 0, 0, Size().iWidth, Size().iHeight);
         HUIFX_VG_INVARIANT();
         UnbindAsRenderTarget();
+        ReleaseVgImage();
         }
     }
 
@@ -123,3 +104,34 @@ void CHuiFxVg10OnscreenRenderbuffer::PrepareForReuse(const TSize& /* aReusedRect
     // this should never happen.
     ASSERT(FALSE);
     }
+
+void CHuiFxVg10OnscreenRenderbuffer::CreateVgImage()
+    {
+#ifndef __WINS__ // Should possibly query the supported mode instead?
+    VGImageFormat imageInternalFormat = VG_sARGB_8888_PRE;
+#else
+    VGImageFormat imageInternalFormat = VG_sARGB_8888;
+#endif
+    
+    iImage = vgCreateImage(imageInternalFormat, Size().iWidth, Size().iHeight, VG_IMAGE_QUALITY_NONANTIALIASED);
+    HUIFX_VG_INVARIANT();
+    
+    // Initialize the context
+    iGc = iPlugin->CreateGcL();
+    BindAsRenderTarget();
+    iGc->InitState();
+    UnbindAsRenderTarget();
+    
+    // Let renderer know that we have been fiddlling with OpenVg state directly
+    // "iGc->InitState" confuses scissoring setting, so lets notify it.
+    CHuiVg10RenderPlugin& renderer = CHuiStatic::Vg10Renderer();
+    renderer.AddRestoreStateFlags(EHuiVg10GcStateFlagDirtyScissor);    
+    renderer.AddRestoreStateFlags(EHuiVg10GcStateFlagDirtyBlendMode);        
+    }
+
+void CHuiFxVg10OnscreenRenderbuffer::ReleaseVgImage()
+    {
+    vgDestroyImage(iImage);
+    HUIFX_VG_INVARIANT();
+    }
+

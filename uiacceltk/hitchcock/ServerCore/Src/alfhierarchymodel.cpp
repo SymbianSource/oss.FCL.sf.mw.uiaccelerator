@@ -734,6 +734,14 @@ void CAlfHierarchyModel::DoNodeCreatedL()
         case MWsWindowTreeNode::EWinTreeNodeClient:
             {
             node = CAlfNodeWindow::NewL( this, iStream, iScreenNumber );
+            
+            #ifdef __WINS__
+            if (++iDebug_CheckNodeTableItegrityCounter > 100) // Do not check too often as is can be slow
+                {
+                Debug_CheckNodeTableItegrity(_L("CAlfHierarchyModel::DoNodeCreatedL"));
+                }            
+            #endif
+            
             break;
             }
         case MWsWindowTreeNode::EWinTreeNodeRoot:
@@ -797,7 +805,12 @@ void CAlfHierarchyModel::DoNodeCreatedL()
 
     AMT_INC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeCount ); 
     AMT_INC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeGroup),  iWindowGroupNodeCount ); 
-    AMT_INC_COUNTER_IF(node, iTotalNodeCount );         
+    AMT_INC_COUNTER_IF(node, iTotalNodeCount );
+    
+    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient,
+                          iIntMap, node->iId, EAlfModuleTestTypeHierarchyModelCreateWindow );
+    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeGroup,
+                          iIntMap, node->iId, EAlfModuleTestTypeHierarchyModelCreateWindowGroup );
     }
 
 // ---------------------------------------------------------------------------
@@ -830,7 +843,12 @@ void CAlfHierarchyModel::DoNodeReleasedL()
 
     AMT_DEC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeCount ); 
     AMT_DEC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeGroup),  iWindowGroupNodeCount ); 
-    AMT_DEC_COUNTER_IF(node, iTotalNodeCount );     
+    AMT_DEC_COUNTER_IF(node, iTotalNodeCount );
+    
+    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient,
+                          iIntMap, nodeId, EAlfModuleTestTypeHierarchyModelReleaseWindow );
+    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeGroup,
+                          iIntMap, nodeId, EAlfModuleTestTypeHierarchyModelReleaseWindowGroup );
     }
 
 // ---------------------------------------------------------------------------
@@ -851,7 +869,11 @@ void CAlfHierarchyModel::DoNodeActivatedL()
         USER_INVARIANT();
         }
     
-    AMT_INC_COUNTER_IF( node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeActivatedCount ); 
+    AMT_INC_COUNTER_IF( node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeActivatedCount );
+    
+    AMT_MAP_SET_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient,
+                          iBoolMap, nodeId, ETrue,
+                          EAlfModuleTestTypeHierarchyModelActiveWindow );    
     }
 
 // ---------------------------------------------------------------------------
@@ -884,12 +906,12 @@ void CAlfHierarchyModel::DoNodeExtentChangedL()
 
     AMT_INC_COUNTER_IF(node, iNodeExtentChangedCount );
     AMT_SET_VALUE_IF(node, iLatestNodeExtentRect, rect );
-    AMT_MAP_SET_VALUE_IF( ( node && node->iWindow ),
+    AMT_MAP_SET_VALUE_IF( node && node->iWindow,
                           iSizeMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
-                          rect.Size(), EAlfModuleTestTypeHierarchyModelChangeSize );
-    AMT_MAP_SET_VALUE_IF( ( node && node->iWindow ),
+                          rect.Size(), EAlfModuleTestTypeHierarchyModelChangeWindowSize );
+    AMT_MAP_SET_VALUE_IF( node && node->iWindow,
                           iPositionMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
-                          rect.iTl, EAlfModuleTestTypeHierarchyModelChangePosition );
+                          rect.iTl, EAlfModuleTestTypeHierarchyModelChangeWindowPosition );
     }
 
 // ---------------------------------------------------------------------------
@@ -951,9 +973,11 @@ void CAlfHierarchyModel::DoNodeFlagChangedL()
         }
 
     AMT_INC_COUNTER_IF(node, iTotalNodeFlagChangedCount );
-    AMT_MAP_INC_VALUE_IF( ( node && node->iWindow ),
-                          iIntMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
-                          EAlfModuleTestTypeHierarchyModelChangeFlag );    
+    AMT_MAP_SET_VALUE_IF( node && node->iWindow && MWsWindowTreeObserver::EVisible == flag,
+                          iBoolMap, 
+                          node->iWindow->WsInfo().iClientSideId.iWindowIdentifer,
+                          newValue,
+                          EAlfModuleTestTypeHierarchyModelChangeWindowVisibility ); 
     }
 
 // ---------------------------------------------------------------------------
@@ -1152,7 +1176,7 @@ void CAlfHierarchyModel::DoNodeAttributeChangedL()
         USER_INVARIANT(); // attribute change for unexpected node type. new code needed!
         }
 
-    AMT_INC_COUNTER_IF(node, iTotalNodeAttributeChangedCount );    
+    AMT_INC_COUNTER_IF(node, iTotalNodeAttributeChangedCount );
     }
     
 // ---------------------------------------------------------------------------
@@ -1271,5 +1295,35 @@ void CAlfHierarchyModel::ProcessUnknownNodeDrawingL( RMemReadStream& aStream )
             }
         }
     }
+
+
+#ifdef __WINS__
+// ---------------------------------------------------------------------------
+//
+// ---------------------------------------------------------------------------
+//
+void CAlfHierarchyModel::Debug_CheckNodeTableItegrity(const TDesC16& aContext)
+    {  
+    iDebug_CheckNodeTableItegrityCounter = 0;
     
+    // Loop through the all items     
+    TInt count = 0;
+    THashMapIter <TUint32,CNodeHashStruct> ptrHashSetIter(iNodeHashArray);
+    for ( ; ; )        
+        {        
+        const CNodeHashStruct* resNext = ptrHashSetIter.NextValue();        
+        if (!resNext)            
+            {             
+            break;            
+            }  
+        count++;
+        if (resNext->iNode->Type() == MWsWindowTreeNode::EWinTreeNodeClient)
+            {
+            resNext->iNode->Debug_CheckSiblingOrder(aContext);
+            }
+        }
+    }
+#endif
+
+
 

@@ -1785,14 +1785,14 @@ EXPORTS
 	_ZN17CHuiFxFilterLayer11AdvanceTimeEf @ 1784 NONAME
 	_ZN17CHuiFxFilterLayer12PrepareDrawLER12CHuiFxEngine @ 1785 NONAME
 	_ZN17CHuiFxFilterLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_ @ 1786 NONAME
-	_ZN17CHuiFxVisualLayer10ConstructLER14MHuiEffectable @ 1787 NONAME
+	_ZN17CHuiFxVisualLayer10ConstructLEP14MHuiEffectable @ 1787 NONAME
 	_ZN17CHuiFxVisualLayer10VisualAreaER5TRect @ 1788 NONAME
 	_ZN17CHuiFxVisualLayer11AdvanceTimeEf @ 1789 NONAME
 	_ZN17CHuiFxVisualLayer12PrepareDrawLER12CHuiFxEngine @ 1790 NONAME
 	_ZN17CHuiFxVisualLayer18RegisterParameterLERK7TDesC16P4TRgb @ 1791 NONAME
 	_ZN17CHuiFxVisualLayer18RegisterParameterLERK7TDesC16Pf @ 1792 NONAME
 	_ZN17CHuiFxVisualLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_ @ 1793 NONAME
-	_ZN17CHuiFxVisualLayer4NewLER14MHuiEffectable @ 1794 NONAME
+	_ZN17CHuiFxVisualLayer4NewLEP14MHuiEffectable @ 1794 NONAME
 	_ZN17CHuiFxVisualLayer9ParameterERK7TDesC16 @ 1795 NONAME
 	_ZN17CHuiFxVisualLayerD0Ev @ 1796 NONAME
 	_ZN17CHuiFxVisualLayerD1Ev @ 1797 NONAME
@@ -1996,4 +1996,6 @@ EXPORTS
 	_ZN16CHuiControlGroup11SetSecureIdEi @ 1995 NONAME
 	_ZN16CHuiControlGroup8SecureIdEv @ 1996 NONAME
 	_ZNK16CHuiCanvasVisual19HasTransParentClearEv @ 1997 NONAME
+	_ZN12CHuiFxEngine16AddEffectToGroupEi @ 1998 NONAME
+	_ZN12CHuiFxEngine18FxmlUsesOpaqueHintERK7TDesC16 @ 1999 NONAME
 

@@ -231,7 +231,7 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
         iMemAllocationsGrowing->Stop();
         iMemAllocationsGoingDown->Continue();
-        if(iTrigger == EGOomTriggerNone)
+        if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood() && !iSynchTimer->IsActive() )
             StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
         }
 #endif
@@ -251,9 +251,11 @@ void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
 
     // Refresh the low and good memory thresholds as they may have changed due to the new foreground application
     RefreshThresholds(aForegroundAppUid);
-    // Not very elegant, now we poll on each window group change
-    // Should have better trigger e.g. from window server 
-	StartFreeSomeRamL(iCurrentTarget, EGOomTriggerFocusChanged);
+    
+    if(iCurrentTarget)
+        {
+        StartFreeSomeRamL(iCurrentTarget, EGOomTriggerFocusChanged);
+        }
      }
 
 void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOomTrigger aTrigger) // The maximum priority of action to run
@@ -275,14 +277,17 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
 
     if (freeMemoryAboveCurrentTarget)
         {
-        ResetTargets();
         /*if(freeMemory >= iGoodThreshold && !NeedToPostponeMemGood())
             {
                 iGOomActionList->MemoryGood();
             }
         */
-        iServer->CloseAppsFinished(freeMemory, ETrue);
-        return;
+        if(!iGOomActionList->UseSwRendering())
+            {
+            iServer->CloseAppsFinished(freeMemory, ETrue);
+            WaitAndSynchroniseMemoryState();
+            return;
+            }
         }
 
     // update wg list only when actually about to use it 
@@ -379,11 +384,12 @@ void CMemoryMonitor::RefreshThresholds(TInt aForegroundAppUid)
     // Calculate the desired good threshold, this could be the globally configured value...
     iGoodThreshold = CMemoryMonitor::GlobalConfig().iGoodRamThreshold;
     iLowThreshold = CMemoryMonitor::GlobalConfig().iLowRamThreshold;
-    if(iCurrentTarget < iLowThreshold)
-        iCurrentTarget = iLowThreshold;
+    //if(iCurrentTarget < iLowThreshold)
+    //    iCurrentTarget = iLowThreshold;
         
     TRACES2("CMemoryMonitor::RefreshThresholds: Global Good Threshold = %d, Global Low Threshold = %d", iGoodThreshold, iLowThreshold);
 
+    TBool useSwRendering = EFalse;
     // The global value can be overridden by an app specific value
     // Find the application config entry for the foreground application
     if (aForegroundAppUid == KErrNotFound)
@@ -412,7 +418,15 @@ void CMemoryMonitor::RefreshThresholds(TInt aForegroundAppUid)
         TRACES2("CMemoryMonitor::RefreshThresholds: For foreground app %x, Target Free on Startup = %d", aForegroundAppUid, iCurrentTarget);
         }
     
+
+    if (iConfig->GetApplicationConfig(aForegroundAppUid).iUseSwRendering != KGOomThresholdUnset)
+        {
+        useSwRendering = iConfig->GetApplicationConfig(aForegroundAppUid).iUseSwRendering;
+        TRACES2("CMemoryMonitor::RefreshThresholds: For foreground app %x, UseSwRendering = %d", aForegroundAppUid, useSwRendering);
+        }
+    
     iGOomActionList->SetCurrentTarget(iCurrentTarget);
+    iGOomActionList->SetUseSwRendering(useSwRendering);
     
 #ifdef USE_ASYNCYH_NOTIFICATIONS 
 
@@ -467,7 +481,10 @@ void CMemoryMonitor::ResetTargets(TInt aTarget)
     iCurrentTarget = aTarget;
     iGOomActionList->SetCurrentTarget(iCurrentTarget);
     if(!aTarget)
+        {
         iTrigger = EGOomTriggerNone;    //reset the trigger condition
+        }
+    iGOomActionList->SetUseSwRendering(EFalse);
     }
 
 void CMemoryMonitor::SetPriorityBusy(TInt aWgId)
@@ -592,7 +609,17 @@ TInt CMemoryMonitor::GetFreeMemory()
                 break;
                 }
             case EGL_PROF_PROCESS_USED_PRIVATE_MEMORY_NOK:
+                    {
+                    TUint mem = prof_data[i];
+                    TRACES1("Private memory Usage by app is %d", mem);
+                    break;
+                    }
             case EGL_PROF_PROCESS_USED_SHARED_MEMORY_NOK:
+                    {
+                    TUint mem = prof_data[i];
+                    TRACES1("Shared memory Usage by app is %d", mem);
+                    break;
+                    }
 			default:
 				{
                 i++;

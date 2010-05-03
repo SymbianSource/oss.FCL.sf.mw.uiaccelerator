@@ -638,6 +638,12 @@ TBool CHuiDisplay::Refresh()
         return EFalse;
         }
     
+    if (!iForegroundTextureTransparency && iForegroundTexture)
+        {
+        // When we can blit foreground texture, we shouldn't need any textures in skin side.
+        iEnv.Skin().ReleaseCachedTextures();
+        }
+    
     TBool useDirtyRects = (RenderSurface().Flags() & MHuiRenderSurface::EFlagUseDirtyRects) 
     					  == MHuiRenderSurface::EFlagUseDirtyRects;
  	
@@ -748,6 +754,23 @@ TBool CHuiDisplay::Refresh()
 	iGc->SetPenColor(iBackgroundColor);
 	iGc->InitNewFrame();
 
+	
+	// if there is a fade effect in progress, we
+	// need to clear the screen as fade effect uses
+	// always blending. If we do not clear here
+	// fade leaves trails in certain situations.
+	if (iEnv.EffectsEngine()->HasActiveFadeEffect() 
+	        || RosterImpl().IsVisibleContentFrozen() // guaranteen, that transparent pixels of the UI surface are drawn correctly during layout switch.
+	        )
+	    {
+        iGc->SetPenColor(KRgbBlack);
+        iGc->SetPenAlpha(0);
+        iGc->Disable(CHuiGc::EFeatureClipping);
+        iGc->Disable(CHuiGc::EFeatureBlending);
+        iGc->Clear();
+	    }
+	
+	
     if ( iDrawDirtyRegions )
         {
         // Show dirty. 
@@ -1035,6 +1058,12 @@ EXPORT_C void CHuiDisplay::SetClearBackgroundL(TClearMode aClearBackground)
 
     iClearBackground = aClearBackground;
     iBackgroundItems.Reset();
+    
+    // release background texture if clearing is set to None
+    if(aClearBackground == EClearNone)
+        {
+        iEnv.Skin().ReleaseTexture(EHuiSkinBackgroundTexture);
+        }
     }
 
 
@@ -1628,6 +1657,12 @@ EXPORT_C CHuiTexture* CHuiDisplay::ForegroundTexture() const
 EXPORT_C void CHuiDisplay::SetForegroundTextureOptions(TBool aTransparency)
     {
     iForegroundTextureTransparency = aTransparency;
+
+    if (!iForegroundTextureTransparency && iForegroundTexture)
+        {
+        // When we can blit foreground texture, we shouldn't need any textures in skin side.
+        iEnv.Skin().ReleaseCachedTextures();
+        }
     }
 
 void CHuiDisplay::UpdateForegroundTexture(const TRect& aRect)

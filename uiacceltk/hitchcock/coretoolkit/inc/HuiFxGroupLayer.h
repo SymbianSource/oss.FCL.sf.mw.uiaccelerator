@@ -51,6 +51,7 @@ public:
     TInt LayerCount() const;
     CHuiFxLayer& Layer(TInt aIndex) const;
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
+    TBool FxmlUsesOpaqueHint() const;
     virtual void EnableMarginApplyChildren(TBool aEnable);
     virtual void SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels);
 

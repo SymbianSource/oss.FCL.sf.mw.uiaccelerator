@@ -2100,7 +2100,7 @@ TInt RenderBufferOrderFunc(const CHuiCanvasRenderBufferImage& aFirst, const CHui
 CHuiCanvasTextureCache::CHuiCanvasTextureCache()
     {
     SetMemoryLevel(EHuiMemoryLevelNormal);
-    CHuiStatic::Env().AddLowMemoryObserver(this);
+    CHuiStatic::Env().AddMemoryLevelObserver(this);
     }
 
 // ---------------------------------------------------------------------------
@@ -2109,7 +2109,7 @@ CHuiCanvasTextureCache::CHuiCanvasTextureCache()
 //
 CHuiCanvasTextureCache::~CHuiCanvasTextureCache()
     {
-    CHuiStatic::Env().RemoveLowMemoryObserver(this);
+    CHuiStatic::Env().RemoveMemoryLevelObserver(this);
     iCachedTexts.ResetAndDestroy();
     iCachedImages.ResetAndDestroy();        
     iRecycledTextures.ResetAndDestroy();
@@ -3170,7 +3170,7 @@ TInt CHuiCanvasTextureCache::CalculateUnusedCanvasRenderBufferUsageInKbytes()
 
     for(TInt i=entries.Count() - 1; i >= 0; i--)
         {
-        if (iCachedRenderBuffers[i]->iCanvasRenderBuffer)
+        if (entries[i]->iCanvasRenderBuffer)
             {        
             TSize renderBufferSize = entries[i]->iCanvasRenderBuffer->Size();    
             totalUnusedRenderBufferBytes += renderBufferSize.iWidth * renderBufferSize.iHeight * KHuiCanvasRenderBufferEstimatedBpp/8.f;
@@ -3472,6 +3472,25 @@ RDebug::Print(_L("-- CHuiCanvasTextureCache::SetMemoryLevel: Enabling lowest mem
             iCachedRenderBuffers.Remove(i);
             delete entry;            
             }                    
+        }
+    else if(iMemoryLevel <= EHuiMemoryLevelReduced)
+        {
+        // free all the caches but allow using renderbuffers
+        #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
+        RDebug::Print(_L("-- CHuiCanvasTextureCache::SetMemoryLevel: Enabling recuded memory state"));
+        RDebug::Print(_L("-- CHuiCanvasTextureCache::SetMemoryLevel: Caching of textures disabled but renderbuffers enabled"));
+        #endif
+        // Set cache sizes to minimum
+        iMaxTextureMemoryInKBytes = 0;
+        iMaxRenderBufferMemoryInKBytes = 0;
+        
+        // Set flags to make sure we check all entries
+        iHasReleasedTexts = ETrue;
+        iHasReleasedImages = ETrue;
+        iHasReleasedRenderBuffers = ETrue;
+        
+        // Delete released cached entries
+        DeleteAllReleasedEntries(EFalse);
         }
     else
         {

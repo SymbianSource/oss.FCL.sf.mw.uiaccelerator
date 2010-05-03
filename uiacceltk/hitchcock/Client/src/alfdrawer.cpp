@@ -22,6 +22,7 @@
 #include <alf/alfdirectclient.h>
 #include "alfcrppluginclient.h"
 #include "alflogger.h"
+#include "alfdrawerinternal.h"
 
 #include <coemain.h>
 #include <w32std.h>
@@ -42,6 +43,17 @@ static TInt CreateAlfCrpClient(CAlfCrpPluginClient*& aClient);
 // Creates CAlfCrpPluginClient instance.
 static CAlfCrpPluginClient* CreateAlfCrpClientL();
 
+NONSHARABLE_CLASS( TAlfDrawerDirectClient ) : public MAlfDrawerScreenInterface
+    {
+public:
+    TAlfDrawerDirectClient( RAlfDirectClient& aClient );
+    TInt GetSizeAndRotation(TSize& aSize, TInt& aRotation);
+    TInt ReadPixels(CFbsBitmap* aBitmap);
+
+private:
+    RAlfDirectClient iClient;
+    };
+   
 /**
  * Misc utility methods for CAlfDrawer.
  */
@@ -91,6 +103,14 @@ public:
      */
     static void DoCopyScreenToBitmapL( 
         CWsScreenDevice& aDevice,
+        CFbsBitmap* aBitmap, 
+        const TRect& aRect );
+
+    /**
+     * Copies screen to bitmap using 'read pixels' operation.
+     */
+    static void DoCopyScreenToBitmap2L( 
+        MAlfDrawerScreenInterface* aInterface,
         CFbsBitmap* aBitmap, 
         const TRect& aRect );
         
@@ -187,12 +207,29 @@ void AlfDrawerUtils::DoCopyScreenToBitmapL(
     RAlfDirectClient client;
     CleanupClosePushL(client);
 
+    TAlfDrawerDirectClient clientWrapper(client);
+    DoCopyScreenToBitmap2L(&clientWrapper, aBitmap, aRect);   
+    
+    CleanupStack::PopAndDestroy(); // CleanupClosePushL
+    
+    __ALFLOGSTRING("DoCopyScreenToBitmapL - Done");    
+    }
+
+// ---------------------------------------------------------------------------
+// DoCopyScreenToBitmapL
+// ---------------------------------------------------------------------------
+//
+void AlfDrawerUtils::DoCopyScreenToBitmap2L( 
+        MAlfDrawerScreenInterface* aInterface,
+        CFbsBitmap* aBitmap, 
+        const TRect& aRect )
+    {
     // Get size & virtual rotation from ALF side.
     // GetSizeAndRotation will also create session to server.
 
     TInt rotation = 0;
     TSize size;
-    User::LeaveIfError(client.GetSizeAndRotation(size, rotation));
+    User::LeaveIfError(aInterface->GetSizeAndRotation(size, rotation));
 
     // Calculate device size in pixels (same as aDevice.SizeInPixels())
     TSize deviceSize = size;
@@ -216,7 +253,6 @@ void AlfDrawerUtils::DoCopyScreenToBitmapL(
          actualRect.IsEmpty() )
         {
         __ALFLOGSTRING("DoCopyScreenToBitmapL - empty rect or zero bitmap size");
-        CleanupStack::PopAndDestroy(); // CleanupClosePushL
         return;
         }
 
@@ -239,7 +275,7 @@ void AlfDrawerUtils::DoCopyScreenToBitmapL(
     CleanupStack::PushL( surfaceBitmap );
     User::LeaveIfError( surfaceBitmap->Create( size, surfaceDisplayMode ) );
     
-    TInt err = client.ReadPixels( surfaceBitmap->Handle() );              
+    TInt err = aInterface->ReadPixels( surfaceBitmap );              
     __ALFLOGSTRING1("DoCopyScreenToBitmapL - ReadPixels returned %d", err);
     User::LeaveIfError( err );  
 
@@ -439,10 +475,6 @@ void AlfDrawerUtils::DoCopyScreenToBitmapL(
         }
     
     CleanupStack::PopAndDestroy( surfaceBitmap );
-    
-    CleanupStack::PopAndDestroy(); // CleanupClosePushL
-    
-    __ALFLOGSTRING("DoCopyScreenToBitmapL - Done");    
     }
 
 // ---------------------------------------------------------------------------
@@ -473,6 +505,19 @@ CAlfDrawer::TAlfDrawerData::TAlfDrawerData()
     }
 
 // ---------------------------------------------------------------------------
+// CopyScreenToBitmap
+// ---------------------------------------------------------------------------
+//
+EXPORT_C TInt AlfDrawerInternal::CopyScreenToBitmap(
+        MAlfDrawerScreenInterface* aInterface, 
+        CFbsBitmap* aBitmap, 
+        const TRect& aRect )
+    {
+    TRAPD(err, AlfDrawerUtils::DoCopyScreenToBitmap2L(aInterface, aBitmap, aRect));
+    return err;
+    }
+
+// ---------------------------------------------------------------------------
 // CreateAlfCrpClient
 // ---------------------------------------------------------------------------
 //
@@ -493,5 +538,32 @@ static CAlfCrpPluginClient* CreateAlfCrpClientL()
     client->ConstructL();
     CleanupStack::Pop( client );
     return client;
+    }
+
+// ---------------------------------------------------------------------------
+// TAlfDrawerDirectClient
+// ---------------------------------------------------------------------------
+//
+TAlfDrawerDirectClient::TAlfDrawerDirectClient( RAlfDirectClient& aClient )
+    : iClient( aClient )
+    {
+    }
+    
+// ---------------------------------------------------------------------------
+// GetSizeAndRotation
+// ---------------------------------------------------------------------------
+//
+TInt TAlfDrawerDirectClient::GetSizeAndRotation(TSize& aSize, TInt& aRotation)
+    {
+    return iClient.GetSizeAndRotation(aSize, aRotation);
+    }
+    
+// ---------------------------------------------------------------------------
+// ReadPixels
+// ---------------------------------------------------------------------------
+//
+TInt TAlfDrawerDirectClient::ReadPixels(CFbsBitmap* aBitmap)
+    {
+    return iClient.ReadPixels(aBitmap->Handle());
     }
 

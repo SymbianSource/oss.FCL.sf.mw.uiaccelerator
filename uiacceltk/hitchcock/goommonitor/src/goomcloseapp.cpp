@@ -38,7 +38,7 @@ CGOomCloseApp* CGOomCloseApp::NewL(MGOomActionObserver& aStateChangeObserver, RW
 
 // Close the application in order to free memory
 // Call the CGOomAction::MemoryFreed when it is done
-void CGOomCloseApp::FreeMemory(TInt)
+void CGOomCloseApp::FreeMemory(TInt, TBool)
     {
     FUNC_LOG;
 

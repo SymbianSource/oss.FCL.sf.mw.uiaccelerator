@@ -451,6 +451,7 @@ private:
     void CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const;
     
     TBool CanSkipDrawing() const;
+    TBool KeepNoCache() const;
 
 private: 
 

@@ -41,5 +41,12 @@ EXPORTS
 	??1CAlfCompositionCntrlClient@@UAE@XZ @ 40 NONAME ; CAlfCompositionCntrlClient::~CAlfCompositionCntrlClient(void)
 	?SetSourceRect@CAlfCompositionSource@@UAEHABVTRect@@@Z @ 41 NONAME ; int CAlfCompositionSource::SetSourceRect(class TRect const &)
 	?GetListOfInactiveWindowGroupsWSurfaces@RAlfBridgerClient@@QAEHPAV?$RArray@H@@@Z @ 42 NONAME ; int RAlfBridgerClient::GetListOfInactiveWindowGroupsWSurfaces(class RArray<int> *)
-	?NewL@CAlfCompositionPixelSource@@SAPAV1@AAVMAlfBufferProvider@@HPAVRWindow@@@Z @ 43  NONAME ; class CAlfCompositionPixelSource * CAlfCompositionPixelSource::NewL(class MAlfBufferProvider &, int, class RWindow *)
+	?NewL@CAlfCompositionPixelSource@@SAPAV1@AAVMAlfBufferProvider@@HPAVRWindow@@@Z @ 43 NONAME ; class CAlfCompositionPixelSource * CAlfCompositionPixelSource::NewL(class MAlfBufferProvider &, int, class RWindow *)
+	?ActivateSyncL@CAlfCompositionPixelSource@@QAEXXZ @ 44 NONAME ; void CAlfCompositionPixelSource::ActivateSyncL(void)
+	?EffectsCount@RAlfBridgerClient@@QAEHXZ @ 45 NONAME ; SBS RULES OK
+	?ActiveEffectsCount@CAlfEffectObserver@@QAEHXZ @ 46 NONAME ; int CAlfEffectObserver::ActiveEffectsCount(void)
+	?NewL@CAlfEffectObserver@@SAPAV1@XZ @ 47 NONAME ; class CAlfEffectObserver * CAlfEffectObserver::NewL(void)
+	??1CAlfEffectObserver@@UAE@XZ @ 48 NONAME ; CAlfEffectObserver::~CAlfEffectObserver(void)
+	?SubscribeCallbackL@CAlfEffectObserver@@QAEXPAVMAlfEffectObserver@1@HH@Z @ 49 NONAME ; void CAlfEffectObserver::SubscribeCallbackL(class CAlfEffectObserver::MAlfEffectObserver *, int, int)
+	?GetListOfWindowGroupsWSurfaces@RAlfBridgerClient@@QAEHPAV?$RArray@H@@@Z @ 50 NONAME ; int RAlfBridgerClient::GetListOfWindowGroupsWSurfaces(class RArray<int> *)
 

@@ -94,7 +94,7 @@ _LIT(KLitVisual, "visual" );
 
 // parameter for visual
 _LIT(KLitSrc, "src" ); // source for the effect
-
+_LIT(KLitOpaque, "opaque");
 _LIT(KLitBlending, "blending" );
 _LIT(KLitParam, "param" );
 _LIT(KLitReplace, "replace" );
@@ -129,6 +129,8 @@ _LIT(KLitDeclerate, "declerate");
 _LIT(KLitAccelerate, "accelerate");
 _LIT(KLitImpulse, "impulse");
 */
+_LIT(KLitTrue,"true");
+_LIT(KLitFalse,"false");
 _LIT(KLitAt, "at" );
 _LIT(KLitMarker, "marker" );
 _LIT(KLitLoopStart, "loop_start" );

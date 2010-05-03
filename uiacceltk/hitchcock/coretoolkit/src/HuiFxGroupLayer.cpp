@@ -456,6 +456,16 @@ void CHuiFxGroupLayer::FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray)
         }
     }
 
+TBool CHuiFxGroupLayer::FxmlUsesOpaqueHint() const
+    {
+    TBool b = EFalse;
+    for( TInt i=0 ; i < iLayers.Count() ; i++ )
+        {
+        b |= iLayers[i]->FxmlUsesOpaqueHint();
+        }
+    return b;
+    }
+
 void CHuiFxGroupLayer::SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels)
     {
     CHuiFxLayer::SetAlwaysReadSurfacePixels(aAlwaysReadSurfacePixels);

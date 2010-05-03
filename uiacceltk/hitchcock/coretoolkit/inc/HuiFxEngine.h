@@ -39,6 +39,13 @@ class CHuiFxEffectCache;
 class MAlfGfxEffectObserver;
 class CHuiGc;
 
+class MHuiEffectObserver
+    {
+    public:
+    virtual void EffectAdded(CHuiFxEffect* aEffect) = 0;
+    virtual void EffectComplete(CHuiFxEffect* aEffect) = 0;
+    };
+
 class CHuiFxEngine : public CBase, public MHuiLowMemoryObserver, public MHuiMemoryLevelObserver
     {
     // important constant! Affects memory fragmentation in backend too small 
@@ -107,7 +114,7 @@ public:
             TInt aFlags = 0 );
     
     IMPORT_C TBool FxmlUsesInput1(const TDesC &aFileName);
-
+    IMPORT_C TBool FxmlUsesOpaqueHint(const TDesC &aFileName);
     
     IMPORT_C void AdvanceTime(TReal32 aElapsedTime);
     
@@ -126,10 +133,10 @@ public:
 	 * time.
 	 */
 	IMPORT_C void BeginGroupEffect(TInt aGroup);
-
     
     IMPORT_C TInt ActiveGroupEffect();
     
+    IMPORT_C TBool AddEffectToGroup(TInt aGroup);
     /*
 	 * StartGroupEffect
 	 *
@@ -140,12 +147,26 @@ public:
     TInt LowMemoryState();
     
     TBool HasActiveEffects() const;
+    TBool HasActiveFadeEffect() const;
     
     void ClearCache();
     
     void NotifyEffectEndObservers();
     
     IMPORT_C void SetMemoryLevel(THuiMemoryLevel aLevel);
+    
+    void SetObserver(MHuiEffectObserver* aObserver)
+        {
+        iEffectObserver = aObserver;    
+        }
+	
+	/**
+	 * Group effects wait until each effect has been drawn once. 
+	 *
+	 * Group effects are set into motion by NotifyEffectReady, when all effects in
+	 * the group have been drawn at least once.
+	 */
+    void NotifyEffectReady(TInt aGroupId);
     
 protected:
     IMPORT_C void AddEffectL(CHuiFxEffect* aEffect);
@@ -157,6 +178,7 @@ protected:
 private:
     
     TBool FxmlUsesInput1(CHuiFxEffect& aEffect);
+    TInt FindEffectGroup(TInt aGroup);
     
 private:
     // Render buffer management --- native implementations
@@ -189,7 +211,24 @@ private:
     TRect                        iExtRect;
     CHuiFxEffectCache *iCache;
     TInt iLowGraphicsMemoryMode;
-    RArray<TInt> iActiveEffectGroups;
+    
+    NONSHARABLE_STRUCT(TEffectGroupStruct)
+        {
+    public:
+            
+        TEffectGroupStruct(TInt aGroup) : iGroup(aGroup), iWaiting(0), iEndCalled(EFalse){};
+
+        TInt iGroup;
+        TInt iWaiting;
+        TBool iEndCalled;
+        };
+    
+	/**
+	 * Only one simultanious effect group is supported
+	 */
+    RArray<TEffectGroupStruct> iActiveEffectGroups;
+    
+    MHuiEffectObserver* iEffectObserver;
     };
 
 #endif /*HUIFXENGINE_H_*/

@@ -40,7 +40,10 @@ const TInt KHuiFxEffectDisableMarginsFlag = 0x2;
 /** Effect is not applied to children visuals. */
 const TInt KHuiFxEffectExcludeChildrenFlag = 0x4;
 
-/** Effect is grouped and syncronized with other effect(s)*/
+/** Effect is grouped and syncronized with other effect(s)
+ * 
+ *  Indicates that the EndGroup event has not yet been received.
+ */
 const TInt KHuiFxWaitGroupSyncronization = 0x8;
 
 /** Effect duration is started after it has first time been drawn. */
@@ -60,6 +63,16 @@ const TInt KHuiFxEnableBackgroundInAllLayers = 0x100;
 
 /** Background pixels are not read for every frame (only once in a while), thus background content looks frozen if it is visible. */
 const TInt KHuiFxFrozenBackground = 0x200;
+
+/** 
+ * EndGroup request has been received, but this effect has not yet drawn itself.
+ */
+const TInt KHuiFxWaitGroupToStartSyncronized = 0x400;
+
+/** EndGroup request has been received and this effect has drawn itself once and it is
+ *  now waiting for the others in the group to be drawn.
+ */
+const TInt KHuiFxReadyAndWaitingGroupToStartSyncronized = 0x800;
 
 class MAlfGfxEffectObserver
     {
@@ -98,6 +111,9 @@ public: // effect cache methods
     IMPORT_C void SetEngine( CHuiFxEngine *aEngine );
 
     IMPORT_C void SetEffectFlags( TInt aFlags );
+    void SetEffectFlag( TInt aFlag );
+    void ClearEffectFlag( TInt aFlag );
+    
     IMPORT_C void SetEffectGroup(TInt aGroupId);
     IMPORT_C TInt EffectFlags();
     IMPORT_C TInt GroupId();
@@ -137,6 +153,13 @@ public: // effect cache methods
     TBool CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque);
 
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);
+    
+	TBool FxmlUsesOpaqueHint() const;
+	
+    TInt Handle() const
+        {
+        return iHandle;    
+        }
 private:
 
     TBool IsAppliedToBackground();
@@ -167,6 +190,8 @@ protected:
     TInt iGroupId;
 	
     TInt iFramesDrawn;
+    TReal32 iElapsedTime;
+    TBool iNotifiedEffectReady;
     };
 
 #endif /*HUIFXEFFECT_H_*/

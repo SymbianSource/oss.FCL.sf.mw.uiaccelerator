@@ -302,9 +302,17 @@ public:
 
     
     /**
-     *  Activate drawing for the first time or continue drawing if it is being paused or suspended
+     * Activate drawing for the first time or continue drawing if it is being paused or suspended
      **/
     IMPORT_C void ActivateL();
+    
+    
+    /*
+     * An other option to activate/continue drawing. This activate method ensures that no saw-edged black area is seen if client
+     * only wants to draw one frame. MAlfBufferProvider::ProduceNewFrameL is called from inside ActivateSyncL so that 
+     * surface buffer can be updated before making surface visible.
+     */
+    IMPORT_C void ActivateSyncL();
     
     /**
      * Suspend drawing 

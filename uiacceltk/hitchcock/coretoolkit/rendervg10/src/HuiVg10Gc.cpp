@@ -1555,7 +1555,7 @@ void CHuiVg10Gc::DrawEllipse(const TRect& aRect, THuiFillMode aDrawMode, const T
     
     }
 
-void CHuiVg10Gc::DrawArc(const TRect& aRect, THuiFillMode aDrawMode, const TInt aThickness, TReal32 aStart, TReal32 aEnd, TBool aIsPie)
+void CHuiVg10Gc::DrawArc(const TRect& aRect, THuiFillMode aDrawMode, const TInt aThickness, TReal32 aStart, TReal32 aEnd, TBool aIsPie) __SOFTFP
     {
     // Fix given destination rect to be in th middle of openvg pixels
     THuiRealRect destinationRect = aRect;
@@ -1759,7 +1759,7 @@ void CHuiVg10Gc::DrawBorderImages(const TRect& aOuterRect,
                                   TReal32 aBorderWidth,
                                   TReal32 aBorderHeight, 
                                   THuiRealPoint aOffset,
-                                  const THuiImage* aImage)
+                                  const THuiImage* aImage) __SOFTFP
     {
     // If there is no image, draw a solid border
     if (!aImage || !aImage->HasTexture())
@@ -1872,7 +1872,7 @@ void CHuiVg10Gc::DrawBorderFixedCorners(const TRect& aOuterRect,
                                         TReal32 aRightBorderWidth, 
                                         TReal32 aTopBorderHeight,
                                         TReal32 aBottomBorderHeight, 
-                                        const THuiImage* aImage)
+                                        const THuiImage* aImage) __SOFTFP
     {
     // If there is no image, draw a solid border
     if (!aImage || !aImage->HasTexture())

@@ -224,6 +224,12 @@ public:
         return iTrackNode;
         }
     
+    #ifdef __WINS__
+    void Debug_CheckSiblingOrder(const TDesC16& aContext);
+    #endif
+    
+public: // Data    
+    
     CAlfNode* iParent;
     
     CAlfNode* iChild;

@@ -73,6 +73,7 @@ public:
     TUint iLowRamThreshold; 
     TUint iTargetFree;
     TUint iSkipPluginId;
+    TBool iUseSwRendering;
     
 private:
     

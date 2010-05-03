@@ -1464,4 +1464,8 @@ CAlfAppSrvSessionBase* CAlfAppServer::SrvSessionForControlGroup(CHuiControlGroup
     return result;
     }
 
+TInt CAlfAppServer::GetLastActiveClient()
+    {
+    return iLastActiveClientWg;
+    }
 

@@ -63,4 +63,13 @@ EXPORTS
 	_ZThn32_N21CAlfCompositionSource13SetSourceRectERK5TRect @ 62 NONAME
 	_ZN17RAlfBridgerClient38GetListOfInactiveWindowGroupsWSurfacesEP6RArrayIiE @ 63 NONAME
 	_ZN26CAlfCompositionPixelSource4NewLER18MAlfBufferProvideriP7RWindow @ 64 NONAME
+	_ZN26CAlfCompositionPixelSource13ActivateSyncLEv @ 65 NONAME
+	_ZN17RAlfBridgerClient12EffectsCountEv @ 66 NONAME
+	_ZN18CAlfEffectObserver18ActiveEffectsCountEv @ 67 NONAME
+	_ZN18CAlfEffectObserver4NewLEv @ 68 NONAME
+	_ZN18CAlfEffectObserverD0Ev @ 69 NONAME
+	_ZN18CAlfEffectObserverD1Ev @ 70 NONAME
+	_ZN18CAlfEffectObserverD2Ev @ 71 NONAME
+	_ZN18CAlfEffectObserver18SubscribeCallbackLEPNS_18MAlfEffectObserverEii @ 72 NONAME
+	_ZN17RAlfBridgerClient30GetListOfWindowGroupsWSurfacesEP6RArrayIiE @ 73 NONAME
 
