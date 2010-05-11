@@ -201,10 +201,12 @@ TInt CAlfStreamerBridge::AddData( TAlfDecoderServerBindings aOp,TInt aI1,TInt aI
         {
         err = Trigger(iMessages.Count()-1);
         }
-	else
-		{
-		iQueueSema.Signal();
-		}	    
+    else if (iVarDataAddedButNotPosted)
+        {
+	iVarDataAddedButNotPosted = EFalse; // data lost 
+        iQueueSema.Signal();
+        }
+	    
     return err;
     }
 

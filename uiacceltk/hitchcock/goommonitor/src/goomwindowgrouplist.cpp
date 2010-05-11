@@ -75,8 +75,9 @@ void CGOomWindowGroupList::RefreshL()
     iLowOnMemWgs.Reset();
     RArray<TInt> inactiveSurfaces;
 
-    User::LeaveIfError(iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&inactiveSurfaces));    
-    User::LeaveIfError(iAlfClient.GetListOfWindowGroupsWSurfaces(&iLowOnMemWgs));
+    // ignore possible errors, we have information from profiling extension anyway
+    iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&inactiveSurfaces);    
+    iAlfClient.GetListOfWindowGroupsWSurfaces(&iLowOnMemWgs);
         
     TRACES1("Inactive surfaces count %d", inactiveSurfaces.Count());     
     TRACES1("Windowgroups w/ surfaces count %d", iLowOnMemWgs.Count());     
@@ -87,14 +88,16 @@ void CGOomWindowGroupList::RefreshL()
     
    //if (inactiveSurfaces.Count() == 1) // ALF only 
    //     {
-        NOK_resource_profiling eglQueryProfilingData = (NOK_resource_profiling)eglGetProcAddress("eglQueryProfilingDataNOK");
+    NOK_resource_profiling eglQueryProfilingData = (NOK_resource_profiling)eglGetProcAddress("eglQueryProfilingDataNOK");
     
-        if (!eglQueryProfilingData)
-            {
-            TRACES("RefreshL EGL_NOK_resource_profiling not available");
-			return;
-            }
+    if (!eglQueryProfilingData && inactiveSurfaces.Count() == 0)
+        {
+        TRACES("RefreshL EGL_NOK_resource_profiling not available");
+        return;
+        }
     
+    if (eglQueryProfilingData)
+        {
         EGLint data_count;
         EGLint* prof_data;
         TInt i(0);
@@ -202,7 +205,7 @@ void CGOomWindowGroupList::RefreshL()
                     }
                 }
             }
-     //   }
+        }
                 
     // Refresh window group list
     // get all window groups, with info about parents

@@ -31,6 +31,14 @@ class CRsDisplayChangeNotifier : public CActive
 	protected:
 		virtual void RunL();
 		virtual void DoCancel();
+        TInt RunError(TInt aError)
+            {
+            // will likely lead to inconsistent state and thus reset anyway
+            RDebug::Print(_L("CRsDisplayChangeNotifier::RunError( %d )"),aError);
+            aError -= (aError);
+            return aError; //KErrNone;
+            }
+
 	private:
 		CRsDisplayChangeNotifier(MWsDisplayControl* aNextLevelInterface, CDisplayPolicy* aDisplayPolicy);
 		

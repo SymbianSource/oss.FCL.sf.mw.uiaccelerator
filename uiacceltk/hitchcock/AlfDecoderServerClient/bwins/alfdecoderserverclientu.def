@@ -49,4 +49,5 @@ EXPORTS
 	??1CAlfEffectObserver@@UAE@XZ @ 48 NONAME ; CAlfEffectObserver::~CAlfEffectObserver(void)
 	?SubscribeCallbackL@CAlfEffectObserver@@QAEXPAVMAlfEffectObserver@1@HH@Z @ 49 NONAME ; void CAlfEffectObserver::SubscribeCallbackL(class CAlfEffectObserver::MAlfEffectObserver *, int, int)
 	?GetListOfWindowGroupsWSurfaces@RAlfBridgerClient@@QAEHPAV?$RArray@H@@@Z @ 50 NONAME ; int RAlfBridgerClient::GetListOfWindowGroupsWSurfaces(class RArray<int> *)
+	?SetDistractionWindow@CAlfEffectObserver@@QAEXABVRWindowTreeNode@@H@Z @ 51 NONAME ; void CAlfEffectObserver::SetDistractionWindow(class RWindowTreeNode const &, int)
 

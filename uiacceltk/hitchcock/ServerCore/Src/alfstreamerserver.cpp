@@ -978,7 +978,16 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
             {
             server->CompleteSignal(aMessage.Int0(), aMessage.Int1());    
             break;    
-            }                   
+            }
+        case EAlfSetDistractionWindow:
+            {
+            TInt windowGroupId = aMessage.Int0();
+            TInt windowHandle = aMessage.Int1();
+            TInt state = (TInt)aMessage.Int2();
+            aMessage.Complete(KErrNone);    
+            server->Bridge()->AddData( EAlfDSSetDistractionWindow, windowGroupId, windowHandle, (TAny*)state );
+            break;
+            }
         default:
             {
             aMessage.Complete(KErrNotSupported);

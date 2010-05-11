@@ -26,6 +26,7 @@
 #include "plugininterface.h"
 #include "themerepositorylistener.h"
 #include "screensaverpropertylistener.h"
+#include "fgapppropertylistener.h"
 #include "sensor.h"
 
 #include "../../../../uiaccelerator_plat/alf_visual_api/inc/alf/alfcompositionutility.h"
@@ -39,6 +40,8 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         void ExecuteL();
         
         static TInt TimerFunc(TAny* aPtr);
+        static TInt ReaperFunc(TAny* aPtr);
+        static TInt DoomBringerFunc(TAny* aPtr);
         
         // from MAlfCompositionObserver
         void FrameReady(TInt aScreenNumber);
@@ -67,11 +70,14 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         void LoadPluginL();
         void ReleasePlugin();
         void NewFrame();
+        void Kill();
         void HandleScreenSaverEvent();
+        void HandleFGAppEvent();
         TBool GetPluginConfigurationL();
-        static TInt ScreenSaverCallback(TAny* aPtr);
         void StartSensorsL();
         void StopSensors();
+        static TInt ScreenSaverCallback(TAny* aPtr);
+        static TInt FgAppCallback(TAny* aPtr);
         
     private:
         // windowing stuff
@@ -96,6 +102,8 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         // timer
         CHighResTimer* iTimer;
         TBool iTimerRunning;
+        CHighResTimer* iTheReaper;
+        CHighResTimer* iDoomBringer;
         
         TBool iEGLInitialized;
         TBool iSurfaceInitialized;
@@ -108,11 +116,15 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
     
         CThemeRepositoryListener* iThemeRepositoryListener;
         CScreenSaverPropertyListener* iSCPropertyListener;
+        CFGAppPropertyListener *iHSFgStatusPropertyListener;
 
         RPointerArray<CSensorListener> iSensorListeners;
+        TBool iSensorsStopped;
 
         RAknsSrvSession iSkinSrv;
         HBufC* iCurrentPluginDllName;
         HBufC* iCurrentPluginAssetDir;
         TBool iIsUIReady;
+    
+        TBool iReaped;
     };

@@ -325,6 +325,13 @@ public:
      */    
     IMPORT_C void SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType = MAlfEffectObserver::EAlfEffectComplete );
     
+	/**
+	 * Define window, that should be considered transparent
+	 * by fullscreen heuristic analysis. The window will
+	 * be drawn normally.
+	 */
+    IMPORT_C void SetDistractionWindow(const RWindowTreeNode& aWindow, TInt aState = 1);
+    
 private:
     CAlfEffectObserver();
     class CAlfEffectObserverData;

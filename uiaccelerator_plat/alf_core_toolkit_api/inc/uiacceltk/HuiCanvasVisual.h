@@ -110,7 +110,9 @@ enum THuiCanvasFlags
     /** Flag to indicate whether surface is invisible (based on visibility calculation) */
     EHuiCanvasFlagSurfaceInvisible = 0x400,
     /** Flag to indicate whether surface is visible (based on visibility calculation) */
-    EHuiCanvasFlagSurfaceVisible = 0x800
+    EHuiCanvasFlagSurfaceVisible = 0x800,
+    /** Flag to indicate avkon clearer window. This needs to be drawn, but excluded in the heuristics determining application screen coverage */
+    EHuiCanvasFlagDistractionWindow = 0x1000
     };
 
 /**

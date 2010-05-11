@@ -408,7 +408,14 @@ NONSHARABLE_CLASS(CAlfRsSendBuffer) : public CActive, public MAlfBridge
 
 	    void RunL();
 	    void DoCancel();
-
+        TInt RunError(TInt aError)
+            {
+            // will likely lead to inconsistent state and thus reset anyway
+            RDebug::Print(_L("CAlfRsSendBuffer::RunError( %d )"),aError);
+            aError -= (aError);
+            return aError; //KErrNone;
+            }
+            
 	private:
 	    
        /**

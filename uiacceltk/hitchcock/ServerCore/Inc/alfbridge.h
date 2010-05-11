@@ -352,6 +352,16 @@ private:
     void HandleGfxStopControlEffectsL( TAlfBridgerData data );
     
 	/**
+ 	 *  HandleSetDistractionWindowL
+	 *  
+	 *  Define or undefine, window that should be discarded in fullscreen
+	 *  heuristic analysus.
+	 *
+	 *  Used by avkon to mark CAknLocalScreenClearer window.
+	 */
+    void HandleSetDistractionWindowL( TAlfBridgerData data );
+	
+	/**
 	*	RemoveEffectFromApp
 	*
 	*	Removes effects on appui.
@@ -812,6 +822,9 @@ private:
     void SetCursorTimerL(TUint aTime = 0, CHuiVisual* aCursor = 0);
     TBool IsAlfOriginatedWindow(CHuiCanvasVisual& aVisual);
     
+    
+    TBool IsFullScreenDrawnRecursiveAlfContent(CHuiVisual* aVisual, TRect& aFullScreen);
+    
    // Experimental
     TBool IsFullScreenDrawnRecursive(
             CHuiLayout* aLayout, 
@@ -1002,6 +1015,9 @@ private:
 
     TBool iHomeScreenWallpaperWindowFound;
     TBool iBgAnimHidden;
+
+    TBool iHomeScreenVisible;
+    TInt iHomeScreenPSValue;
     
     CAlfLayoutSwitchEffectCoordinator* iLayoutSwitchEffectCoordinator;
     TInt iAlfSecureId; 	    

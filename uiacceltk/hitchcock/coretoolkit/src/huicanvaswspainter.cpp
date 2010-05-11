@@ -246,6 +246,9 @@ void CHuiCanvasWsPainter::HandleBufferL(TRect& aDisplayRect, TInt aAction, const
         // Initialize canvas
         canvasGc.SetDefaults();   
 
+        // Ensure that all regions have been shifted to correct origin (before calculating iFullUpdateRegion).
+        UpdateBufferUpdateRegions(aPos);
+        
         // Make sure we got up to date update reagion
         iFullUpdateRegion.Clear();                
         TInt bufferCount = iCommandBuffers.Count();
@@ -313,7 +316,6 @@ void CHuiCanvasWsPainter::HandleBufferL(TRect& aDisplayRect, TInt aAction, const
             /* Begin draw. If render buffer is used this sets up the render buffer if needed */
             iCanvasWsGc->BeginActionL(aAction,aDisplayRect,aUser,cachePrepared,iFullUpdateRegion);                   
 
-            TBool isFullUpdateRegionCleared = EFalse;
             if(iShapeRegionClearingPending)
                 {
                 #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
@@ -323,7 +325,6 @@ void CHuiCanvasWsPainter::HandleBufferL(TRect& aDisplayRect, TInt aAction, const
                 TBool doClear = ETrue;
                 iCanvasWsGc->EnableUpdateRegion(iFullUpdateRegion, doClear);
                 iCanvasWsGc->DisableUpdateRegion(); 
-                isFullUpdateRegionCleared = ETrue;
                 iShapeRegionClearingPending = EFalse;
                 }
 
@@ -472,9 +473,7 @@ void CHuiCanvasWsPainter::DoHandleAllBuffersL( TRect& aDisplayRect,
                                                TBool aIgnoreClippedBuffers, 
                                                TBool aIgnoreHandledBuffers,
                                                TBool aClearBeforeHandlingBuffers) 
-    {   
-    UpdateBufferUpdateRegions(aPos);
-
+    {
     TInt bufferCount = iCommandBuffers.Count();
     for (TInt cb = 0; cb < bufferCount; cb++)
         {
@@ -621,6 +620,23 @@ void CHuiCanvasWsPainter::HandleBufferL(TRect& aDisplayRect, TInt aAction, const
         }
     DoHandleBufferStringL(-1, aDisplayRect, aAction, aUser, aGc, aPos, cmds, buf);
     CleanupStack::PopAndDestroy();
+    }
+
+void CHuiCanvasWsPainter::DoPeekBufferAndUpdateShapeRegionL()
+    {
+    TBool hadShapeRegion = iShapeRegionAvailable;
+    iShapeRegionAvailable = EFalse;
+    
+    TInt latest = iCommandBuffers.Count() - 1;    
+    DoPeekBufferL(latest);
+    
+    if (hadShapeRegion && !iShapeRegionAvailable)
+        {
+        // Previously we had shape region, but not any more.
+        // So refresh update regions.
+        iShapeRegionClearingPending = ETrue;
+        iShapeRegionClippingPending = ETrue;        
+        }
     }
 
 void CHuiCanvasWsPainter::DoPeekBufferL(TInt aIndex) 
@@ -1270,22 +1286,13 @@ void CHuiCanvasWsPainter::SetCommandSetL( const TDesC8& aCommands )
     {
 	CHuiCanvasPainter::SetCommandSetL(aCommands);  
 
-    TInt latest = iCommandBuffers.Count() - 1;
-    DoPeekBufferL(latest);
+    DoPeekBufferAndUpdateShapeRegionL();
     SelectGcL();
        
     // If shape region has changed recalculate all update regions and remove redundant buffers
     if (iShapeRegionClippingPending)
         {
-        TInt bufferCount = iCommandBuffers.Count();
-        for (TInt cb = 0; cb < bufferCount; cb++)
-            {        
-            CHuiCanvasCommandBuffer* cmdbuffer = iCommandBuffers[cb];
-            cmdbuffer->iUpdateRegion.Copy(cmdbuffer->iOriginalUpdateRegion);                
-            cmdbuffer->iUpdateRegion.Intersect(iShapeRegion);
-            cmdbuffer->iUpdateRegion.Tidy();
-            }
-        iShapeRegionClippingPending = EFalse;       
+        ApplyShapeRegion();       
         RemoveRedundantBuffers();   
         }    
     
@@ -1307,8 +1314,11 @@ void CHuiCanvasWsPainter::ClearCommandSet()
 #endif
 
     CHuiCanvasPainter::ClearCommandSet();
+    
+    iShapeRegionAvailable = EFalse;
+    
     // Release currently cached images. 
-    // They may still be taken into use after next HandleBuffferL call.
+    // They may still be taken into use after next HandleBufferL call.
     if (iCanvasVisual)
         {
         iCanvasVisual->Env().CanvasTextureCache().ReleaseAllCachedEntries(*iCanvasVisual); 
@@ -1338,23 +1348,10 @@ void CHuiCanvasWsPainter::AddCommandSetL( const TDesC8& aMoreCommands )
 #endif
 
     CHuiCanvasPainter::AddCommandSetL(aMoreCommands);
-    TInt latest = iCommandBuffers.Count() - 1;
-    DoPeekBufferL(latest);     
+    DoPeekBufferAndUpdateShapeRegionL();
     SelectGcL();
     
-    // If shape region has changed recalculate all update regions
-    if (iShapeRegionClippingPending)
-        {
-        TInt bufferCount = iCommandBuffers.Count();
-        for (TInt cb = 0; cb < bufferCount; cb++)
-            {        
-            CHuiCanvasCommandBuffer* cmdbuffer = iCommandBuffers[cb];
-            cmdbuffer->iUpdateRegion.Copy(cmdbuffer->iOriginalUpdateRegion);                
-            cmdbuffer->iUpdateRegion.Intersect(iShapeRegion);
-            cmdbuffer->iUpdateRegion.Tidy();
-            }
-        iShapeRegionClippingPending = EFalse;       
-        }    
+    ApplyShapeRegion();
     
     RemoveRedundantBuffers();   
     
@@ -2142,27 +2139,19 @@ void CHuiCanvasWsPainter::WsSetUpdateRegionL(TInt aIndex)
         for (TInt i=count-1; i>=0; i--)
             {
             TRect rect = iTempRegion[i];
-            TRect screen = iCanvasVisual->Display()->VisibleArea();
-            if (rect.Intersects(screen) || rect == screen)
-                {
-                // - Sometimes updateregion is outiside window (WSERV...why?!) 
-                //   We clip it here to avoid ui probs.
-				// - Lets remove this for now, this seems to break scrollbars again
-				//   when window parent-child relations work..
-				// - Hmm, should we add this anyway because now the idle softkeys are lost again in landscape mode ?
-				// - Added again after WSERV fix in the window parent-child relations
+
+            // - Sometimes updateregion is outiside window (WSERV...why?!) 
+            //   We clip it here to avoid ui probs.
+            // - Lets remove this for now, this seems to break scrollbars again
+            //   when window parent-child relations work..
+            // - Hmm, should we add this anyway because now the idle softkeys are lost again in landscape mode ?
+            // - Added again after WSERV fix in the window parent-child relations
+            // - Rect may be outside the screen and that's fine (Visual may be moved later).
 #ifndef HUI_DISABLE_CANVAS_VISUAL_CLIPPING
-                rect.Intersection(displayRect); 
+            rect.Intersection(displayRect); 
 #endif                
-                iCommandBuffers[aIndex]->iUpdateRegion.AddRect(rect);    
-                iCommandBuffers[aIndex]->iOriginalUpdateRegion.AddRect(rect);    
-                }
-            else
-                {
-#ifdef _DEBUG
-                RDebug::Print(_L("CHuiCanvasWsPainter::WsSetUpdateRegionL: Incorrect update region removed from buffer, this should not happen !"));
-#endif
-                }
+            iCommandBuffers[aIndex]->iUpdateRegion.AddRect(rect);    
+            iCommandBuffers[aIndex]->iOriginalUpdateRegion.AddRect(rect);    
             }                
         
         // Combine areas that are next to each others
@@ -2210,16 +2199,19 @@ void CHuiCanvasWsPainter::WsSetShapeRegionL( TInt aIndex )
         iShapeRegion.Copy(iTempRegion);
 
         // note: iUpdateRegion will be updated later, set flags to indicate pending
+        iShapeRegionAvailable = ETrue;
+        iShapeRegionOrigin = iCanvasVisual->DisplayRect().Round().iTl;
+        
         iShapeRegionClearingPending = ETrue;
-        iShapeRegionClippingPending = ETrue;        
-       }
+        iShapeRegionClippingPending = ETrue;
+        }
     
 	
     #ifdef _DEBUG
     if (iShapeRegion.Count() == 0 && iTempRegion.Count() > 0)
         {
         HUI_DEBUG(_L("CHuiCanvasWsPainter::WsSetShapeRegionL. Error: iShapeRegion not set by any command buffer! However, there exists at least one command buffer that has shape region command."));
-         }
+        }
     #endif
     }
 
@@ -2268,9 +2260,9 @@ TBool CHuiCanvasWsPainter::RemoveRedundantBuffers()
     
     RemoveBuffersWithoutRealDrawing();
 
-    // Remove buffers only with moved display rect and modify the clip region
-    // of buffers with changed size instead of completely removing all. 
-    RemoveBuffersWithMovedDisplayRect();
+    // Don't remove command buffers with modified display rect.
+	// Instead, apply clipping.
+    //RemoveBuffersWithMovedDisplayRect();
     ModifyBuffersWithChangedDisplayRect();
     //RemoveBuffersWithOldDisplayRect();
     
@@ -2304,16 +2296,32 @@ void CHuiCanvasWsPainter::ModifyBuffersWithChangedDisplayRect()
     TInt bufferCount = iCommandBuffers.Count();
     TRect canvasRect = iCanvasVisual->DisplayRect().Round();
     TRegionFix<1> region(canvasRect);
+
+    // We must first offset to canvasRect.iTl, otherwise region clipping doesn't work.
+    UpdateBufferUpdateRegions(canvasRect.iTl);
     
     // If the buffers have different update region than CanvasVisual, clip
     // the drawing to canvas visual's & cmdbuffer's updateregions' intersection.
     for (TInt cb = 0; cb < bufferCount; cb++)
         {
         CHuiCanvasCommandBuffer* cmdbuffer = iCommandBuffers[cb];
-        if (cmdbuffer->iOriginalDisplayRect.Round() != canvasRect)
+        TRect bufRect = cmdbuffer->iOriginalDisplayRect.Round();
+                
+        if (bufRect != canvasRect)
             {
             cmdbuffer->iUpdateRegion.Copy(cmdbuffer->iOriginalUpdateRegion);
+            
+            TPoint deltaPos = cmdbuffer->iPositionForUpdateRegion - cmdbuffer->iOriginalDisplayRect.Round().iTl;
+            cmdbuffer->iUpdateRegion.Offset(deltaPos);
+            
             cmdbuffer->iUpdateRegion.Intersect(region);
+            
+            if ( iShapeRegionAvailable )
+                {
+                TranslateShapeRegion(cmdbuffer->iPositionForUpdateRegion);
+                cmdbuffer->iUpdateRegion.Intersect(iShapeRegion);
+                }
+            
             cmdbuffer->iUpdateRegion.Tidy();
             }
         }
@@ -2383,7 +2391,11 @@ void CHuiCanvasWsPainter::RemoveBuffersWithOverlappingUpdateRegion()
                 {
                 iTempRegion.AddRect(cmdbuffer->iOriginalUpdateRegion[j]);        
                 }
-                       
+            
+            // Translate region to be relative to visual top left corner.
+            TPoint offset = -cmdbuffer->iOriginalDisplayRect.Round().iTl;
+            iTempRegion.Offset(offset);
+            
             // Check older buffers for overlapping regions against current buffer
             if (cb > 0)
                 {                   
@@ -2394,19 +2406,26 @@ void CHuiCanvasWsPainter::RemoveBuffersWithOverlappingUpdateRegion()
                         break;    
                         }
 
-                    CHuiCanvasCommandBuffer* previousCommands = iCommandBuffers[i];            
+                    CHuiCanvasCommandBuffer* previousCommands = iCommandBuffers[i];
+                    TPoint previousCommandsOffset = previousCommands->iOriginalDisplayRect.Round().iTl;
+                    
                     // Keep count how many subregions of the prevous command are contained inside current command buffer region
                     TInt coveredRegionCount = 0;                    
                     for (TInt k=0; k < previousCommands->iOriginalUpdateRegion.Count();k++)
                         {
                         iTempCurrentSubRegion.Clear();
                         iTempIntersectingRegion.Clear();                                               
-                        iTempCurrentSubRegion.AddRect(previousCommands->iOriginalUpdateRegion[k]);                        
+                        iTempCurrentSubRegion.AddRect(previousCommands->iOriginalUpdateRegion[k]);
+                                                
+                        iTempCurrentSubRegion.Offset(-previousCommandsOffset);
+                        
                         iTempIntersectingRegion.Intersection(iTempRegion, iTempCurrentSubRegion);
                         iTempIntersectingRegion.Tidy();
                         
                         if (iTempIntersectingRegion.Count() == 1)
                             {
+                            iTempIntersectingRegion.Offset(previousCommandsOffset);
+                        
                             if (iTempIntersectingRegion[0] == previousCommands->iOriginalUpdateRegion[k])
                                 {
                                 coveredRegionCount++;
@@ -2429,6 +2448,45 @@ void CHuiCanvasWsPainter::RemoveBuffersWithOverlappingUpdateRegion()
                     }
                 }
             }
+        }
+    }
+
+void CHuiCanvasWsPainter::ApplyShapeRegion()
+    {
+    // If shape region has changed recalculate all update regions
+    if (iShapeRegionClippingPending)
+        {
+        TRect canvasRect = iCanvasVisual->DisplayRect().Round();
+
+        // We must first offset to canvasRect.iTl, otherwise region clipping doesn't work.
+        UpdateBufferUpdateRegions(canvasRect.iTl);
+
+        TInt bufferCount = iCommandBuffers.Count();
+        for (TInt cb = 0; cb < bufferCount; cb++)
+            {        
+            CHuiCanvasCommandBuffer* cmdbuffer = iCommandBuffers[cb];
+            cmdbuffer->iUpdateRegion.Copy(cmdbuffer->iOriginalUpdateRegion);                
+
+            TPoint deltaPos = cmdbuffer->iPositionForUpdateRegion - cmdbuffer->iOriginalDisplayRect.Round().iTl;
+            cmdbuffer->iUpdateRegion.Offset(deltaPos);
+
+            if ( iShapeRegionAvailable )
+                {
+                TranslateShapeRegion(cmdbuffer->iPositionForUpdateRegion);                 
+                cmdbuffer->iUpdateRegion.Intersect(iShapeRegion);
+                }
+            cmdbuffer->iUpdateRegion.Tidy();
+            }
+        iShapeRegionClippingPending = EFalse;       
+        }    
+    }
+    
+void CHuiCanvasWsPainter::TranslateShapeRegion(const TPoint& aNewOrigin)
+    {
+    if (iShapeRegionOrigin != aNewOrigin)
+        {
+        iShapeRegion.Offset(aNewOrigin - iShapeRegionOrigin);
+        iShapeRegionOrigin = aNewOrigin;
         }
     }
 
@@ -2704,18 +2762,28 @@ void CHuiCanvasWsPainter::UpdateBufferUpdateRegions(TPoint aPos)
 	{
 	// iUpdateRegion is in screen coordinates. If visual moves position, iUpdateRegion 
 	// should be updated as well. Otherwise visual will encounter clipping.
-    for (TInt cb = 0; cb < iCommandBuffers.Count(); cb++)
+    TBool updated = EFalse;
+	
+	for (TInt cb = 0; cb < iCommandBuffers.Count(); cb++)
         {
 		if (iCommandBuffers[cb]->iPositionForUpdateRegion != aPos && !iCommandBuffers[cb]->iUpdateRegion.IsEmpty() )
 			{
+			updated = ETrue;
+			
 			TPoint deltaPos = aPos - iCommandBuffers[cb]->iPositionForUpdateRegion;
 			iCommandBuffers[cb]->iUpdateRegion.Offset(deltaPos);
 			iCommandBuffers[cb]->iPositionForUpdateRegion = aPos;
-			iCommandBuffers[cb]->ClearStatusFlags(EHuiCanvasBufferStatusAll);
-			iCommandBuffers[cb]->SetStatusFlags(EHuiCanvasBufferStatusNew);
 			}
+		
+		if (updated)
+		    {
+            // If one command buffer is drawn, then all following command
+            // buffers must be redrawn as well.
+            iCommandBuffers[cb]->ClearStatusFlags(EHuiCanvasBufferStatusAll);
+            iCommandBuffers[cb]->SetStatusFlags(EHuiCanvasBufferStatusNew);			
+            }
         }
-	}
+    }
 
 void CHuiCanvasWsPainter::SetMemoryLevel(THuiMemoryLevel /*aLevel*/)
     {

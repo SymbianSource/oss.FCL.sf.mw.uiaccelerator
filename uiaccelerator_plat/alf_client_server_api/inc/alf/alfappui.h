@@ -54,7 +54,7 @@ public:
  *
  *  @since S60 v3.2
  */
-NONSHARABLE_CLASS(CAlfAppUi) : public CAknAppUi, public MAlfSrvSettingsObserver
+NONSHARABLE_CLASS(CAlfAppUi) : public CBase, public MAlfSrvSettingsObserver
     {
 
 public: // new methods 
@@ -121,7 +121,7 @@ public: // from base classes
      * 2nd phase constructor. Called by the framework after 
      * the 1st phase construction.
      */
-    IMPORT_C void ConstructL();
+    IMPORT_C virtual void ConstructL();
     
     /**
      * From CAknAppUi.
@@ -129,7 +129,7 @@ public: // from base classes
      *
      * @param aEvent Occurred event.
      */
-    IMPORT_C void HandleSystemEventL(const TWsEvent& aEvent);
+    IMPORT_C virtual void HandleSystemEventL(const TWsEvent& aEvent);
 
     /**
      * From CAknAppUi.
@@ -137,7 +137,7 @@ public: // from base classes
      *
      * @param aEvent Occurred event.
      */    
-    IMPORT_C void HandleWsEventL(const TWsEvent& aEvent, CCoeControl* aDestination);
+    IMPORT_C virtual void HandleWsEventL(const TWsEvent& aEvent, CCoeControl* aDestination);
     
     /**
      * From CAknAppUi.
@@ -145,7 +145,7 @@ public: // from base classes
      *
      * @return ETrue. Meaning the framework will synchronize the application to the starter
      */
-    IMPORT_C TBool FrameworkCallsRendezvous() const;
+    IMPORT_C virtual TBool FrameworkCallsRendezvous() const;
     
     /**
      * From CAknAppUi.
@@ -153,7 +153,7 @@ public: // from base classes
      *
      * @param aType Changed resource. 
      */
-    IMPORT_C void HandleResourceChangeL( TInt aType );
+    IMPORT_C virtual void HandleResourceChangeL( TInt aType );
    
    /**
      * From CAknAppUi.
@@ -161,7 +161,7 @@ public: // from base classes
      *
      * @param aCommand The command
      */
-    IMPORT_C void HandleCommandL(TInt aCommand);
+    IMPORT_C virtual void HandleCommandL(TInt aCommand);
     
     void MAlfSrvUintSettingChangedL( TAlfSrvSetting aSetting, TUint aNewValue );
     
