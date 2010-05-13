@@ -258,7 +258,9 @@ TRect CHuiCanvasPainter::CommandBufferCoverage(TInt aOrientation)
             tempRegion.AddRect(iCommandBuffers[cb]->iOriginalDisplayRect);
             }
         }    
-    return tempRegion.BoundingRect();
+    TRect result = tempRegion.BoundingRect();
+    tempRegion.Close();
+    return result;
     }
 
 void CHuiCanvasPainter::ClearCapturingBufferArea(const TRect& /*aRect*/)

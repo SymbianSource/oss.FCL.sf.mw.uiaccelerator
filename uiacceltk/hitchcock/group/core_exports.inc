@@ -3,7 +3,7 @@
 *  Name        : core_exports.inc
 *  Part of     : Alfred UI Toolkit
 *  Description : Exported header files.
-*  Version     : %version: tr1sido#8.1.36 %
+*  Version     : %version: tr1sido#8.1.37 %
 *
 *  Copyright © 2006-2007 Nokia.  All rights reserved.
 *  This material, including documentation and any related computer
@@ -53,6 +53,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/app_activate.fxml /epoc32/release/winscw/urel/z/resource/effects/app_activate.fxml
 ../coretoolkit/data/app_exit.fxml /epoc32/release/winscw/urel/z/resource/effects/app_exit.fxml
 ../coretoolkit/data/app_start.fxml /epoc32/release/winscw/urel/z/resource/effects/app_start.fxml
+../coretoolkit/data/app_start_long.fxml /epoc32/release/winscw/urel/z/resource/effects/app_start_long.fxml
 ../coretoolkit/data/app_start_rect.fxml /epoc32/release/winscw/urel/z/resource/effects/app_start_rect.fxml
 ../coretoolkit/data/app_start_switch.fxml /epoc32/release/winscw/urel/z/resource/effects/app_start_switch.fxml
 ../coretoolkit/data/app_start_switch_rect.fxml /epoc32/release/winscw/urel/z/resource/effects/app_start_switch_rect.fxml
@@ -145,6 +146,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/app_activate.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_activate.fxml
 ../coretoolkit/data/app_exit.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_exit.fxml
 ../coretoolkit/data/app_start.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_start.fxml
+../coretoolkit/data/app_start_long.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_start_long.fxml
 ../coretoolkit/data/app_start_rect.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_start_rect.fxml
 ../coretoolkit/data/app_start_switch.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_start_switch.fxml
 ../coretoolkit/data/app_start_switch_rect.fxml /epoc32/release/winscw/udeb/z/resource/effects/app_start_switch_rect.fxml
@@ -237,6 +239,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/app_activate.fxml /epoc32/data/z/resource/effects/app_activate.fxml
 ../coretoolkit/data/app_exit.fxml /epoc32/data/z/resource/effects/app_exit.fxml
 ../coretoolkit/data/app_start.fxml /epoc32/data/z/resource/effects/app_start.fxml
+../coretoolkit/data/app_start_long.fxml /epoc32/data/z/resource/effects/app_start_long.fxml
 ../coretoolkit/data/app_start_rect.fxml /epoc32/data/z/resource/effects/app_start_rect.fxml
 ../coretoolkit/data/app_start_switch.fxml /epoc32/data/z/resource/effects/app_start_switch.fxml
 ../coretoolkit/data/app_start_switch_rect.fxml /epoc32/data/z/resource/effects/app_start_switch_rect.fxml

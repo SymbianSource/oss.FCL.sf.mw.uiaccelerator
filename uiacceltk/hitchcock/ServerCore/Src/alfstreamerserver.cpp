@@ -32,6 +32,12 @@
 #include <alf/AlfTransEffectPlugin.hrh>
 
 
+// Implements just Error() to avoid panic
+NONSHARABLE_CLASS(CSimpleScheduler) : public CActiveScheduler
+    {
+    void Error( TInt ) const{} // From CActiveScheduler
+    };
+
 // ==================================
 // Launcher implementation.
 // ==================================   
@@ -66,7 +72,7 @@ GLDEF_C TInt AlfStreamerServerThreadStartFunction(TAny* aBridge)
         thread.Close();
 
         // Set up scheduler and cleanup stack for this thread
-        CActiveScheduler* scheduler = new CActiveScheduler;
+        CActiveScheduler* scheduler = new CSimpleScheduler;
         if (!scheduler)
             {
             return KErrNoMemory;

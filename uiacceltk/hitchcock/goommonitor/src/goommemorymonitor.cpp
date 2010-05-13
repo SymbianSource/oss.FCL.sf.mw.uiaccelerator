@@ -313,7 +313,7 @@ void CMemoryMonitor::RunCloseAppActions(TInt aMaxPriority)
     {
     FUNC_LOG;
     // Build the list of memory freeing actions (by killing apps)
-    iGOomActionList->BuildKillAppActionListL(*iGOomWindowGroupList, *iConfig);
+    TRAP_IGNORE(iGOomActionList->BuildKillAppActionListL(*iGOomWindowGroupList, *iConfig));
     iGOomActionList->FreeMemory(aMaxPriority);
     }
 

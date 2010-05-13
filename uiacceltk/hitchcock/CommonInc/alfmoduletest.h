@@ -1,19 +1,3 @@
-/*
-* Copyright (c) 2009 Nokia Corporation and/or its subsidiary(-ies).
-* All rights reserved.
-* This component and the accompanying materials are made available
-* under the terms of "Eclipse Public License v1.0"
-* which accompanies this distribution, and is available
-* at the URL "http://www.eclipse.org/legal/epl-v10.html".
-*
-* Initial Contributors:
-* Nokia Corporation - initial contribution.
-*
-* Contributors:
-*
-* Description: 
-*
-*/
 #ifndef ALFMODULETEST_H
 #define ALFMODULETEST_H
 
@@ -41,7 +25,7 @@
 _LIT(KAlfModuleTestChunkName, "ALF_MODULE_TEST_CHUNK");
 _LIT(KAlfModuleTestMutexName, "ALF_MODULE_TEST_MUTEX");
 
-
+const TInt KMaxSimultMeasurementCount = 10;
 /*
  *  Class CAlfModuleTestData
  */
@@ -240,6 +224,18 @@ public:
     TInt iASE_Temp3;
     TInt iASE_Temp4;
 
+    class TSpeedTest
+    {
+    public:
+        TInt64 iHandle;
+        TInt iCounter;
+        TBool iEffects;
+        TInt64 iTimeStamp[5];
+    };
+    
+    TSpeedTest iTimeMap[10];
+    TInt iNextFreeMap;
+        
     // Map that contains boolean items for certain test cases.
     TAlfModuleTestMap< TBool > iBoolMap;        
     // Map that contains integer items for certain test cases.

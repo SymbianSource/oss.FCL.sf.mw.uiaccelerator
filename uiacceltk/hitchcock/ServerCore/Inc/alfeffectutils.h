@@ -239,6 +239,7 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         TInt iToSecureId;
         TInt iFromSecureId;
         TRect iRect;
+        TBool iTimeoutTriggered;
         
         // ETrue if waiting for window group to appear
         TBool iWaitingWindowGroup;
