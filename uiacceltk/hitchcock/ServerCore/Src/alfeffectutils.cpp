@@ -826,11 +826,8 @@ void CFullScreenEffectState::ConstructL(
     iToAppId = aStream.ReadInt32L();
     iFromAppId = aStream.ReadInt32L();
 
-    if (iType == AknTransEffect::EParameterType)
-        {
-        iToSecureId = aStream.ReadInt32L();
-        iFromSecureId = aStream.ReadInt32L();
-        }
+    iToSecureId = aStream.ReadInt32L();
+    iFromSecureId = aStream.ReadInt32L();
     /*TInt flags =*/
     aStream.ReadInt32L();
     iRect.iTl.iX = aStream.ReadInt32L();
