@@ -209,6 +209,12 @@ void CAlfRenderStage::End( TRequestStatus* aFinished )
 	__ALFLOGSTRING2("CAlfRenderStage::End. iScreenNumber=%d, aFinished=%d", iScreenNumber,aFinished);
 	if (iAlfSendBuffer->FrameContainsDataL() ) 
 	    {
+    // set up the link for composition rs
+        MAlfCompositionController* compcntrl = ( MAlfCompositionController*)ResolveObjectInterface(KAlfCompositionControllerIfUid);
+        if (compcntrl)
+            {
+            compcntrl->AlfBridgeCallback(MAlfBridge::EEndCallbackInitiated,0);  
+            }
 	    TRAP( err, iAlfSendBuffer->SendL( aFinished ));
 	    }
 	else

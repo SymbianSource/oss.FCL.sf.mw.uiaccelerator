@@ -69,7 +69,6 @@ void CHuiFxVg10OffscreenRenderbuffer::ConstructL(CHuiVg10RenderPlugin& aPlugin, 
     // Create a context
     iContext = eglCreateContext(iPlugin->EglDisplay(), config,
             iPlugin->EglSharedContext(), NULL);
-    EGLint err = eglGetError();
     ASSERT(iContext);
     
     // Create a pbuffer surface
@@ -190,32 +189,61 @@ void CHuiFxVg10OffscreenRenderbuffer::ReadBackground()
     {
     if (iBackgroundEnabled)
         {
-        CHuiDisplay& display = CHuiStatic::Env().PrimaryDisplay();        
-        TBool rotatedDisplay = display.Orientation() == CHuiGc::EOrientationCCW90 || display.Orientation() == CHuiGc::EOrientationCW90;
-        TRect renderBufferLocation = TRect(iPosition, iSize);
+        TBool rotatedDisplay = EFalse;
+        CHuiGc::TOrientation orientation = CHuiStatic::Env().PrimaryDisplay().Orientation(); 
+        
+        // The current context can be the screen context or, in case of nested effects, an "effect off-screen"
+        // context. The latter uses VG image that is encapsulated inside PBuffer surface.
+        // Only if we have the screen context, the surface content can be in rotated state.
+        
+        TBool isScreenContext = (iPlugin->EglSharedContext() == eglGetCurrentContext());
+        if (isScreenContext)
+            {
+            rotatedDisplay = orientation == CHuiGc::EOrientationCCW90 || orientation == CHuiGc::EOrientationCW90;
+            }
 
-#ifdef HUIFX_TRACE    
-        RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::PrepareForReuse - renderBufferLocation original: %i,%i, %i,%i "), 
-                renderBufferLocation.iTl.iX,
-                renderBufferLocation.iTl.iY,
-                renderBufferLocation.iBr.iX,
-                renderBufferLocation.iBr.iY);
-#endif
-        
-        TRect displayArea = display.VisibleArea();
-        
-        TInt displayHeight = displayArea.Height();
-        TInt displayWidth = displayArea.Width();
-       
-        TSize rotatedSize = iSize;
-        TPoint rotatedPos = iPosition;
+
+        // Read surface size from egl
+        EGLDisplay eglDisp = eglGetCurrentDisplay();
+        EGLSurface eglSurf = eglGetCurrentSurface(EGL_DRAW);
+        EGLint sfWidth;
+        EGLint sfHeight;
+        eglQuerySurface(eglDisp, eglSurf, EGL_WIDTH, &sfWidth);
+        eglQuerySurface(eglDisp, eglSurf, EGL_HEIGHT, &sfHeight);
+
+        #ifdef HUIFX_TRACE  
+        RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::ReadBackground - surface size: %i,%i "), sfWidth, sfHeight);
+        #endif
         
         // Read pixels from surface        
-        if (rotatedDisplay)
+        if (!rotatedDisplay)
             {
-            if (iRotatedImage == VG_INVALID_HANDLE)
+            // Much easier if no rotation !
+            vgGetPixels(iImage, 0, 0, iPosition.iX, sfHeight - (iPosition.iY + iSize.iHeight), iSize.iWidth, iSize.iHeight);
+            }
+        else
+            {
+            // If screen is rotated but surface is not in native orientation, this gets difficult
+            // because vgGetPixels is not affected by transformations.
+
+            // display size = surface size rotated
+            TInt displayHeight = sfWidth;
+            TInt displayWidth = sfHeight;
+       
+            TSize newRotatedImageSize = TSize(iSize.iHeight, iSize.iWidth);
+            if (iRotatedImage == VG_INVALID_HANDLE || iRotatedImageSize != newRotatedImageSize)
                 {
                 PushEGLContext();
+                
+                // *** Create new vg image
+                
+                // Remove existing vg image, if any
+                if (iRotatedImage != VG_INVALID_HANDLE)
+                    {
+                    vgDestroyImage(iRotatedImage);
+                    iRotatedImage = VG_INVALID_HANDLE;
+                    HUIFX_VG_INVARIANT();
+                    }
                 
                 #ifndef __WINS__ // Should possibly query the supported mode instead?
                     VGImageFormat imageInternalFormat = VG_sARGB_8888_PRE;
@@ -223,9 +251,11 @@ void CHuiFxVg10OffscreenRenderbuffer::ReadBackground()
                     VGImageFormat imageInternalFormat = VG_sARGB_8888;
                 #endif
 
-                TSize rotatedImageSize = TSize(iSize.iHeight, iSize.iWidth);
-                iRotatedImage = vgCreateImage(imageInternalFormat, rotatedImageSize.iWidth, rotatedImageSize.iHeight, 
-                                   VG_IMAGE_QUALITY_NONANTIALIASED);
+                    iRotatedImageSize = newRotatedImageSize;
+                    iRotatedImage = vgCreateImage(imageInternalFormat, iRotatedImageSize.iWidth, iRotatedImageSize.iHeight, 
+                                       VG_IMAGE_QUALITY_NONANTIALIASED);
+                    //iRotatedImage = vgCreateImage(imageInternalFormat, iSize.iWidth, iSize.iHeight, 
+                    //                   VG_IMAGE_QUALITY_NONANTIALIASED);
 
                 PopEGLContext();
                 }
@@ -233,14 +263,17 @@ void CHuiFxVg10OffscreenRenderbuffer::ReadBackground()
             
             // If we have rotation on CHuiGc level, we must manually take that into account when
             // accessing pixels directly                
-            if(display.Orientation() == CHuiGc::EOrientationCCW90)
+            TSize rotatedSize = iSize;
+            TPoint rotatedPos = iPosition;
+            TRect renderBufferLocation = TRect(iPosition, iSize);
+            if(orientation == CHuiGc::EOrientationCCW90)
                 {
                 // Rotate the buffer location relative to real surface coordinates
                 rotatedSize = TSize(iSize.iHeight, iSize.iWidth);
                 rotatedPos = TPoint(displayHeight - iPosition.iY - iSize.iHeight, iPosition.iX);                        
                 renderBufferLocation = TRect(rotatedPos, rotatedSize);            
                 }
-            else if(display.Orientation() == CHuiGc::EOrientationCW90)
+            else if(orientation == CHuiGc::EOrientationCW90)
                 {
                 // Rotate the buffer location relative to real surface coordinates
                 rotatedSize = TSize(iSize.iHeight, iSize.iWidth);
@@ -251,23 +284,17 @@ void CHuiFxVg10OffscreenRenderbuffer::ReadBackground()
                 {
                 // nothing
                 }        
-
-            // If screen is rotated but surface is not in native orientation, this gets difficult
-            // because vgGetPixels is not affected by transformations.
-
-            // Swap h and w so that those are the "real" values from surface point of view.
-            displayHeight = displayWidth;
-
-            #ifdef HUIFX_TRACE    
-            RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::PrepareForReuse - renderBufferLocation: %i,%i, %i,%i "), 
+            
+            #ifdef HUIFX_TRACE 
+            RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::ReadBackground - renderBufferLocation: %i,%i, %i,%i "), 
                     renderBufferLocation.iTl.iX,
                     renderBufferLocation.iTl.iY,
                     renderBufferLocation.iBr.iX,
                     renderBufferLocation.iBr.iY);
 
-            TRect vgRect(TPoint(renderBufferLocation.iTl.iX, displayHeight - renderBufferLocation.iTl.iY - rotatedSize.iHeight), rotatedSize);
+            TRect vgRect(TPoint(renderBufferLocation.iTl.iX, sfHeight - renderBufferLocation.iTl.iY - rotatedSize.iHeight), rotatedSize);
 
-            RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::PrepareForReuse - vgRect: %i,%i, %i,%i "), 
+            RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::ReadBackground - vgRect: %i,%i, %i,%i "), 
                     vgRect.iTl.iX,
                     vgRect.iTl.iY,
                     vgRect.iBr.iX,
@@ -275,7 +302,7 @@ void CHuiFxVg10OffscreenRenderbuffer::ReadBackground()
             #endif
             
             // So...first get pixels from surface into rotated image
-            vgGetPixels(iRotatedImage, 0, 0, renderBufferLocation.iTl.iX, displayHeight - renderBufferLocation.iTl.iY - rotatedSize.iHeight, rotatedSize.iWidth, rotatedSize.iHeight);
+            vgGetPixels(iRotatedImage, 0, 0, renderBufferLocation.iTl.iX, sfHeight - (renderBufferLocation.iTl.iY + rotatedSize.iHeight), rotatedSize.iWidth, rotatedSize.iHeight);
             
             // Draw rotated image into real buffer image, first bind it as render target...
             BindAsRenderTarget();            
@@ -295,19 +322,19 @@ void CHuiFxVg10OffscreenRenderbuffer::ReadBackground()
             TInt h = iSize.iHeight;
             
             // ...select right rotation...
-            if (display.Orientation() == CHuiGc::EOrientationCW90)
+            if (orientation == CHuiGc::EOrientationCW90)
                 {
                 // Rotate around origo and move back to displayarea
                 vgRotate(-90);
                 vgTranslate(-h, 0);
                 }
-            else if (display.Orientation() == CHuiGc::EOrientationCCW90)
+            else if (orientation == CHuiGc::EOrientationCCW90)
                 {
                 // Rotate around origo and move back to displayarea
                 vgRotate(90);
                 vgTranslate(0, -w);
                 }
-            else if (display.Orientation() == CHuiGc::EOrientation180)
+            else if (orientation == CHuiGc::EOrientation180)
                 {
                 // Rotate around origo and move back to displayarea
                 vgRotate(180);
@@ -330,11 +357,6 @@ void CHuiFxVg10OffscreenRenderbuffer::ReadBackground()
 
             // ...finally unbind image and we should have the content correctly.
             UnbindAsRenderTarget();
-            }
-        else
-            {
-            // Much easier if no rotation !
-            vgGetPixels(iImage, 0, 0, renderBufferLocation.iTl.iX, displayHeight - renderBufferLocation.iTl.iY - rotatedSize.iHeight, rotatedSize.iWidth, rotatedSize.iHeight);
             }
         }    
     }

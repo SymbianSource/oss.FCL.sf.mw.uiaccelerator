@@ -259,32 +259,37 @@ public:
     /**
      * Creates a new instance of a canvas graphics context.
      */
-   virtual CHuiCanvasGc* CreateCanvasGcL();
+    virtual CHuiCanvasGc* CreateCanvasGcL();
 
-   /**
-    * Used to set flags that describe how the openvg state has changed.
-    */
-   virtual void AddRestoreStateFlags(TInt aFlags);
+    /**
+     * Used to set flags that describe how the openvg state has changed.
+     */
+    virtual void AddRestoreStateFlags(TInt aFlags);
    
-   /**
-    * Return the flags, e.g. for vg10gc to reset its state
-    */
-   virtual TInt GetRestoreStateFlags();
+    /**
+     * Return the flags, e.g. for vg10gc to reset its state
+     */
+    virtual TInt GetRestoreStateFlags();
    
-   /**
-    * Clear the stateflags
-    */
-   virtual void ClearRestoreStateFlags();
+    /**
+     * Clear the stateflags
+     */
+    virtual void ClearRestoreStateFlags();
    
 #ifdef __NVG
-   /**
-    * Getter for NVGEngine, to be used with NVG drawing inside OpenVG plugin
-    * 
-    * @return   CNvgEngine object
-    */
-   CNvgEngine& NvgEngine() const;
+    /**
+     * Getter for NVGEngine, to be used with NVG drawing inside OpenVG plugin
+     * 
+     * @return   CNvgEngine object
+     */
+    CNvgEngine& NvgEngine() const;
 #endif
 
+    /**
+     * Getter for hardware configuration flags (rendering quality Accurate / Fast)
+     */
+    TInt GetHwConfigurationFlags() const;
+    
 	/**
 	*  Getter for texture upload context. This is called by CHuiVg10Texture.
 	*/
@@ -365,6 +370,9 @@ private:
     /** Image binder for NVG-TLV "Group opacity" special case */
     MVGImageBinder* iMVGImageBinder;
 #endif
+    
+    // Hardware configuration, fetched from CenRep
+    TInt iHwConf;
     
     TBool iAllowsSwapBufferPreserved;
     TBool iAllowsVisualPBufferSurfaces;

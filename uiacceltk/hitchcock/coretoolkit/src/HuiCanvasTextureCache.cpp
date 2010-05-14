@@ -3270,7 +3270,7 @@ CHuiCanvasRenderBuffer* CHuiCanvasTextureCache::CreateCachedRenderBufferL(const 
     if (cachedEntry == KErrNotFound)
         {
         // Try first getting reused render buffer
-        newRenderBufferEntry = ReUseReleasedRenderBuffer(aSizeHint);
+        newRenderBufferEntry = ReUseReleasedRenderBufferL(aSizeHint);
 
         // Create new entry object if needed
         if (!newRenderBufferEntry)
@@ -3375,7 +3375,7 @@ void CHuiCanvasTextureCache::ReleaseCachedRenderBuffer(const CHuiCanvasVisual& a
 // 
 // ---------------------------------------------------------------------------
 //
-CHuiCanvasRenderBufferImage* CHuiCanvasTextureCache::ReUseReleasedRenderBuffer(TSize aSizeHint)
+CHuiCanvasRenderBufferImage* CHuiCanvasTextureCache::ReUseReleasedRenderBufferL(TSize aSizeHint)
     {
     if (aSizeHint == TSize(0,0))
         {
@@ -3392,6 +3392,12 @@ CHuiCanvasRenderBufferImage* CHuiCanvasTextureCache::ReUseReleasedRenderBuffer(T
             // Remove from array and return instance to caller
             CHuiCanvasRenderBufferImage* reusedEntry = iCachedRenderBuffers[i];        
             iCachedRenderBuffers.Remove(i);
+            
+            if (reusedEntry->iCanvasRenderBuffer && reusedEntry->iCanvasRenderBuffer->IsInitialized())
+                {
+                reusedEntry->iCanvasRenderBuffer->InitializeL(aSizeHint, ETrue);
+                }
+            
             return reusedEntry;
             }
         }         

@@ -1379,16 +1379,6 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
                     EHuiVg10GcStateFlagDirtyScissorRects;
     iRenderPlugin.AddRestoreStateFlags(dirtyFlags);
     
-#ifdef _DEBUG
-    // TODO: There's something in the DrawNvg() code, which causes OpenVg to set
-    // error code => PANIC, if not for this temp check here. REMOVE ONCE THE TSW ERROR IS FIXED!
-    VGErrorCode err = vgGetError();
-    if (err)
-        {
-        RDebug::Print(_L("CHuiVG10Texture::CreateRenderedImage - Error in NVG draw: %04x"), err);
-        }
-#endif
-    
     HUI_VG_INVARIANT();
     
     vgSeti(VG_MATRIX_MODE, VG_MATRIX_IMAGE_USER_TO_SURFACE);

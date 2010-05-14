@@ -1611,6 +1611,7 @@ EXPORT_C void CAlfVisual::SetEffectL( const TDesC& aEffectFile )
     TBuf8<1> dumDum;
     TAlfVisualEffectParams params;
     params.iFileName = aEffectFile;
+    params.iHandle = Identifier();
     
     TPckg<TAlfVisualEffectParams> paramsPckg(params);
     
@@ -1640,6 +1641,7 @@ EXPORT_C void CAlfVisual::SetGroupEffectL( const TDesC& aEffectFile, TInt aGroup
 	TAlfVisualEffectParams params;
 	params.iFileName = aEffectFile;
 	params.iGroupHandle = aGroupHandle;
+	params.iHandle = Identifier();
 	
 	TPckg<TAlfVisualEffectParams> paramsPckg(params);
 	

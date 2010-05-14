@@ -72,6 +72,14 @@ TInt CTestPlatAlfVisual::TestBufDrawerDrawBufferL( CStifItemParser& /*aItem*/ )
                         TPoint( KTestDisplayPosX, KTestDisplayPosY ),
                         TSize( KTestDisplayWidth, KTestDisplayHeight )
                         );
+    TRAPD( trapError,
+           iAlfEnv->NewDisplayL(
+                        dispRect, 0, NULL,
+                        CAlfDisplay::EDisplayOffScreenBuffer,
+                        KTestScreenBufferUid ) );
+    // CAlfDisplay::EDisplayOffScreenBuffer is not supported for new display.
+    STIF_ASSERT_EQUALS( KErrNotSupported, trapError );
+/** Deprecated test
     CAlfDisplay* alfDisp = &( iAlfEnv->NewDisplayL(
                             dispRect, 0, NULL,
                             CAlfDisplay::EDisplayOffScreenBuffer,
@@ -114,6 +122,7 @@ TInt CTestPlatAlfVisual::TestBufDrawerDrawBufferL( CStifItemParser& /*aItem*/ )
     CleanupStack::PopAndDestroy( bitmap );
     CleanupStack::PopAndDestroy( scrBuffer );
     CleanupStack::PopAndDestroy( observer );
+*/    
     
     return KErrNone;
     }
@@ -135,6 +144,14 @@ TInt CTestPlatAlfVisual::TestBufDrawerGetBufferBitmapsL( CStifItemParser& /*aIte
                         TPoint( KTestDisplayPosX, KTestDisplayPosY ),
                         TSize( KTestDisplayWidth, KTestDisplayHeight )
                         );
+    TRAPD( trapError,
+           iAlfEnv->NewDisplayL(
+                        dispRect, 0, NULL,
+                        CAlfDisplay::EDisplayOffScreenBuffer,
+                        KTestScreenBufferUid ) );
+    // CAlfDisplay::EDisplayOffScreenBuffer is not supported for new display.
+    STIF_ASSERT_EQUALS( KErrNotSupported, trapError );
+/** Deprecated test    
     CAlfDisplay* alfDisp = &( iAlfEnv->NewDisplayL(
                             dispRect, 0, NULL,
                             CAlfDisplay::EDisplayOffScreenBuffer,
@@ -155,7 +172,7 @@ TInt CTestPlatAlfVisual::TestBufDrawerGetBufferBitmapsL( CStifItemParser& /*aIte
     drawer->GetBufferBitmaps( bitmap, mask );
     CleanupStack::PopAndDestroy( scrBuffer );
     CleanupStack::PopAndDestroy( observer );
-    
+*/
     return KErrNone;
     }
 
@@ -176,6 +193,14 @@ TInt CTestPlatAlfVisual::TestBufDrawerReleaseDrawerL( CStifItemParser& /*aItem*/
                         TPoint( KTestDisplayPosX, KTestDisplayPosY ),
                         TSize( KTestDisplayWidth, KTestDisplayHeight )
                         );
+    TRAPD( trapError,
+           iAlfEnv->NewDisplayL(
+                        dispRect, 0, NULL,
+                        CAlfDisplay::EDisplayOffScreenBuffer,
+                        KTestScreenBufferUid ) );
+    // CAlfDisplay::EDisplayOffScreenBuffer is not supported for new display.
+    STIF_ASSERT_EQUALS( KErrNotSupported, trapError );
+/** Deprecated test    
     CAlfDisplay* alfDisp = &( iAlfEnv->NewDisplayL(
                             dispRect, 0, NULL,
                             CAlfDisplay::EDisplayOffScreenBuffer,
@@ -195,7 +220,7 @@ TInt CTestPlatAlfVisual::TestBufDrawerReleaseDrawerL( CStifItemParser& /*aItem*/
     drawer = NULL;
     CleanupStack::PopAndDestroy( scrBuffer );
     CleanupStack::PopAndDestroy( observer );
-    
+*/
     return KErrNone;
     }
 

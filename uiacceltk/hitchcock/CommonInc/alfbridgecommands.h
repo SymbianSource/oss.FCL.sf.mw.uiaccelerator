@@ -83,6 +83,7 @@ enum TAlfDecoderServerBindings
     EAlfDSSetWindowArea,
     EAlfDSSetTransparencyAlphaChannel,
     EAlfDSIncludeToVisibilityCalculation,
+    EAlfDSSetDistractionWindow,
 
     KUnInitialized
     };

@@ -53,12 +53,15 @@ void CThemeRepositoryListener::RunL()
     // we are only interested in the value if it
     // is something else than 0
     // as it means that we should stop...
-    if (value && value != iPreviousValue)
+    if (value)
         {
         *iValueToChange = EFalse;
         }
+    else
+        {
+        *iValueToChange = ETrue;
+        }
 
-    iPreviousValue = value;
     
     if (iStatus.Int() != KErrCancel)
         {

@@ -706,7 +706,7 @@ TBool CHuiDisplay::Refresh()
             RosterImpl().ScanDirty();	         	      
             }   
 
-        if (!useDirtyRects || cantUseDirtyRectsInThisFrame || iEnv.EffectsEngine()->HasActiveEffects()) 
+        if (!useDirtyRects || cantUseDirtyRectsInThisFrame || iEnv.EffectsEngine()->HasActiveEffects() || RosterImpl().IsVisibleContentFrozen()) 
          	{         	
 	        // Just redraw everything
 	        iCurrentDirtyRegions->Reset();
@@ -759,7 +759,7 @@ TBool CHuiDisplay::Refresh()
 	// need to clear the screen as fade effect uses
 	// always blending. If we do not clear here
 	// fade leaves trails in certain situations.
-	if (iEnv.EffectsEngine()->HasActiveFadeEffect() 
+	if (iEnv.EffectsEngine()->HasActiveEffects() 
 	        || RosterImpl().IsVisibleContentFrozen() // guaranteen, that transparent pixels of the UI surface are drawn correctly during layout switch.
 	        )
 	    {

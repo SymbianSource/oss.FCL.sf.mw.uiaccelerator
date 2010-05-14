@@ -78,6 +78,11 @@ public: // From CHuiCanvasRenderBuffer
      */ 
     void Copy(TPoint aPoint);    
     
+    /**
+     * Initializes render buffer, with clear option.
+     */
+    void InitializeL(const TSize& aSize, TBool aForceClear);
+    
 public:
     
     VGImage Image() const;

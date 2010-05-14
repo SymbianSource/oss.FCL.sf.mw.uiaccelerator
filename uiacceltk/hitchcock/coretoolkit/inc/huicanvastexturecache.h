@@ -398,7 +398,7 @@ private:
 
     TInt CalculateTotalCanvasRenderBufferUsageInKbytes();
     
-    CHuiCanvasRenderBufferImage* ReUseReleasedRenderBuffer(TSize aSizehint);
+    CHuiCanvasRenderBufferImage* ReUseReleasedRenderBufferL(TSize aSizehint);
     
     TBool IsLowMemoryStateEnabled() const;
     

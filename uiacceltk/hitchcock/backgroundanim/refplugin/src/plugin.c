@@ -197,6 +197,7 @@ EXPORT_C void* getinterface(int version)
             interface->destroy = destroy;
             interface->desiredsensors = 0;
             interface->receivesensordata = 0;
+            interface->setfaded = 0;
             interface->extension = extension;
             }
         }

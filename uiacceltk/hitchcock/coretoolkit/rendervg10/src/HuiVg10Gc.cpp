@@ -32,7 +32,6 @@
 #include "uiacceltk/HuiPanic.h"
 #include "uiacceltk/huifixmath.h"
 #include "HuiRenderSurface.h"
-#include "../../CommonInc/uiacceltkdomaincrkeys.h"
 
 #include "huiextension.h"
 
@@ -385,8 +384,9 @@ void CHuiVg10Gc::CreateVgObjectsL()
     vgRemovePathCapabilities(iBorderPath, VG_PATH_CAPABILITY_APPEND_TO);
         
     // Get hardware configuration
-    TInt hwConf = 0; // the defaulf value for everything is 0 to allow new flags to be defined
-    HuiUtil::GetValueFromCentralRepository( KUIAccelTKHWConfigurationFlags, hwConf );
+    CHuiVg10RenderPlugin& renderer = (CHuiVg10RenderPlugin&) CHuiStatic::Renderer();
+    TInt hwConf = renderer.GetHwConfigurationFlags();
+    
     if ( hwConf & KHuiAntialiasing )
         {
         SetQuality( EHuiQualityAccurate );
@@ -395,11 +395,10 @@ void CHuiVg10Gc::CreateVgObjectsL()
         {
         SetQuality( EHuiQualityFast );
         }
-
     
     iVgObjectsCreated = ETrue;
     }
- 
+
 void CHuiVg10Gc::InitState()
     {
     // Clean matrix stack in case there is anything left
@@ -2225,15 +2224,6 @@ void CHuiVg10Gc::DrawNVG(HBufC8* aNVGData, MNVGIcon* aIconCmds, const TSize& aIm
         HUI_DEBUG(_L("CHuiVg10Gc::DrawNVG() - Fallback to draw the old way (via DrawNvg)"));
         iNvgEngine->DrawNvg(nvgDataVoidIC, aImageSize, NULL, NULL);
         }
-
-#ifdef _DEBUG
-    // TODO: REMOVE ONCE THE TSW ERROR IS FIXED!
-    VGErrorCode err = vgGetError();
-    if (err)
-        {
-        RDebug::Print(_L("CHuiVg10Gc::DrawNVG - Error in NVG draw: %04x"), err);
-        }
-#endif
     
     // The NVG draw messes up the paint, scissoring & rects, so mark them as dirty
     TInt dirtyFlags = EHuiVg10GcStateFlagDirtyPaint |

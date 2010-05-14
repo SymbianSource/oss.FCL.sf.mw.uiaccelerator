@@ -61,6 +61,8 @@ typedef struct
     // If plugin does not want to use sensors, the function pointer must to be initialized to NULL
     void (*receivesensordata)(void*, int, int);
 
+    void (*setfaded)(int);
+    
     // this function can be used to convey any additional data from/to the plugin.
     int (*extension)(int, void*);
     } plugin_export_v1_t;

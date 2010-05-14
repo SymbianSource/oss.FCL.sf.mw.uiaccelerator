@@ -1321,13 +1321,14 @@ void CAlfRsSendBuffer::SendL( TRequestStatus* aStatus )
     TInt lastWrittenOffset( iOffset );
     Commit();
     
-    TIpcArgs args( lastWrittenOffset );
-    // __ALFLOGSTRING1("CAlfRsSendBuffer::SendL, offset %d ( TRequestStatus)"), lastWrittenOffset );
+    TIpcArgs args( lastWrittenOffset, iCompositionModified );
+    //RDebug::Printf("CAlfRsSendBuffer::SendL, offset %d",lastWrittenOffset );
     if ( iFlushBufferTimer ) 
         {
         iFlushBufferTimer->Cancel();
         }
     iAlfBridgerClient->SendAsynchronous( EAlfBridgerAsyncronousData, args, iStatus );
+    iCompositionModified = EFalse;
 
     if ( aStatus )  // aStatus is null, if this was event notification and not drawing
         {

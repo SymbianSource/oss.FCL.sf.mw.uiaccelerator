@@ -40,6 +40,10 @@ TInt CTestPlatAlfVisual::TestAlfMeshSetAndGetL( CStifItemParser& /*aItem*/ )
     // Print to log file
     iLog->Log( KTestAlfMeshSetAndGetL );
     
+    // Mesh not supported at the moment
+    STIF_ASSERT_LEAVES_WITH( KErrNotSupported,
+                             CAlfMeshVisual::AddNewL( *iAlfCtl ) );
+/* Not supported at the moment
     CAlfMeshVisual* vVisual = CAlfMeshVisual::AddNewL( *iAlfCtl );
     vVisual->CreateMeshL( EAlfMeshTypeM3G );
     CAlfMesh& vMesh = vVisual->Mesh();
@@ -51,7 +55,7 @@ TInt CTestPlatAlfVisual::TestAlfMeshSetAndGetL( CStifItemParser& /*aItem*/ )
     vMesh.StartAnimationController( iAlfCtl->Id() );
     vMesh.StopAnimationController( iAlfCtl->Id() );
     vMesh.Reset();
-    
+*/    
     return KErrNone;
     }
 

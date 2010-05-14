@@ -45,7 +45,8 @@ enum
     EAlfQueueRequestBGSessions,
     EAlfGetNumberOfActiveEffects,
     EAlfRequestSignal,
-    EAlfCompleteSignal
+    EAlfCompleteSignal,
+    EAlfSetDistractionWindow
 
     };
 

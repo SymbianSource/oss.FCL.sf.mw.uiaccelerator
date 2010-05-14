@@ -67,6 +67,8 @@ threshold values are used.
 		this line may be enabled for flashlite and other apps that allocate mem through policy server
 		close_app uid="101FD693" priority="80" sync_mode="check" close_timeout="3000" wait_after_close="5000"
 -->
+	<close_app uid="AF00ABBA" priority="NEVER_CLOSE" sync_mode="check"></close_app> <!--QtLauncher-->
+	
 	</app_close_settings>
 	
 <!--	The priority of executing each system plugin is defined here.

@@ -295,7 +295,9 @@ void CAlfCompositionCntrlClient::HandleEventL(TInt aEventType, TAny* aEventData)
             }
         case KAlfCompOpBindSourceToToken:
             {
+#ifdef _ALF_LOGGING
             RDebug::Print(_L("ptr0: %d, Target %d, Flags %d, combinedtarget"), ptr[0], ptr[1], ptr[2]);
+#endif // #ifdef _ALF_LOGGING
             if( ptr[1] != 0) // add binding information for new host to given target with permitted operations
                 {
                 iHostBindingsHash.Insert(*ptr, ptr[1]);
@@ -479,7 +481,9 @@ EXPORT_C CAlfCompositionSource::~CAlfCompositionSource()
 void CAlfCompositionSource::ConstructL(TInt aWsHandle, TInt aGroupHandle, TInt aScreenNumber)
     {
     iData = CAlfCompositionSourceData::NewL();
+#ifdef _ALF_LOGGING
     RDebug::Print(_L("CAlfCompositionClientBase::ConstructL - %d"), iData );
+#endif // #ifdef _ALF_LOGGING
 
     User::LeaveIfError( SendEvent(KAlfCompositionSourceScreenNumber, &aScreenNumber, sizeof(TInt)));
     
@@ -698,7 +702,9 @@ EXPORT_C CAlfCompositionHost* CAlfCompositionHost::NewL(TInt aToken, TInt aKey)
 void CAlfCompositionHost::ConstructL(TInt aToken, TInt aKey)
     {
     iData = CAlfCompositionSourceData::NewL();
+#ifdef _ALF_LOGGING
     RDebug::Print(_L("CAlfCompositionClientBase::ConstructL - %d"), iData );
+#endif // #ifdef _ALF_LOGGING
 
     TInt array[] = { 0, aToken, aKey }; 
     TInt result  = SendEvent(KAlfCompOpBindSourceToToken, array, sizeof(array));   
@@ -1237,6 +1243,7 @@ class MAlfEffectObserverData
     {
     public:
         virtual void Remove(CAlfSignalObserver* aObserver) = 0;
+        virtual RAlfBridgerClient& Client() = 0;
     };
 
 NONSHARABLE_CLASS(CAlfEffectObserver::CAlfEffectObserverData): public CBase, public MAlfEffectObserverData
@@ -1245,6 +1252,7 @@ NONSHARABLE_CLASS(CAlfEffectObserver::CAlfEffectObserverData): public CBase, pub
     void SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType = MAlfEffectObserver::EAlfEffectComplete );        
     ~CAlfEffectObserverData();
     void Remove(CAlfSignalObserver* aObserver);
+    RAlfBridgerClient& Client();
     
     // data
     RAlfBridgerClient iClient;
@@ -1261,20 +1269,40 @@ NONSHARABLE_CLASS(CAlfSignalObserver):public CActive
         CActiveScheduler::Add(this);
         SetActive(); 
         }
-                
-    void DoCancel(){} // do not...
+		
+    ~CAlfSignalObserver()
+        {
+        Cancel();
+        }
+
+    private:
     
+        void DoCancel()
+            {
+            if (iOwner)
+                {
+                iOwner->Client().SendSynch(EAlfCompleteSignal, TIpcArgs(iHandle, iType));
+                }
+            }
+    
+	    // just to prohibit cancel outside destructor
+        void Cancel()
+            {
+            CActive::Cancel();
+			}	   
+	
     void RunL()
         {    
         iObserver->HandleEffectCallback(iType, iHandle, iStatus.Int());
         iOwner->Remove(this);
         }    
     
-    MAlfEffectObserverData* iOwner;
-    CAlfEffectObserver::MAlfEffectObserver* iObserver;
-    TInt iHandle;        
-    TInt iType;
-    TIpcArgs iArgs;
+	public:
+        MAlfEffectObserverData* iOwner;
+        CAlfEffectObserver::MAlfEffectObserver* iObserver;
+        TInt iHandle;        
+        TInt iType;
+        TIpcArgs iArgs;
     };
 
 void CAlfEffectObserver::CAlfEffectObserverData::SubscribeCallbackL(MAlfEffectObserver* aObserver, TInt aHandle, TInt aType)
@@ -1288,15 +1316,24 @@ void CAlfEffectObserver::CAlfEffectObserverData::SubscribeCallbackL(MAlfEffectOb
         
 CAlfEffectObserver::CAlfEffectObserverData::~CAlfEffectObserverData()
     {    
-    iClient.Close(); // destroys signals
     iObservers.ResetAndDestroy();
+    iObservers.Close();
+    iClient.Close(); // destroys signals
     }
-        
+
+RAlfBridgerClient& CAlfEffectObserver::CAlfEffectObserverData::Client()
+    {
+    return iClient;
+    }
+
 void CAlfEffectObserver::CAlfEffectObserverData::Remove(CAlfSignalObserver* aObserver)
     {
     TInt index = iObservers.Find(aObserver);
-    iObservers.Remove(index);
-    delete aObserver;   
+    if (index != KErrNotFound)
+        {
+        iObservers.Remove(index);
+        }
+    delete aObserver;
     }    
     
 EXPORT_C CAlfEffectObserver* CAlfEffectObserver::NewL()
@@ -1311,7 +1348,7 @@ EXPORT_C CAlfEffectObserver* CAlfEffectObserver::NewL()
 
 EXPORT_C CAlfEffectObserver::~CAlfEffectObserver()
     {
-    delete iData;        
+    delete iData; 
     }
 
 EXPORT_C TInt CAlfEffectObserver::ActiveEffectsCount()
@@ -1324,11 +1361,18 @@ EXPORT_C void CAlfEffectObserver::SubscribeCallbackL(MAlfEffectObserver* aObserv
     iData->SubscribeCallbackL(aObserver, aHandle, aType ); 
     }
 
+EXPORT_C void CAlfEffectObserver::SetDistractionWindow(const RWindowTreeNode& aWindow, TInt aState)
+    {
+    if (!&aWindow)
+        {
+        return;
+        }
+    iData->iClient.SendSynch(EAlfSetDistractionWindow, TIpcArgs(aWindow.WindowGroupId(), aWindow.ClientHandle(), aState));
+    }
+
 CAlfEffectObserver::CAlfEffectObserver()
     {
     }
-
  
+//end of file
 
-
-//end of file    

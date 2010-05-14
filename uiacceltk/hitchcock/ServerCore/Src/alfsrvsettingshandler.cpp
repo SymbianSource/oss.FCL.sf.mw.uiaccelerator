@@ -282,5 +282,8 @@ void CAlfSrvSettingsHandler::DoCancel()
 //
 TInt CAlfSrvSettingsHandler::RunError(TInt aError)
     {
-    return aError;    
+    // will likely lead to inconsistent state and thus reset anyway
+    RDebug::Print(_L("CAlfSrvSettingsHandler::RunError( %d )"),aError);
+    aError -= (aError);
+    return aError; //KErrNone;
     }

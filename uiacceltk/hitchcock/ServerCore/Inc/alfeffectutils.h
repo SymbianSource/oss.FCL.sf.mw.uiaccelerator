@@ -205,11 +205,22 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
     NONSHARABLE_CLASS(CControlEffectState ) : public CEffectState
         {
     public:
-
+        
         TUint32 iClientHandle;
         TUint32 iClientGroupHandle;
-    
+        
+        enum TDistractionType
+            {
+            ENoOperation = 0,
+            ESetDistractionWindow = 100,
+            ERemoveDistractionWindow
+            };
+        
+        TDistractionType iSetDistractionWindow;
+        
         void ConstructL(TInt aAction, RMemReadStream& aStream);
+        
+        void ConstructL(TUint32 aClientHandle, TUint32 aClientGroupHandle, TBool aSetDistractionWindow);
         };
 
     NONSHARABLE_CLASS(CFullScreenEffectState ) : public CEffectState

@@ -69,4 +69,8 @@ EXPORT_C void CHuiCanvasRenderBuffer::Copy(TPoint /*aPoint*/)
     // Default implementation does nothing    
     }
 
+EXPORT_C void CHuiCanvasRenderBuffer::InitializeL(const TSize& /*aSize*/, TBool /*aForceClear*/)
+    {
+    iInitialized = ETrue;
+    }
 

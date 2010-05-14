@@ -32,6 +32,7 @@
 #include "uiacceltk/HuiEnv.h"
 #include "uiacceltk/HuiDisplay.h"
 #include "HuiFxVg10Engine.h"
+#include "../../CommonInc/uiacceltkdomaincrkeys.h"
 
 #ifdef __NVG
     #include <nvg.h>
@@ -109,7 +110,10 @@ void CHuiVg10RenderPlugin::ConstructL()
 
     // Initialize some "allow flags" which depend on used HW
     ReadAllowsSwapBufferPreserved();
-    ReadAllowsVisualPBufferSurfaces();    
+    ReadAllowsVisualPBufferSurfaces();
+    
+    // Cache the Hardware configuration
+    iHwConf = HuiUtil::GetValueFromCentralRepository( KUIAccelTKHWConfigurationFlags, iHwConf );
     }
 
 CHuiVg10RenderPlugin::~CHuiVg10RenderPlugin()
@@ -507,6 +511,11 @@ CNvgEngine& CHuiVg10RenderPlugin::NvgEngine() const
     return *iNvgEngine;
     }
 #endif
+
+TInt CHuiVg10RenderPlugin::GetHwConfigurationFlags() const
+    {
+    return iHwConf;
+    }
 
 // TODO: This is only a temporary check until all HW platforms support feature
 void CHuiVg10RenderPlugin::ReadAllowsSwapBufferPreserved()

@@ -510,7 +510,7 @@ void CAlfLayoutSwitchEffectCoordinator::SetLayoutSwitchEffect(AknTransEffect::TC
             if ( iBridge.iAlfRegisteredEffects[i].iAction == aContext)
                 {
                 //RDebug::Print(_L("CAlfLayoutSwitchEffectCoordinator::SetLayoutSwitchEffectL - loading effect"));
-                TRAP_IGNORE(engine->LoadEffectL(*iBridge.iAlfRegisteredEffects[i].iEffectFile, effect, effectable, NULL, this, iLayoutSwitchEffectContext, 0 ) );                    
+                TRAP_IGNORE(engine->LoadEffectL(*iBridge.iAlfRegisteredEffects[i].iEffectFile, effect, effectable, NULL, this, iLayoutSwitchEffectContext, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn ) );                    
                 break;
                 }
             }
@@ -854,8 +854,22 @@ void CControlEffectState::ConstructL(TInt aAction,
     iHandle = aStream.ReadInt32L();
     iClientHandle = aStream.ReadInt32L();
     iClientGroupHandle = aStream.ReadInt32L();
-    TInt screenNumber = aStream.ReadInt32L(); // this has always value 0 
+    TInt screenNumber = aStream.ReadInt32L(); // this has always value 0
+    iSetDistractionWindow = ENoOperation;
     // Are Symbian full filename+directory combinations still max 256 characters long?
     ResolveFileNameL(aStream);
     }
 
+void CControlEffectState::ConstructL(TUint32 aClientHandle, TUint32 aClientGroupHandle, TInt aSetDistractionWindow)
+    {
+    iClientHandle = aClientHandle;
+    iClientGroupHandle = aClientGroupHandle;
+    if (aSetDistractionWindow)
+        {
+        iSetDistractionWindow = CControlEffectState::ESetDistractionWindow;
+        }
+    else
+        {
+        iSetDistractionWindow = CControlEffectState::ERemoveDistractionWindow;
+        }
+    }

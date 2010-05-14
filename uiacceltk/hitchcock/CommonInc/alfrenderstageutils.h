@@ -94,6 +94,7 @@ class MAlfBridge
         EAlfBridgeCreated, // data: MAlfBridge
         EAlfNativeWindowCreated, // data: TAlfNativeWindowData
         ESetWindowTreeObserver, // data: MAlfCompositionAgnosticWindowTreeObserver*
+        EEndCallbackInitiated, // Renderstage above us has started progressing End(), i.e. rendering UI surface, no data 
         EExternalize, // externalize complete state data: Todo
         EInternalize  // reset the state from data data: Todo
         };
@@ -102,6 +103,7 @@ class MAlfBridge
     virtual void WriteIntsL(TUint8 aCommand, TInt aCount, TInt* aArray) = 0;
     virtual RAlfBridgerClient* Client() = 0;
     virtual void SetOrientation(TInt aOrientation) = 0;
+    virtual void SetCompositionModified() = 0;
     };
 
 /**

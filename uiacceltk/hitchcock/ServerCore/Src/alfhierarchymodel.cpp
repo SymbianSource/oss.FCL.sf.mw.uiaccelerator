@@ -185,10 +185,10 @@ void CAlfHierarchyModel::RequestPacketEndCallback( TInt aOffset )
 // RequestFrameEndCallback
 // ---------------------------------------------------------------------------
 //
-void CAlfHierarchyModel::RequestFrameEndCallback( )
+void CAlfHierarchyModel::RequestFrameEndCallback(TBool aCompositionModified)
     {
-    __ALFLOGSTRING( "CAlfHierarchyModel::RequestFrameEndCallback" );
-    iServer.Bridge()->StartNewBlock();
+    __ALFLOGSTRING1( "CAlfHierarchyModel::RequestFrameEndCallback, composition modified: %d", aCompositionModified);
+    iServer.Bridge()->StartNewBlock(aCompositionModified);
     }
 // ---------------------------------------------------------------------------
 // HandleMessageL
@@ -216,7 +216,7 @@ void CAlfHierarchyModel::HandleMessageL( const RMessage2& aMessage )
             {
             if ( iChunk.Handle() )
                 {
-                ExecuteCommandsL();
+                ExecuteCommandsL(aMessage.Int1());
                 if ( iBatchAlreadyCommited )
                     {
                     // This may happen, if alfstreamerbridge happens to process the commands (containing the EAlfCommitBatch) 
@@ -398,7 +398,7 @@ void CAlfHierarchyModel::ReadRegionL( RMemReadStream* aStream, RRegion& aRegion,
 // ExecuteCommandsL
 // ---------------------------------------------------------------------------
 //
-void CAlfHierarchyModel::ExecuteCommandsL(  )
+void CAlfHierarchyModel::ExecuteCommandsL( TBool aCompositionModified )
     {
     if ( !iStream )
         {
@@ -564,7 +564,7 @@ void CAlfHierarchyModel::ExecuteCommandsL(  )
                 
             case EAlfCommitBatch:
                 {
-                RequestFrameEndCallback();
+                RequestFrameEndCallback(aCompositionModified);
                 break;
                 }
 #ifdef ALF_DEBUG_TRACK_DRAWING              
@@ -1097,6 +1097,9 @@ void CAlfHierarchyModel::DoNodeLayerUsesAlphaFlagChangedL()
         {
         // SetLayerUsesAplhaFlag is not supported for image visual
         node->Window()->SetLayerUsesAplhaFlag( enabled );
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS        
+        node->Window()->SetTransparencyAlphaChannel( enabled );
+#endif // #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS        
         }
     else if( node ) // this would mean that node has being orphaneded but not yet deleted
         {

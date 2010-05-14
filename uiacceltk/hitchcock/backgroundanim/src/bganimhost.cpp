@@ -41,21 +41,17 @@ CBgAnimHost::~CBgAnimHost()
     delete iCurrentPluginDllName;
     delete iCurrentPluginAssetDir;
     delete iTimer;
-    if (iPlugin)
-        {
-        iPlugin->destroy();
-        free(iPlugin);
-        }
-    iPluginLibrary.Close();
+    delete iTheReaper;
+    delete iDoomBringer;
+    
+    ReleasePlugin();
+
 #if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)
     delete iSCPropertyListener;
 #endif
+    delete iHSFgStatusPropertyListener;
     delete iThemeRepositoryListener;
-    while (iSensorListeners.Count())
-        {
-        delete iSensorListeners[0];
-        iSensorListeners.Remove(0);
-        }
+
     iSensorListeners.Close();
     delete CActiveScheduler::Current();
     CActiveScheduler::Install(NULL);
@@ -82,11 +78,12 @@ void CBgAnimHost::ConstructL()
     CActiveScheduler *ac = new (ELeave) CActiveScheduler;
     CActiveScheduler::Install(ac);
     iTimer = CHighResTimer::NewL(TCallBack(TimerFunc, this),CActive::EPriorityStandard);
+    iTheReaper = CHighResTimer::NewL(TCallBack(ReaperFunc, this),CActive::EPriorityStandard);
     iThemeRepositoryListener = CThemeRepositoryListener::NewL(&iRunning);
 #if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)
     iSCPropertyListener = CScreenSaverPropertyListener::NewL(TCallBack(ScreenSaverCallback, this));
 #endif
-    
+    iHSFgStatusPropertyListener = CFGAppPropertyListener::NewL(TCallBack(FgAppCallback, this));
     CreateWindowL();
 
     User::LeaveIfError(iSkinSrv.Connect());
@@ -101,6 +98,7 @@ void CBgAnimHost::ConstructL()
 #if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)    
     iSCPropertyListener->IssueRequest();
 #endif
+    iHSFgStatusPropertyListener->IssueRequest();
     }
     
 void CBgAnimHost::CreateWindowL()
@@ -481,6 +479,7 @@ void CBgAnimHost::LoadPluginL()
             if (!serr)
                 {
                 iSensorListeners.Append(listener);
+                StartSensorsL();
                 }
             }
         }
@@ -506,11 +505,16 @@ void CBgAnimHost::ReleasePlugin()
     
 void CBgAnimHost::NewFrame()
     {
-    if (!iRunning)
+    if (!iRunning && !iDoomBringer)
         {
-        // Stop and exit
-        CActiveScheduler::Stop();
-        return;
+        iDoomBringer = CHighResTimer::NewL(TCallBack(DoomBringerFunc, this),CActive::EPriorityStandard);
+        iDoomBringer->CallBack(5000);
+        }
+		
+    if (iRunning && iDoomBringer)
+        {
+        delete iDoomBringer;
+        iDoomBringer = NULL;
         }
     if (!iSurfaceInitialized)
         {
@@ -544,7 +548,28 @@ void CBgAnimHost::NewFrame()
     
     iTimer->CallBack(nextcallback);
     }
+
+void CBgAnimHost::Kill()
+    {
+    if (!iRunning)
+        {
+        CActiveScheduler::Stop();
+        }
+    else
+        {
+        delete iDoomBringer;
+        iDoomBringer = NULL;
+        }
     
+    return;
+    }
+    
+TInt CBgAnimHost::DoomBringerFunc(TAny* aPtr)
+    {
+    CBgAnimHost* me = (CBgAnimHost*)(aPtr);
+    me->Kill();
+    return ETrue;
+    }
     
 TInt CBgAnimHost::TimerFunc(TAny* aPtr)
     {
@@ -553,7 +578,14 @@ TInt CBgAnimHost::TimerFunc(TAny* aPtr)
     return ETrue;
     }
 
-    
+TInt CBgAnimHost::ReaperFunc(TAny* aPtr)
+    {
+    CBgAnimHost* me = (CBgAnimHost*)(aPtr);
+    me->CompositionTargetHidden();
+    return ETrue;
+    }
+
+
 void CBgAnimHost::ExecuteL() 
     {
     // finally start our timer and scheduler...
@@ -600,14 +632,22 @@ void CBgAnimHost::CompositionTargetHidden()
     iTimerRunning = EFalse;
     iPlugin->gpuresourcesavailable(0);
     ReleaseWindowSurface(EFalse);
+    StopSensors();
     }
 
 void CBgAnimHost::CompositionTargetVisible()
     {
-    if (iSurfaceInitialized)
+    if (!iRunning && !iDoomBringer)
+        {
+        iDoomBringer = CHighResTimer::NewL(TCallBack(DoomBringerFunc, this),CActive::EPriorityStandard);
+        iDoomBringer->CallBack(5000);
+        }
+
+    if (iSurfaceInitialized || iHiddenDueSC || iReaped)
         {
         // don't bother if we are already in
-        // a correct state..
+        // a correct state, or if we are hidden by
+        // the screensaver
         return;
         }
 
@@ -623,40 +663,88 @@ void CBgAnimHost::CompositionTargetVisible()
     if (!err)
         {
         iPlugin->gpuresourcesavailable(1);
+        iPlugin->setfaded(iHSFgStatusPropertyListener->GetHSFGStatus());
         iTimer->CallBack(1);
         iTimerRunning = ETrue;
         }
+    TRAP_IGNORE(StartSensorsL());
     }
 
 void CBgAnimHost::HandleScreenSaverEvent()
     {
 #if !defined(SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS)
     TInt scStatus = iSCPropertyListener->GetScreenSaverStatus();
+    
     if (scStatus)
         {
         // screensaver is ON
-        if (iTimerRunning)
-            {
-            iTimer->Cancel();
-            iTimerRunning = EFalse;
-            }
+        iHiddenDueSC = ETrue;
+        CompositionTargetHidden();
         }
     else
         {
         // screensaver is OFF
-        if (!iTimerRunning && iSurfaceInitialized)
-            {
-            iTimerRunning = ETrue;
-            iTimer->CallBack(1);
-            }
+        iHiddenDueSC = EFalse;
+        CompositionTargetVisible();
         }
 #endif
+    }
+
+void CBgAnimHost::StartSensorsL()
+    {
+    for (TInt count = 0; count < iSensorListeners.Count(); count++)
+        {
+        iSensorListeners[count]->StartListeningL();
+        }
+    }
+    
+void CBgAnimHost::StopSensors()
+    {
+    for (TInt count = 0; count < iSensorListeners.Count(); count++)
+        {
+        iSensorListeners[count]->StopListening();
+        }
+    }
+
+void CBgAnimHost::HandleFGAppEvent()
+    {
+    if (!iRunning && !iDoomBringer)
+        {
+        iDoomBringer = CHighResTimer::NewL(TCallBack(DoomBringerFunc, this),CActive::EPriorityStandard);
+        iDoomBringer->CallBack(5000);
+        }
+
+    if (iPlugin && iPlugin->setfaded)
+        {
+        iPlugin->setfaded(iHSFgStatusPropertyListener->GetHSFGStatus());
+        if (!iHSFgStatusPropertyListener->GetHSFGStatus())
+            {
+            // reap the anim in 5 seconds...
+            // 5 seconds is probably just allright
+            // to have enought time for the plugin to fade out...
+            iReaped = ETrue;
+            iTheReaper->CallBack(5000);
+            }
+        else
+            {
+            iReaped = EFalse;
+            iTheReaper->Cancel();
+            CompositionTargetVisible();
+            }
+        }
     }
 
 TInt CBgAnimHost::ScreenSaverCallback(TAny* aPtr)
     {
     CBgAnimHost* me = (CBgAnimHost*) aPtr;
     me->HandleScreenSaverEvent();
+    return EFalse;
+    }
+
+TInt CBgAnimHost::FgAppCallback(TAny* aPtr)
+    {
+    CBgAnimHost* me = (CBgAnimHost*) aPtr;
+    me->HandleFGAppEvent();
     return EFalse;
     }
 

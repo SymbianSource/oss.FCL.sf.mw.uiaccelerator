@@ -1597,4 +1597,5 @@ EXPORTS
 	?HasTransParentClear@CHuiCanvasVisual@@QBEHXZ @ 1596 NONAME ; int CHuiCanvasVisual::HasTransParentClear(void) const
 	?AddEffectToGroup@CHuiFxEngine@@QAEHH@Z @ 1597 NONAME ; int CHuiFxEngine::AddEffectToGroup(int)
 	?FxmlUsesOpaqueHint@CHuiFxEngine@@QAEHABVTDesC16@@@Z @ 1598 NONAME ; int CHuiFxEngine::FxmlUsesOpaqueHint(class TDesC16 const &)
+	?InitializeL@CHuiCanvasRenderBuffer@@UAEXABVTSize@@H@Z @ 1599 NONAME ; void CHuiCanvasRenderBuffer::InitializeL(class TSize const &, int)
 
