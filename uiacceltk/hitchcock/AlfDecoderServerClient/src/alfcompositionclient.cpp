@@ -1363,6 +1363,10 @@ EXPORT_C void CAlfEffectObserver::SubscribeCallbackL(MAlfEffectObserver* aObserv
 
 EXPORT_C void CAlfEffectObserver::SetDistractionWindow(const RWindowTreeNode& aWindow, TInt aState)
     {
+    if (!&aWindow)
+        {
+        return;
+        }
     iData->iClient.SendSynch(EAlfSetDistractionWindow, TIpcArgs(aWindow.WindowGroupId(), aWindow.ClientHandle(), aState));
     }
 

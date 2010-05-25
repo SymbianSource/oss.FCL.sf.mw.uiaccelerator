@@ -234,6 +234,8 @@ public:
     
     virtual TBool IsVisibleContentFrozen() const = 0;
     
+    virtual void SetAlfEventWindow(CHuiVisual* aVisual) = 0;
+    
 protected:
 
     /* Constructors. */

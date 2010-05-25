@@ -48,6 +48,7 @@ SYSTEMINCLUDE   /epoc32/include/ecom
 
 USERINCLUDE     ../../inc
 USERINCLUDE     ../inc
+USERINCLUDE     ../../../CommonInc
 
 //Added as part of break team support changes.
 #include "../../../../../group/stdinc.mmh"

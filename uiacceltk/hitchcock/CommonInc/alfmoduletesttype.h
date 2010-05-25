@@ -17,8 +17,6 @@ enum TAlfModuleTestType
     EAlfModuleTestTypeNone,
     
     // Render stage component specific tests
-    EAlfModuleTestTypeRenderStageCreateLayer,
-    EAlfModuleTestTypeRenderStageReleaseLayer,
     EAlfModuleTestTypeRenderStageCreateWindow,
     EAlfModuleTestTypeRenderStageReleaseWindow,    
     EAlfModuleTestTypeRenderStageCreateWindowGroup,
@@ -64,10 +62,17 @@ enum TAlfModuleTestType
     EAlfModuleTestTypeBridgeChangeTextCursorFlag,
     EAlfModuleTestTypeBridgeChangeTextCursorColor,
     EAlfModuleTestTypeBridgeVisualVisibility,
+    EAlfModuleTestTypeBridgeGoom,
     
     // Core toolkit component specific tests
     EAlfModuleTestTypeCoreToolkitDrawWindow,
     EAlfModuleTestTypeCoreToolkitDrawFromRenderBuffer,
+    EAlfModuleTestTypeCoreToolkitGoom,
+    
+    // Layer tests
+    EAlfModuleTestTypeCreateLayer,
+    EAlfModuleTestTypeReleaseLayer,    
+    EAlfModuleTestTypeLayerOrdinalPosition,    
     
     // Do not use this value when creating item.
     // This is just meant for Find operations when all tests are accepted.

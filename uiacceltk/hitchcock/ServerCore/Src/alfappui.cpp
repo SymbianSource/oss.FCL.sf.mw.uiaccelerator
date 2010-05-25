@@ -67,6 +67,12 @@
 #define ALF_USE_EMULATOR_LAYOUT_SWITCH_BUTTON
 #endif
 
+// Implements just Error() to avoid panic
+NONSHARABLE_CLASS(CSimpleScheduler) : public CActiveScheduler
+    {
+    void Error( TInt ) const{} // From CActiveScheduler
+    };
+
 NONSHARABLE_CLASS(TAlfEffectObserver): public MHuiEffectObserver
     {
     public:    
@@ -603,7 +609,7 @@ GLDEF_C TInt AlfEventThreadStartFunction(TAny* aBridge)
     if (err == KErrNone)
         {
         // Set up scheduler and cleanup stack for this thread
-        CActiveScheduler* scheduler = new CActiveScheduler;
+        CActiveScheduler* scheduler = new CSimpleScheduler();
         if (!scheduler)
             {
             return KErrNoMemory;
@@ -952,6 +958,11 @@ void CAlfAppUi::UpdateActiveSession(CAlfAppSrvSessionBase* aSession)
         }
     }
     
+CAlfAppSrvSessionBase* CAlfAppUi::ActiveSession()
+    {
+    return iData->iActiveSession;
+    }
+
 // ---------------------------------------------------------------------------
 // From class CAknAppUi.
 // Handles window server event.

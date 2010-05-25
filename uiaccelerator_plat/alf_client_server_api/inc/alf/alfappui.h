@@ -177,6 +177,8 @@ public: // internal utilities
     void EndPointerEventHandling();
     void UpdateActiveSession(CAlfAppSrvSessionBase* aSession);
     
+    CAlfAppSrvSessionBase* ActiveSession();
+    
     TTypeUid::Ptr MopSupplyObject(TTypeUid aId);
 
     TInt FirstAlfControlGroupIndex( TInt aScreenNumber = 0);    

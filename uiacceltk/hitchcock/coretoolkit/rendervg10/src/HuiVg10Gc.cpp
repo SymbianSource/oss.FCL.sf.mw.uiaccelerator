@@ -105,6 +105,8 @@ CHuiVg10Gc::~CHuiVg10Gc()
     vgDestroyPaint(iPaint);
     vgDestroyPaint(iGradientPaint);
     vgDestroyPath(iEllipsePath);
+    
+    iTempRegion.Close();
     }
     
 
@@ -978,8 +980,8 @@ void CHuiVg10Gc::UpdateColor(TReal32 /*aAlphaFactor*/) __SOFTFP
 #if defined(RENDER_DEBUG_RECTANGLES)
     color = Math::Random() | 0xff;
 #endif
-    
-    // Update the color of the current paint
+    vgSetPaint(iPaint, VG_FILL_PATH | VG_STROKE_PATH);
+   // Update the color of the current paint
     // if required
     if (iPaintColor != color)
         {
@@ -2085,12 +2087,12 @@ void CHuiVg10Gc::DrawGradient(TGradientType aType, const TRect& aRect,
         1.0f,  aEndColor.Red()   * scale, aEndColor.Green()   * scale, aEndColor.Blue()   * scale, aEndOpacity,
         };
     
+
     vgSetParameterfv(iGradientPaint, VG_PAINT_LINEAR_GRADIENT, 2 * 2, gradientCoords);
     vgSetParameterfv(iGradientPaint, VG_PAINT_COLOR_RAMP_STOPS, 2 * 5, gradientStops);
     vgSetPaint(iGradientPaint, VG_FILL_PATH);
     HUI_VG_INVARIANT();
 
-    UpdateColor();
     UpdateMatrix(VG_MATRIX_PATH_USER_TO_SURFACE);
     
     // Draw the gradient as an image if we have a texture, otherwise draw a regular rectangle
@@ -2117,7 +2119,16 @@ void CHuiVg10Gc::DrawGradient(TGradientType aType, const TRect& aRect,
 
         if (!tex)
             {
-            DrawRect(aRect);
+            UpdateMatrix(VG_MATRIX_PATH_USER_TO_SURFACE);
+            vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
+            
+            vgTranslate(aRect.iTl.iX, aRect.iTl.iY);
+            vgScale(aRect.Width(),aRect.Height());
+            
+            vgDrawPath(iRectPath, VG_FILL_PATH);
+            
+            vgSeti(VG_MATRIX_MODE, VG_MATRIX_IMAGE_USER_TO_SURFACE);
+            UpdateMatrix(VG_MATRIX_PATH_USER_TO_SURFACE);
             }
         else
             {
@@ -2127,12 +2138,20 @@ void CHuiVg10Gc::DrawGradient(TGradientType aType, const TRect& aRect,
         }
     else
         {
-        DrawRect(aRect);
+        UpdateMatrix(VG_MATRIX_PATH_USER_TO_SURFACE);
+        vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
+        
+        vgTranslate(aRect.iTl.iX, aRect.iTl.iY);
+        vgScale(aRect.Width(),aRect.Height());
+        
+        vgDrawPath(iRectPath, VG_FILL_PATH);
+        
+        vgSeti(VG_MATRIX_MODE, VG_MATRIX_IMAGE_USER_TO_SURFACE);
+        UpdateMatrix(VG_MATRIX_PATH_USER_TO_SURFACE);
         }
     HUI_VG_INVARIANT();
     
-    // Restore the original paint
-    vgSetPaint(iPaint, VG_FILL_PATH | VG_STROKE_PATH);
+    // Restore the original color & paint
     UpdateColor();
     }
 

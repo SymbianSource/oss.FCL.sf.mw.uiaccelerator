@@ -154,6 +154,11 @@ EXPORT_C CAlfAppSrvSessionBase::~CAlfAppSrvSessionBase()
             {
             iData->iSystemEvent.Complete(KErrCancel);
             }
+        
+        if ( iData->iContainer )
+            {
+            iHost->ReleaseContainer( *iData->iContainer );
+            }
         delete iData;
         }
     iHost = NULL;

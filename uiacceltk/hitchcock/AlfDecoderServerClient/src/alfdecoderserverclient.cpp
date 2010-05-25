@@ -22,9 +22,18 @@
 #include "alfuids.h"
 
 _LIT(KAlfServerThreadName, "alfredserver");
+
+
+// Implements just Error() to avoid panic
+NONSHARABLE_CLASS(CSimpleScheduler) : public CActiveScheduler
+    {
+    void Error( TInt ) const{} // From CActiveScheduler
+    };
+
+
 static void RunServerL()
     {
-    CActiveScheduler* s=new(ELeave) CActiveScheduler;
+    CActiveScheduler* s=new(ELeave) CSimpleScheduler;
     CleanupStack::PushL(s);
     CActiveScheduler::Install(s);
 

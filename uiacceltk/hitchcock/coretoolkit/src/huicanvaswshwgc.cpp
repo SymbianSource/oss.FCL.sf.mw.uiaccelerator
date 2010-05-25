@@ -1906,12 +1906,15 @@ void CHuiCanvasWsHwGc::EndDrawL(const TRegion& aUpdateRegion, TBool aUpdateDispl
     if (aUpdateDisplay && renderbuffer && iCanvasGc->Gc())
         {
         THuiRealRect updatedRect = aUpdateRegion.BoundingRect();
-
+				  TInt w; 
+				  TInt h ;
         // Handle relative rotation
-        TRect displayArea = iVisual->Display()->VisibleArea();
-        TInt w = displayArea.Width();
-        TInt h = displayArea.Height();
-                
+        if (iVisual->Display())
+            {
+            TRect displayArea = iVisual->Display()->VisibleArea();
+            w = displayArea.Width();
+            h = displayArea.Height();
+            }
         // ...select right rotation...
         if (iRelativeOrientation == CHuiGc::EOrientationCW90)
             {

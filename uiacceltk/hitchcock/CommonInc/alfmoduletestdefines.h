@@ -27,6 +27,11 @@
     #define AMT_DEC_COUNTER_IF(cond, member)
     #define AMT_SET_VALUE_IF(cond, member, val)
     #define AMT_GET_VALUE_IF(cond, x, member)
+
+    #define AMT_ADD_TIME(handle, member, effects)
+    #define AMT_GET_TIME(x, handle, index, effects)
+    #define AMT_GET_TIME_POINT_COUNT(handle, x)
+    #define AMT_RESET_TIME(handle)
     
     #define AMT_MAP_PTR_TO_KEY_CAST( keyPtr )
     #define AMT_MAP_CPTR_TO_KEY_CAST( keyCPtr )
@@ -91,6 +96,11 @@
     #define AMT_SET_VALUE_IF(cond, member, val)     AMT_FUNC_EXC_IF((cond), AMT_DATA()->member=(val))
     #define AMT_GET_VALUE_IF(cond, x, member)       AMT_FUNC_EXC_IF((cond), (x) = AMT_DATA()->member)
     
+    #define AMT_ADD_TIME(handle, member, effects)   AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ TInt nextFreeIndex = AMT_DATA()->iTimeMap[timemapIndex].iCounter; AMT_DATA()->iTimeMap[timemapIndex].iTimeStamp[nextFreeIndex] = member; AMT_DATA()->iTimeMap[timemapIndex].iCounter++; timemapIndex = 100; break;} timemapIndex++; } if (timemapIndex == 10) { if (AMT_DATA()->iNextFreeMap == 10) { AMT_DATA()->iNextFreeMap = 0;} TInt nextFreeMap = AMT_DATA()->iNextFreeMap; AMT_DATA()->iTimeMap[nextFreeMap].iCounter = 1; AMT_DATA()->iTimeMap[nextFreeMap].iHandle = handle; AMT_DATA()->iTimeMap[nextFreeMap].iTimeStamp[0] = member; AMT_DATA()->iTimeMap[nextFreeMap].iEffects = effects; AMT_DATA()->iNextFreeMap++; /*RDebug::Printf("Handle: %d, %d %d %d", handle, timemapIndex, AMT_DATA()->iNextFreeMap, member)*/;})
+    #define AMT_GET_TIME(x, handle, index, effects) AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ (x) = AMT_DATA()->iTimeMap[timemapIndex].iTimeStamp[index];(effects) = AMT_DATA()->iTimeMap[timemapIndex].iEffects;break;}timemapIndex++;}if(timemapIndex == 10){(x) = KErrNotFound;(effects) = EFalse;})
+    #define AMT_GET_TIME_POINT_COUNT(handle, x)     AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ (x) = AMT_DATA()->iTimeMap[timemapIndex].iCounter;timemapIndex = 100;}timemapIndex++;}if(timemapIndex == 10){(x) = KErrNotFound;})
+    #define AMT_RESET_TIME(handle)                  AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ AMT_DATA()->iTimeMap[timemapIndex].iHandle = 0; AMT_DATA()->iTimeMap[timemapIndex].iCounter = 0;AMT_DATA()->iTimeMap[timemapIndex].iEffects = 0;break;}timemapIndex++;})
+    
     // Map operation macros, that will do lock/unlock
     #define AMT_MAP_PTR_TO_KEY_CAST( keyPtr )                                                   reinterpret_cast< TInt >( keyPtr )
     #define AMT_MAP_CPTR_TO_KEY_CAST( keyCPtr )                                                 AMT_MAP_PTR_TO_KEY_CAST( static_cast< const CBase* >( keyCPtr ) )
@@ -120,6 +130,16 @@
 // Text cursor handle is defined as constant because correct handle is not provided
 // from the window server for render stage.
 #define AMT_MAP_TEXT_CURSOR_HANDLE 0
+
+#define AMT_MAP_FORCE_SW_HANDLE 0
+#define AMT_MAP_SW_ENABLED_HANDLE 1
+#define AMT_MAP_LOW_MEMORY_MODE_HANDLE 2
+
+#define AMT_MAP_CANVAS_WS_GC_TYPE 0
+#define AMT_MAP_TEXTURE_CACHE_MEMORY_LEVEL 1
+#define AMT_MAP_CACHED_IMAGES_COUNT 2
+#define AMT_MAP_CACHED_TEXTS_COUNT 3
+#define AMT_MAP_CACHED_RENDER_BUFFERS_COUNT 4
 
 
 // Notice: 
@@ -153,14 +173,22 @@
         AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor && aAttribute == ECursorColor ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeRenderStageChangeTextCursorColor )
 
 #define AMT_MAP_RENDER_STAGE_ADD_LAYER() \
-        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeRenderStageCreateLayer ); \
-        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeRenderStageReleaseLayer )
+        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeCreateLayer ); \
+        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeReleaseLayer ); \
+        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeLayerOrdinalPosition )
 
 #define AMT_MAP_RENDER_STAGE_ADD_LAYER_LINK() \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeRenderStageCreateLayer ); \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeRenderStageReleaseLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeCreateLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeCreateLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeReleaseLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeReleaseLayer ); \
+        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeLayerOrdinalPosition ); \
+        AMT_MAP_APPEND_LINK( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeLayerOrdinalPosition ); \
         \
-        AMT_MAP_SET_VALUE( iSurfaceMap, windowId, aLayer.Surface(), EAlfModuleTestTypeRenderStageCreateLayer )
+        AMT_MAP_SET_VALUE( iSurfaceMap, windowId, aLayer.Surface(), EAlfModuleTestTypeCreateLayer )
+
+#define AMT_MAP_RENDER_STAGE_REMOVE_LAYER() \
+        AMT_MAP_SET_VALUE_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), aLayer->Surface(), EAlfModuleTestTypeReleaseLayer )
 
 
 // Streamer defines
@@ -229,7 +257,38 @@
         AMT_MAP_INC_VALUE_IF( viz, iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeBridgeChangeTextCursorFlag ); \
         AMT_MAP_INC_VALUE_IF( viz, iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeBridgeChangeTextCursorColor )
 
-        
+#define AMT_MAP_BRIDGE_SET_ORDINAL_POSITION() \
+        AMT_MAP_SET_VALUE_IF( windowAttributes, iIntMap, windowNodeId, windowAttributes->iOrdinalPosition, EAlfModuleTestTypeLayerOrdinalPosition )
+
+#ifndef USE_MODULE_TEST_HOOKS_FOR_ALF
+#define AMT_MAP_CANVAS_WS_PAINTER_SELECT_GC()
+#else
+#define AMT_MAP_CANVAS_WS_PAINTER_SELECT_GC() \
+        if ( iCanvasWsGc ) \
+            { \
+            AMT_MAP_SET_VALUE( \
+                    iIntMap, \
+                    AMT_MAP_CANVAS_WS_GC_TYPE, \
+                    iCanvasWsGc->Type(), \
+                    EAlfModuleTestTypeCoreToolkitGoom ); \
+            } \
+        else \
+            { \
+            AMT_MAP_SET_VALUE( \
+                    iIntMap, \
+                    AMT_MAP_CANVAS_WS_GC_TYPE, \
+                    KErrNotFound, \
+                    EAlfModuleTestTypeCoreToolkitGoom ); \
+            }
+#endif // USE_MODULE_TEST_HOOKS_FOR_ALF
+
+#define AMT_MAP_CANVAS_TEXTURE_CACHE_SET_MEMORY_LEVEL() \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_TEXTURE_CACHE_MEMORY_LEVEL, iMemoryLevel, EAlfModuleTestTypeCoreToolkitGoom ); \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_CACHED_IMAGES_COUNT, iCachedImages.Count(), EAlfModuleTestTypeCoreToolkitGoom ); \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_CACHED_TEXTS_COUNT, iCachedTexts.Count(), EAlfModuleTestTypeCoreToolkitGoom ); \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_CACHED_RENDER_BUFFERS_COUNT, iCachedRenderBuffers.Count(), EAlfModuleTestTypeCoreToolkitGoom )
+
+
 #endif // ALF_MODULE_TEST_DEFINES_H
 
 // End of File

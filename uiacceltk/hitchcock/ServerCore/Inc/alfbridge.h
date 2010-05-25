@@ -66,13 +66,15 @@ NONSHARABLE_CLASS(CAlfBridge):
                         CHuiVisual* aTemporaryPresenterVisual,
                         TBool aIsLayout, 
                         TBool aHideWhenFinished,
-                        TBool aCanDestroyOrHideImmediately) 
+                        TBool aCanDestroyOrHideImmediately,
+                        TBool aIsFullScreenEffect) 
                 : iHandle(aHandle), 
                 iEffectedVisual(aEffectedVisual),
                 iTemporaryPresenterVisual(aTemporaryPresenterVisual),
                 iIsLayout(aIsLayout),
                 iHideWhenFinished(aHideWhenFinished),
-                iCanDestroyOrHideImmediately(aCanDestroyOrHideImmediately)
+                iCanDestroyOrHideImmediately(aCanDestroyOrHideImmediately),
+                iIsFullScreenEffect(aIsFullScreenEffect)
                         {
 //                        RDebug::Printf("TEffectCleanupStruct - 0x%x 0x%x, %d", iEffectedVisual, iTemporaryPresenterVisual, iIsLayout );
                         };
@@ -84,7 +86,9 @@ NONSHARABLE_CLASS(CAlfBridge):
                 TBool iHideWhenFinished;
                 
                 TBool iCanDestroyOrHideImmediately;
-				
+
+                TBool iIsFullScreenEffect;
+                
 				// not own, unless iEffectedVisual has EShouldDestroy flag enabled
                 CHuiVisual* iEffectedVisual;
 				// owned
@@ -427,7 +431,7 @@ private:
 	 *	@return	ETrue, 	if layout have been initialized succesfully for the effect
 	 			EFalse,	if any visuals have been removed. Effect should not be applied.
      */
-    TBool SetupEffectLayoutContainerL(TInt aHandle,CHuiLayout* aSourceLayout, TBool aIsExitEffect, TBool aCanDestroyOrHideImmediately);
+    TBool SetupEffectLayoutContainerL(TInt aHandle,CHuiLayout* aSourceLayout, TBool aIsFullScreenEffect, TBool aIsExitEffect, TBool aCanDestroyOrHideImmediately);
 
     /*
      *	AddEffectItemL
@@ -444,8 +448,10 @@ private:
             CHuiControl* aEffectControl,
             TBool aInsertTemporaryVisual,
             TBool& aItemDestroyed,
+            TBool aIsFullScreenEffect,
             TBool aIsExitEffect = EFalse,
-            TBool aCanDestroyOrHideImmediately = EFalse);
+            TBool aCanDestroyOrHideImmediately = EFalse
+            );
             
 
     /*
@@ -457,6 +463,7 @@ private:
             CHuiLayout* aTargetLayout,
             CHuiControl* aEffectControlGroup,
             TInt& aItemsDestroyed,
+            TBool aIsFullScreenEffect,
             TBool aAddLayout = ETrue,
             TBool aIsExitEffect = EFalse,
             TBool aCanDestroyOrHideImmediately = EFalse);

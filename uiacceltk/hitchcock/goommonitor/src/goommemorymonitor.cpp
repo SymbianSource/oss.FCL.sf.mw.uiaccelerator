@@ -502,6 +502,7 @@ void CMemoryMonitor::SetPriorityBusy(TInt aWgId)
         if(iGOomActionList->IsRunningKillAppActions())  //this may be too late as killing of apps has already begun, but we might still be able to save the app 
             AppClosePriorityChanged(WgIdList[i], RGOomMonitorSession::EGOomPriorityBusy);
         }
+    WgIdList.Close();
     }
 
 void CMemoryMonitor::SetPriorityNormal(TInt aWgId)
@@ -519,6 +520,7 @@ void CMemoryMonitor::SetPriorityNormal(TInt aWgId)
         if(iGOomActionList->IsRunningKillAppActions())
             AppClosePriorityChanged(WgIdList[i], RGOomMonitorSession::EGOomPriorityNormal);
         }
+    WgIdList.Close();
     }
 
 void CMemoryMonitor::SetPriorityHigh(TInt aWgId)
@@ -536,6 +538,7 @@ void CMemoryMonitor::SetPriorityHigh(TInt aWgId)
         if(iGOomActionList->IsRunningKillAppActions())
             AppClosePriorityChanged(WgIdList[i], RGOomMonitorSession::EGOomPriorityHigh);
         }
+    WgIdList.Close();
     }
 
 TInt CMemoryMonitor::GetFreeMemory()

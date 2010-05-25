@@ -30,6 +30,29 @@
 #include <uiacceltk/HuiSessionObject.h>
 
 
+
+enum THuiControlGroupRole
+    {
+    /** Unknown */
+    EHuiUnknownContainer,
+    
+    /** Alf application control group */
+    EHuiSessionContainer,
+    
+    /** WSERV window group */
+    EHuiWindowGroupContainer,
+    
+    /** WSERV floating sprite group */
+    EHuiWindowFloatingSpriteContainer,
+
+    /** Group for showing effects */
+    EHuiFullScreenEffectContainer,
+    
+    /** Group for FPS indicator */
+    EHuiFpsIndicatorContainer
+    };
+
+
 /* Forward declarations. */
 class CHuiEnv;
 class CHuiControl;

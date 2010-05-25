@@ -248,7 +248,7 @@ TBool CHuiCanvasPainter::HasOldCommandBuffers(TInt aLifeTimeInMs)
 TRect CHuiCanvasPainter::CommandBufferCoverage(TInt aOrientation)
     {
     TInt bufferCount = iCommandBuffers.Count();
-    RRegion tempRegion;
+    RRegionBuf<1> tempRegion;
     
     for (TInt cb = 0; cb < bufferCount; cb++)
         {        
@@ -258,7 +258,9 @@ TRect CHuiCanvasPainter::CommandBufferCoverage(TInt aOrientation)
             tempRegion.AddRect(iCommandBuffers[cb]->iOriginalDisplayRect);
             }
         }    
-    return tempRegion.BoundingRect();
+    TRect result = tempRegion.BoundingRect();
+    tempRegion.Close();
+    return result;
     }
 
 void CHuiCanvasPainter::ClearCapturingBufferArea(const TRect& /*aRect*/)

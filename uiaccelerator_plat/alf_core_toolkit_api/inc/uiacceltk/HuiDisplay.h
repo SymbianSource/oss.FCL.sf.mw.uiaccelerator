@@ -821,6 +821,10 @@ public:
     
     void DoBackgroundClear();
     
+    void ScanningAlfContent(TBool aScanning );
+    void SetAlfContentChanged(TBool aChanged);
+    TBool AlfContentChanged();
+    
 private:
 
     /**
@@ -1030,6 +1034,10 @@ private:
     
     /** Current dirty region for this refresh instance */
     RDirtyRegions iTempDirtyRegions;
+    
+	/** For handling alf content update */
+    TBool iScanningAlfContent;
+    TBool iDisplayContainsChangedAlfContent;
     };
 
 #endif  // __HUIDISPLAY_H__

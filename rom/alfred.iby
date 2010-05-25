@@ -101,6 +101,7 @@ data=DATAZ_/RESOURCE_FILES_DIR/effects/activeidle_viewswitch_right_disappear_lsc
 data=DATAZ_/RESOURCE_FILES_DIR/effects/app_activate.fxml RESOURCE_FILES_DIR/effects/app_activate.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/app_exit.fxml RESOURCE_FILES_DIR/effects/app_exit.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/app_start.fxml RESOURCE_FILES_DIR/effects/app_start.fxml
+data=DATAZ_/RESOURCE_FILES_DIR/effects/app_start_long.fxml RESOURCE_FILES_DIR/effects/app_start_long.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/app_start_rect.fxml RESOURCE_FILES_DIR/effects/app_start_rect.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/app_start_switch.fxml RESOURCE_FILES_DIR/effects/app_start_switch.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/app_start_switch_rect.fxml RESOURCE_FILES_DIR/effects/app_start_switch_rect.fxml

@@ -48,7 +48,7 @@ public:
 	virtual void StartEndChecker() = 0;
 	virtual void CancelEndChecker() = 0;
 	virtual void SendBeginFullscreen() = 0;
-	virtual TInt SendEndFullscreen() = 0;
+	virtual TInt SendEndFullscreen(TBool aTimeout = EFalse) = 0;
 	virtual TInt SendAbortFullscreen() = 0;
 	virtual TInt SendAbortControlTransition() = 0;
     virtual	TInt SendBeginControlTransition() = 0;

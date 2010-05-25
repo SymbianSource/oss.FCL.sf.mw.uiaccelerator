@@ -25,7 +25,7 @@
 _LIT(KAlfModuleTestChunkName, "ALF_MODULE_TEST_CHUNK");
 _LIT(KAlfModuleTestMutexName, "ALF_MODULE_TEST_MUTEX");
 
-
+const TInt KMaxSimultMeasurementCount = 10;
 /*
  *  Class CAlfModuleTestData
  */
@@ -224,6 +224,18 @@ public:
     TInt iASE_Temp3;
     TInt iASE_Temp4;
 
+    class TSpeedTest
+    {
+    public:
+        TInt64 iHandle;
+        TInt iCounter;
+        TBool iEffects;
+        TInt64 iTimeStamp[5];
+    };
+    
+    TSpeedTest iTimeMap[10];
+    TInt iNextFreeMap;
+        
     // Map that contains boolean items for certain test cases.
     TAlfModuleTestMap< TBool > iBoolMap;        
     // Map that contains integer items for certain test cases.

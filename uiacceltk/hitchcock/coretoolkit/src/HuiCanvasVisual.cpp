@@ -342,6 +342,11 @@ TBool CHuiCanvasVisual::PrepareDrawL()
     
 TBool CHuiCanvasVisual::CanSkipDrawing() const
     {
+    if(Display()->RosterImpl().AlfEventWindow() == this)
+         {
+         return EFalse;
+         }
+    
     if (Effect())
         {
         TBool semiTranparentEffectActive = Effect()->IsSemitransparent();
@@ -465,7 +470,11 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
             iCanvasVisualData->iPaintedRegion.Clear();
             CollectPaintedRegion(iCanvasVisualData->iPaintedRegion, 0);
             }
-        
+
+        if(Display()->RosterImpl().AlfEventWindow() == this)
+            {
+            refreshCache |= Display()->RosterImpl().NativeAppsContentChanged();
+            }
         didDrawEffect = Effect()->CachedDraw(aGc, area, refreshCache, !transparent, iCanvasVisualData->iPaintedRegion);
         
         }
@@ -536,10 +545,10 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
         RDebug::Print(_L("CHuiCanvasVisual::DrawSelf - tracked visual"));
         }
 #endif		
-      
+    TBool alfEventWindow = (Display()->RosterImpl().AlfEventWindow() == this);
     TReal32 effectiveOpacity = EffectiveOpacity();
         
-    if (effectiveOpacity <= 0 || !HasCommandBuffers(ETrue))
+    if ((effectiveOpacity <= 0 || !HasCommandBuffers(ETrue)) && !alfEventWindow)
         {
         // In case background drawing is enabled, and even if we don't have command buffers we still
         // want to issue clear. If the background drawing is enabled here, it means that the
@@ -572,6 +581,12 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
             }
         }    
 
+    if(alfEventWindow)
+         {
+         Display()->RosterImpl().DrawNativeAppsContent(aGc, Display());
+         return;
+         }
+    
     // Use 'under opaque' hint to optimize drawing.
     // See comment from CHuiCanvasVisual::Draw for further details. 
     const TBool drawVisualContent = !( Flags() & EHuiVisualFlagUnderOpaqueHint );
@@ -997,6 +1012,7 @@ THuiCanvasPaintedArea CHuiCanvasVisual::CanvasPaintedArea(TInt aIndex) const
                     }                    
 
                 background.iPaintedRect = backgroundItems[aIndex].Rect();
+                backgroundItems.Close();
                 return background;
                 }
             else
