@@ -35,10 +35,10 @@ class CHuiFxVg10FilterBase: public CHuiFxFilter
 public: // from CHuiFxFilter
     virtual TBool Draw(CHuiFxEngine& aEngine, CHuiGc& aGc,
             CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource,
-            const TRect& aTargetRect, const TRect& aSourceRect);
+            const TRect& aTargetRect, const TRect& aSourceRect, TBool aHasSurface);
 
 private:
-    virtual void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight) = 0;
+    virtual void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool aHasSurface) = 0;
 protected:
     TBool wasEnoughMemory();
     

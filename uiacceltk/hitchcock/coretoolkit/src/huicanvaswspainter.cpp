@@ -51,6 +51,15 @@
 
 #include "HuiCmdBufferBrush.h"
 
+#include "alfmoduletestconf.h"
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // Provides TLS object data for test cases.
+    // This is used only if module test hooks are set on.
+    #include "huistatictlsdata.h"
+#endif // USE_MODULE_TEST_HOOKS_FOR_ALF
+// Provides module test hook defines.
+#include "alfmoduletestdefines.h"
+
 /** 
  * Constants to define enabling/disabling render buffer automatically 
  *  incase there are frequently new buffers posted. 
@@ -2387,15 +2396,16 @@ void CHuiCanvasWsPainter::RemoveBuffersWithOverlappingUpdateRegion()
                 }
             
             CHuiCanvasCommandBuffer* cmdbuffer = iCommandBuffers[cb];
-            for (TInt j=0; j < cmdbuffer->iOriginalUpdateRegion.Count();j++)
-                {
-                iTempRegion.AddRect(cmdbuffer->iOriginalUpdateRegion[j]);        
-                }
-            
             // Translate region to be relative to visual top left corner.
             TPoint offset = -cmdbuffer->iOriginalDisplayRect.Round().iTl;
-            iTempRegion.Offset(offset);
-            
+
+            for (TInt j=0; j < cmdbuffer->iOriginalUpdateRegion.Count();j++)
+                {
+                TRect rect = cmdbuffer->iOriginalUpdateRegion[j];
+                rect.Move(offset);
+                iTempRegion.AddRect(rect);
+                }
+                        
             // Check older buffers for overlapping regions against current buffer
             if (cb > 0)
                 {                   
@@ -2745,6 +2755,8 @@ void CHuiCanvasWsPainter::SelectGcL()
     CHuiCanvasWsGc* realGc = iCanvasWsGc;
     iCanvasWsGc = CHuiCanvasDebugWsGc::NewL( realGc, *iCommandDebugger );
     #endif
+    
+    AMT_MAP_CANVAS_WS_PAINTER_SELECT_GC();
     }
 
 void CHuiCanvasWsPainter::RenewAllBuffers()

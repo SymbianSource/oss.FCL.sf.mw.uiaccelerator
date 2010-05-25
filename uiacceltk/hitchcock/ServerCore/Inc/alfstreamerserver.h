@@ -71,11 +71,13 @@ public:
 
     void RemoveTargetFromInactiveSurfaces(TInt aTarget);
     void AddTargetFromInactiveSurfaces(TInt aTarget);
-    void GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aMessage, TBool aActiveAlso = ETrue);
+    void GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aMessage, TInt aActiveAlso = ETrue);
     void QueueRequestBGAnimSessionsL(const TPtrC8& aPtr, TInt aOp);
 
     void AddSignal(CAlfStreamerServerSession* aSession, const RMessage2& aMessage);
     void CompleteSignal(TInt aSignal, TInt aType);
+    void FormAQueueL(TInt aOp, TInt aSecureId, TInt aWindowGroupId);
+
     
 private:
     void ConstructL();
@@ -145,13 +147,14 @@ public:
     struct TAlfCompParams
         {
         TInt iTarget; 
-        TInt iTarget2;  // padding actually
+        TInt iSecureId; // used with optional GRAM list
         TInt iWindowHandle;
         TInt iWindowGroup;
         }; 
 
     RArray<TAlfCompParams> iAlfTargets;
     RArray<TAlfCompParams> iInactiveSurfaces;
+    RArray<TAlfCompParams> iOptionalGRAM;
     };
 
 NONSHARABLE_CLASS(CAlfStreamerServerSession): public CSession2

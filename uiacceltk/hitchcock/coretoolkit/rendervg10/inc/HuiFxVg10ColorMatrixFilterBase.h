@@ -29,7 +29,7 @@ public:
     static CHuiFxVg10ColorMatrixFilterBase* NewL();
 protected:
     void ConstructL();
-    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight);
+    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool aHasSurface);
     virtual void UpdateColorMatrix();
     void CopyFromL(const CHuiFxVg10ColorMatrixFilterBase *aOldFilter);
     CHuiFxVg10ColorMatrixFilterBase *CloneL() const;

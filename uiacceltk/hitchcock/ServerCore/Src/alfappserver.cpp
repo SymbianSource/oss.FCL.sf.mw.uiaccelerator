@@ -1058,6 +1058,18 @@ CObjectCon* CAlfAppServer::NewContainerL()
     return iObjectConIx->CreateL();
     }
 
+// ---------------------------------------------------------------------------
+// Releases container back to server.
+// ---------------------------------------------------------------------------
+// 
+void CAlfAppServer::ReleaseContainer(CObjectCon& aContainer)
+    {
+    if ( iObjectConIx )
+        {
+        iObjectConIx->Remove(&aContainer);
+        }
+    }
+
 // ======== RnD FUNCTIONS ========
 
 // ---------------------------------------------------------------------------

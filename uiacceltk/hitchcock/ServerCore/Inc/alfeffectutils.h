@@ -19,6 +19,16 @@
 #include <akntranseffect.h>
 #include "alfbridge.h"
 
+enum TEffectState
+    {
+    EBeginFullScreenReceived, // first request of effect received
+    EWaitingWindowGroup,
+    EWaitEndFullScreen,
+    EEndFullScreenReceivedWaitingWindowGroup,
+    EEndFullscreenReceived,
+    ESecondPhaseSetupActive,
+    EFinalEffectActive
+    };
 // Timer to send finish full screen effect
 // ---------------------------------------------------------
 // CAlfFinishTimer
@@ -228,6 +238,8 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
     public:
         ~CFullScreenEffectState();
         
+        void ConstructL(const CFullScreenEffectState& aEffectState);
+        
         void ConstructL(TInt aAction, RMemReadStream& aStream);
         
         // Information from BeginFullScreen
@@ -239,15 +251,32 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         TInt iToSecureId;
         TInt iFromSecureId;
         TRect iRect;
-        TBool iTimeoutTriggered;
+        TBool iLongAppStartTimeout;
+        TBool iTimeout;
         
-        // ETrue if waiting for window group to appear
-        TBool iWaitingWindowGroup;
+         
+        void SetState(TEffectState aState);
+       
+        TEffectState State();
+       
+      
+private:
+        TEffectState iState;
+        
+public:
         // ETrue if end fullscreen has been performed
         TBool iEndFullScreen;
         // ETrue if setup effect container has been done
         TBool iSetupDone;
-
+        // effect has fade out and fade in. The fade in part is active, when this is ETrue.
+        enum TEffectPhase
+            {
+            EOnlyOnePart = 0,
+            EFirstPartActive,
+            ESecondPartActive
+            };
+        
+        TEffectPhase iTwoPhaseEffect;
         // used for resolving the iCleanupStackItem that holds the frozen app layout underneath the starting application
         TInt iAppStartScreenshotItemHandle;
         

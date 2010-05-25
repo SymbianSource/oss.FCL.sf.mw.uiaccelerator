@@ -34,7 +34,7 @@ public:
     IMPORT_C virtual ~CHuiFxFilter();
     IMPORT_C virtual TBool PrepareDrawL(CHuiFxEngine& aEngine);
     IMPORT_C virtual TBool Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource,
-                               const TRect& aTargetRect, const TRect& aSourceRect) = 0;
+                               const TRect& aTargetRect, const TRect& aSourceRect, TBool aHasSurface) = 0;
     // CalculateMargin will be called before PrepareDrawL(), so 
     // parameters are not ready, so margin calculation need to use 
     // either previous frame parameter values, or should be independent 

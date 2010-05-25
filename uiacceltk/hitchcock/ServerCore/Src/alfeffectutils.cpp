@@ -812,6 +812,31 @@ CFullScreenEffectState::~CFullScreenEffectState()
         }
     }
 
+void CFullScreenEffectState::ConstructL(const CFullScreenEffectState& aEffectState)
+    {
+    iAction = aEffectState.iAction;
+    iHandle = aEffectState.iHandle;
+    iType = aEffectState.iType;
+    iLongAppStartTimeout = aEffectState.iLongAppStartTimeout;
+    iTimeout = aEffectState.iTimeout;
+    iToWg = aEffectState.iToWg;
+    iFromWg = aEffectState.iFromWg;
+    iToAppId = aEffectState.iToAppId;
+    iFromAppId = aEffectState.iFromAppId;
+
+    iToSecureId = aEffectState.iToSecureId;
+    iFromSecureId = aEffectState.iFromSecureId;
+    
+    iRect.iTl.iX = aEffectState.iRect.iTl.iX;
+    iRect.iTl.iY = aEffectState.iRect.iTl.iY;
+    iRect.iBr.iX = aEffectState.iRect.iBr.iX;
+    iRect.iBr.iY = aEffectState.iRect.iBr.iY;
+    iState = aEffectState.iState;
+    iEffectName = aEffectState.iEffectName->AllocL();
+    iEffectType = aEffectState.iEffectType;
+    iCompletionHandle = aEffectState.iCompletionHandle;
+    iTwoPhaseEffect = CFullScreenEffectState::EOnlyOnePart;
+    }
 
 void CFullScreenEffectState::ConstructL(
         TInt aAction,
@@ -820,7 +845,8 @@ void CFullScreenEffectState::ConstructL(
     iAction = aAction;
     iHandle = aStream.ReadInt32L();
     iType = aStream.ReadInt32L();
-    iTimeoutTriggered = aStream.ReadInt32L();
+    iLongAppStartTimeout = aStream.ReadInt32L();
+    iTimeout = aStream.ReadInt32L();
     iToWg = aStream.ReadInt32L();
     iFromWg = aStream.ReadInt32L();
     iToAppId = aStream.ReadInt32L();
@@ -828,7 +854,8 @@ void CFullScreenEffectState::ConstructL(
 
     iToSecureId = aStream.ReadInt32L();
     iFromSecureId = aStream.ReadInt32L();
-    /*TInt flags =*/
+    
+    // TInt flags
     aStream.ReadInt32L();
     iRect.iTl.iX = aStream.ReadInt32L();
     iRect.iTl.iY = aStream.ReadInt32L();
@@ -838,7 +865,26 @@ void CFullScreenEffectState::ConstructL(
     ResolveFileNameL(aStream);
 
     iCompletionHandle = iHandle;
+    iTwoPhaseEffect = CFullScreenEffectState::EOnlyOnePart;
     }
+
+void CFullScreenEffectState::SetState(TEffectState aState)
+    {
+    if (aState >= iState)
+        {
+        iState = aState;
+        }
+    else
+        {
+        __ALFFXLOGSTRING2("CFullScreenEffectState::SetState - WARNING! Trying to set to previous state. %d -> %d", iState, aState);
+        }
+    };
+        
+TEffectState CFullScreenEffectState::State()
+    {
+    return iState;
+    }
+      
 
 void CControlEffectState::ConstructL(TInt aAction,
         RMemReadStream& aStream)

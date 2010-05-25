@@ -234,6 +234,7 @@ CAlfStreamerServer::~CAlfStreamerServer()
     iCompositionTokens.Close();
     iWindowServerSessions.Close();
     iAlfTargets.Close();
+    iOptionalGRAM.Close();
     }
 
 void CAlfStreamerServer::AppendCompositionSessionL(CAlfStreamerServerSession* aSession, TBool aHost)
@@ -409,6 +410,30 @@ void CAlfStreamerServer::ReleasePermissionTokenL(TInt aAlfToken)
     __ALFLOGSTRING("CAlfStreamerServer::ReleasePermissionTokenL: Not Found <<")
     }
 
+void CAlfStreamerServer::FormAQueueL(TInt aOp, TInt aSecureId, TInt aWindowGroup)
+    {
+    __ALFLOGSTRING3("CAlfStreamerServer::FormAQueueL( %d, %d, %d )",aOp, aSecureId, aWindowGroup)
+    if (aOp == EAlfVolunteerForGoomTarget)
+        {
+        TAlfCompParams param = {aSecureId, aSecureId, aWindowGroup, aWindowGroup};
+        if (iOptionalGRAM.Find(param) != KErrNotFound)
+            {
+            __ALFLOGSTRING("CAlfStreamerServer::FormAQueueL: Already added");
+            return;
+            }    
+        User::LeaveIfError(iOptionalGRAM.Append(param));
+        }
+    else
+        {
+        for(TInt i = iOptionalGRAM.Count()-1; i >= 0; i-- )
+            {
+            if ( iOptionalGRAM[i].iWindowGroup == aWindowGroup )
+                {
+                iOptionalGRAM.Remove(i);
+                }       
+            }    
+        }    
+    }
 void CAlfStreamerServer::QueueRequestSessionsL(TInt aAlfToken, const TPtrC8& aPtr, TInt aOp)
     {
     __ALFLOGSTRING("CAlfStreamerServer::QueueRequestSessionsL >>")
@@ -676,12 +701,29 @@ void CAlfStreamerServer::AddTargetFromInactiveSurfaces(TInt aTarget)
         }
     }
     
-void CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aMessage, TBool aActiveAlso)
+void CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aMessage, TInt aActiveAlso)
     {
-    RArray<TAlfCompParams>& arrayRef = aActiveAlso?iAlfTargets:iInactiveSurfaces;
+    TBool optionalOnly(aActiveAlso==EAlfVolunteersForCommonGood);  // to lessen ambiquity..
         
+    RArray<TAlfCompParams>* arrayPtr = 0;
+    switch (aActiveAlso)
+        {
+        case EAlfInactiveWgs:
+            arrayPtr = &iInactiveSurfaces;
+            break;
+        case EAlfAllWgsWithSurface:
+            arrayPtr = &iAlfTargets;
+            break;
+        case EAlfVolunteersForCommonGood:
+        default:
+            arrayPtr = &iOptionalGRAM;      
+            break;
+        }
+    
+    RArray<TAlfCompParams>& arrayRef =  *arrayPtr; // :)
+            
     TInt count = arrayRef.Count();    
-   __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL >> count %d", count)
+    __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL >> count %d", count);
     if ( count == 0)
         {
         aMessage.Complete(KErrNotFound);
@@ -689,20 +731,29 @@ void CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aM
         }
                 
     TInt maxLength = aMessage.GetDesMaxLength(0);
-    TInt* array = new (ELeave) TInt [maxLength/4];
+    TInt* arrayStart = new (ELeave) TInt [maxLength/4];
+    TInt* array = arrayStart;
+	
+    TInt payloadSize = optionalOnly?8:4; // what a waste
+    count = Min(maxLength/payloadSize-1, count);
     
-    count = Min(maxLength/4-1, count);
     for ( TInt i = 0; i<count; i++ ) 
         {
-        __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL adding %d", arrayRef[i].iWindowGroup);
-        array[i] = arrayRef[i].iWindowGroup;
+        __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL adding %d", arrayPtr[i].iWindowGroup);
+        *array = arrayRef[i].iWindowGroup;
+        array++;
+        if (optionalOnly)
+            {           
+            *array = arrayRef[i].iSecureId;
+            array++;
+            }
         }
         
-    array[count] = 0;
+    *array = 0;
         
-    TPtr8 ptr((TUint8*)array,maxLength,maxLength);
+    TPtr8 ptr((TUint8*)arrayStart,maxLength,maxLength);
     aMessage.WriteL(0, ptr);
-    delete[] array;
+    delete[] arrayStart;
     aMessage.Complete(KErrNone);
    __ALFLOGSTRING("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL <<")
     }
@@ -994,6 +1045,14 @@ void CAlfStreamerServerSession::ServiceL(const RMessage2& aMessage)
             server->Bridge()->AddData( EAlfDSSetDistractionWindow, windowGroupId, windowHandle, (TAny*)state );
             break;
             }
+        case EAlfVolunteerForGoomTarget:  
+        case EAlfExcludeFromGoomTargets:
+            { // all these volunteers, just get into a line..
+            server->FormAQueueL(op, aMessage.Int0(), aMessage.Int1());    
+            break;    
+            }            
+            
+            
         default:
             {
             aMessage.Complete(KErrNotSupported);

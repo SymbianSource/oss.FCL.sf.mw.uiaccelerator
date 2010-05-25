@@ -342,8 +342,15 @@ TBool CHuiCanvasVisual::PrepareDrawL()
     
 TBool CHuiCanvasVisual::CanSkipDrawing() const
     {
+    if(Display()->RosterImpl().AlfEventWindow() == this)
+         {
+         return EFalse;
+         }
+    
     if (Effect())
         {
+        TBool hasStoredContent = (IsDelayedEffectSource() || Freezed()) && (StoredRenderBuffer() ||  iCanvasVisualData->iStoredRenderBuffer);
+    
         TBool semiTranparentEffectActive = Effect()->IsSemitransparent();
         if ((iOpacity.Now() <= EPSILON && !semiTranparentEffectActive))
             {
@@ -356,7 +363,8 @@ TBool CHuiCanvasVisual::CanSkipDrawing() const
             !HasCommandBuffers(ETrue /*include children*/) && 
             !IsBackgroundDrawingEnabled() &&
             !IsExternalContentDrawingEnabled()&&
-            !IsExternalContentDrawingEnabled(ETrue /*include children*/))
+            !IsExternalContentDrawingEnabled(ETrue /*include children*/) &&
+            !hasStoredContent )
             {
             return ETrue;
             }
@@ -451,22 +459,27 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
         transparent |= iOpacity.Now() < 1.0f; // Opacity less than 1.0f -> always transparent
                 
         TBool refreshCache = EFalse;        
+        TBool layer =  EFalse;
         if (EffectIsAppliedToChildren())
             {
             refreshCache |= ChildTreeChanged(EHuiCanvasFlagExcludeFromParentEffect);
 
             iCanvasVisualData->iPaintedRegion.Clear();
-            CollectRecursivePaintedRegion(iCanvasVisualData->iPaintedRegion, EHuiCanvasFlagExcludeFromParentEffect);
+            layer = CollectRecursivePaintedRegion(iCanvasVisualData->iPaintedRegion, EHuiCanvasFlagExcludeFromParentEffect);
             }
         else
             {
             refreshCache |= Changed();            
 
             iCanvasVisualData->iPaintedRegion.Clear();
-            CollectPaintedRegion(iCanvasVisualData->iPaintedRegion, 0);
+            layer = CollectPaintedRegion(iCanvasVisualData->iPaintedRegion, 0);
             }
-        
-        didDrawEffect = Effect()->CachedDraw(aGc, area, refreshCache, !transparent, iCanvasVisualData->iPaintedRegion);
+
+        if(Display()->RosterImpl().AlfEventWindow() == this)
+            {
+            refreshCache |= Display()->RosterImpl().NativeAppsContentChanged();
+            }
+        didDrawEffect = Effect()->CachedDraw(aGc, area, refreshCache, !transparent, iCanvasVisualData->iPaintedRegion,layer );
         
         }
     
@@ -536,10 +549,10 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
         RDebug::Print(_L("CHuiCanvasVisual::DrawSelf - tracked visual"));
         }
 #endif		
-      
+    TBool alfEventWindow = (Display()->RosterImpl().AlfEventWindow() == this);
     TReal32 effectiveOpacity = EffectiveOpacity();
-        
-    if (effectiveOpacity <= 0 || !HasCommandBuffers(ETrue))
+    TBool hasStoredContent = (IsContentDrawingEnabled() && (IsDelayedEffectSource() || Freezed())) && (StoredRenderBuffer() || iCanvasVisualData->iStoredRenderBuffer);        
+    if ((effectiveOpacity <= 0 || !HasCommandBuffers(ETrue)) && !alfEventWindow && !hasStoredContent)
         {
         // In case background drawing is enabled, and even if we don't have command buffers we still
         // want to issue clear. If the background drawing is enabled here, it means that the
@@ -555,7 +568,7 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
             }
         }
 
-    if (IsContentDrawingEnabled() && (IsDelayedEffectSource() || Freezed()))
+    if (hasStoredContent)
         {
         // Select right draw mode
         THuiCanvasDrawMode drawMode = (Flags() & EHuiVisualFlagOpaqueHint) ? EHuiCanvasDrawModeNormal : EHuiCanvasDrawModeBlend;
@@ -572,6 +585,12 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
             }
         }    
 
+    if(alfEventWindow)
+         {
+         Display()->RosterImpl().DrawNativeAppsContent(aGc, Display());
+         return;
+         }
+    
     // Use 'under opaque' hint to optimize drawing.
     // See comment from CHuiCanvasVisual::Draw for further details. 
     const TBool drawVisualContent = !( Flags() & EHuiVisualFlagUnderOpaqueHint );
@@ -997,6 +1016,7 @@ THuiCanvasPaintedArea CHuiCanvasVisual::CanvasPaintedArea(TInt aIndex) const
                     }                    
 
                 background.iPaintedRect = backgroundItems[aIndex].Rect();
+                backgroundItems.Close();
                 return background;
                 }
             else
@@ -1509,7 +1529,7 @@ void CHuiCanvasVisual::VisualExtension(const TUid& aExtensionUid, TAny** aExtens
 		}
     }
 
-void CHuiCanvasVisual::CollectPaintedRegion(TRegion& aPaintRegion, TInt aExcludeCanvasFlags) const
+TBool CHuiCanvasVisual::CollectPaintedRegion(TRegion& aPaintRegion, TInt aExcludeCanvasFlags) const
     {
     // Only our own painted areas.
     TInt paintedAreaCount = PaintedAreaCount();  
@@ -1518,12 +1538,13 @@ void CHuiCanvasVisual::CollectPaintedRegion(TRegion& aPaintRegion, TInt aExclude
         aPaintRegion.AddRect( CanvasPaintedArea(i).iPaintedRect.Round() );
         }
     aPaintRegion.Tidy();
+    return !iCanvasVisualData->iLayerExtent.IsEmpty();
     }
 
-void CHuiCanvasVisual::CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const
+TBool CHuiCanvasVisual::CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const
     {
     // First our own painted areas...
-    CollectPaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
+    TBool layer = CollectPaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
             
     // ...then children (and their children).
     const TInt count = Count();
@@ -1543,13 +1564,14 @@ void CHuiCanvasVisual::CollectRecursivePaintedRegion(TRegion& aRecursivePaintReg
                     if (visual->Flags() & EHuiVisualFlagWserv)
                         {
                         CHuiCanvasVisual* canvasVisual = (CHuiCanvasVisual*)visual;
-                        canvasVisual->CollectRecursivePaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
+                        layer |= canvasVisual->CollectRecursivePaintedRegion(aRecursivePaintRegion, aExcludeCanvasFlags);
                         }
                     }
                 }        
             }
         }    
     aRecursivePaintRegion.Tidy();
+    return layer;
     }
 
 EXPORT_C TRect CHuiCanvasVisual::CommandBufferCoverage(TInt aOrientation)

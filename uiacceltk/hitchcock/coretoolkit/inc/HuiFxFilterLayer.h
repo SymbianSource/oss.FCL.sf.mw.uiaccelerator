@@ -31,7 +31,7 @@ public:
     IMPORT_C ~CHuiFxFilterLayer();
     IMPORT_C static CHuiFxFilterLayer* NewL(CHuiFxFilter* aFilter); // takes ownership
     IMPORT_C TBool PrepareDrawL(CHuiFxEngine& aEngine);
-    IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource);
+    IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface);
     IMPORT_C CHuiFxFilter& Filter() const;
     IMPORT_C TBool Changed() const;
     IMPORT_C void AdvanceTime(TReal32 aElapsedTime);

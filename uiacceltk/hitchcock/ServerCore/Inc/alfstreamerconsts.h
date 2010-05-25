@@ -46,7 +46,9 @@ enum
     EAlfGetNumberOfActiveEffects,
     EAlfRequestSignal,
     EAlfCompleteSignal,
-    EAlfSetDistractionWindow
+    EAlfSetDistractionWindow,
+    EAlfVolunteerForGoomTarget,
+    EAlfExcludeFromGoomTargets
 
     };
 
@@ -93,8 +95,14 @@ struct TAlfNativeWindowData
 enum TAlfSignalFlags
     {
     EAlfSignalEffectStarted = 0x1,
-    EAlfSignalEffectComplete = 0x2,    
-    
+    EAlfSignalEffectComplete = 0x2,     
     };
     
+enum TAlfWindowGroupListType
+    {    
+    EAlfInactiveWgs = 0,
+    EAlfAllWgsWithSurface,
+    EAlfVolunteersForCommonGood
+    };
+     
 #endif

@@ -32,6 +32,15 @@
 #include <AknLayoutFont.h>
 #include <e32property.h>
 
+#include "alfmoduletestconf.h"
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // Provides TLS object data for test cases.
+    // This is used only if module test hooks are set on.
+    #include "huistatictlsdata.h"
+#endif // USE_MODULE_TEST_HOOKS_FOR_ALF
+// Provides module test hook defines.
+#include "alfmoduletestdefines.h"
+
 // Enable this for debugging cache usage
 //#define HUI_DEBUG_PRINT_CANVAS_TEXTURE_CACHE
 //#define HUI_DEBUG_PRINT_CANVAS_TEXTURE_CACHE_EGL
@@ -3508,6 +3517,8 @@ RDebug::Print(_L("-- CHuiCanvasTextureCache::SetMemoryLevel: Enabling lowest mem
         iMaxTextureMemoryInKBytes = KHuiMaxRecommendedTextureAmountInKBytes;
         iMaxRenderBufferMemoryInKBytes = KHuiMaxRecommendedRenderBufferAmountInKBytes;       
         }    
+
+    AMT_MAP_CANVAS_TEXTURE_CACHE_SET_MEMORY_LEVEL();
     }
 
 TBool CHuiCanvasTextureCache::IsLowMemoryStateEnabled() const

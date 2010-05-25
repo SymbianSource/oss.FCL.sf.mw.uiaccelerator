@@ -76,7 +76,7 @@ void CAlfSrvControlGroupSubSession::ConstructL()
         
     iHostControl = new (ELeave) CAlfSrvHostControl( *Session().SharedHuiEnv() );
     iHostControl->ConstructL();
-    iHostControl->SetRole(EAlfSessionContainer);
+    iHostControl->SetRole(EHuiSessionContainer);
         
     CHuiLayout* sessionContainer = CHuiDeckLayout::AddNewL( *iHostControl, NULL );
     sessionContainer->SetFlags( EHuiVisualFlagManualLayout );

@@ -28,7 +28,7 @@ public:
     static CHuiFxVg10OutlineFilter* NewL();
 protected:
     void ConstructL();
-    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight);
+    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool aHasSurface);
     void CalculateMargin(TMargins &aMargin) const;  
     CHuiFxVg10OutlineFilter *CloneL() const;
 private:

@@ -265,6 +265,8 @@ private: //data
     TUint iCurrentPluginRun;
     RArray<TInt> iLowOnMemWgs;
     TBool iUseSwRendering;
+    TBool iTryOptional; // we did everything we could but still missing some bits, try again with different app targets
+    TBool iOptionalTried; // no need to overperform though
     };
 
 #include "goomactionlist.inl"

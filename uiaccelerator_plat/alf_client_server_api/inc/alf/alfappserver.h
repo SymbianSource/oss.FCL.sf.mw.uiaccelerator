@@ -164,6 +164,12 @@ public:
      * @return Container. Ownership not transferred.
      */
     CObjectCon* NewContainerL();
+
+    /**
+     * Releases container created by NewContainerL back to server.
+     * @param aContainer container to be removed.
+     */
+    void ReleaseContainer(CObjectCon& aContainer);
     
 // from base class CAknAppServer
 

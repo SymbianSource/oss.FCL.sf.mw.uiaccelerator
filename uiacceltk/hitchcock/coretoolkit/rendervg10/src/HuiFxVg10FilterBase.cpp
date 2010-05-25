@@ -25,7 +25,7 @@
 
 
 TBool CHuiFxVg10FilterBase::Draw(CHuiFxEngine& aEngine, CHuiGc& /* aGc */, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource,
-                                            const TRect& aTargetRect, const TRect& aSourceRect)
+                                            const TRect& aTargetRect, const TRect& aSourceRect, TBool aHasSurface)
     {
     aTarget.BindAsTexture(ERenderbufferUsageWriteOnly);
     aSource.BindAsTexture(ERenderbufferUsageReadOnly);
@@ -37,7 +37,7 @@ TBool CHuiFxVg10FilterBase::Draw(CHuiFxEngine& aEngine, CHuiGc& /* aGc */, CHuiF
 
     if(opacity > EPSILON)
         {
-        DrawEffect(aEngine, destImage, srcImage, aSourceRect.Width(), aSourceRect.Height());
+        DrawEffect(aEngine, destImage, srcImage, aSourceRect.Width(), aSourceRect.Height(), aHasSurface);
         }
     else
         {
