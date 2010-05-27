@@ -61,7 +61,8 @@ public:
      * Constructor to initialize variables.
      */
     TAlfModuleTestMap():
-        iArrayCount( 0 )
+        iArrayCount( 0 ),
+        iAcceptArrayCount( 0 )
         {
         }
 

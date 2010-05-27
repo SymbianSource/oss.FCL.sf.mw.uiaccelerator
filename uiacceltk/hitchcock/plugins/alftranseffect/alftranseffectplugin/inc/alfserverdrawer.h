@@ -69,7 +69,7 @@ public:
     void BeginFullscreen( TInt aAction, const TRect& aEffectRect, 
 						TInt aType, const TUid aUid1, const TUid aUid2, TInt aData,
 						TSecureId aSid1, TInt aWg1, TSecureId aSid2, TInt aWg2);
-    void EndFullscreen();
+    void EndFullscreen(TBool aTimeout = EFalse);
     void CancelFullscreen();
     void AbortFullscreen();
     void RegisterAlfFullScreenEffect( TInt aAction, const TDesC& aResourceDir,
@@ -103,7 +103,7 @@ public:
 
 	TInt SendBeginFullscreen(TInt aHandle, TUint aAction, const TUid& aUid, 
 							 const TUid& aPreviousUid, const TRect& aEffectRect);
-	TInt SendEndFullscreen();
+	TInt SendEndFullscreen(TBool aTimeout = EFalse);
 	TInt SendAbortFullscreen();
 	TInt SendAbortControlTransition();
 	void SendBeginFullscreen();

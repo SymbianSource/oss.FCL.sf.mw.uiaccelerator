@@ -542,7 +542,10 @@ void CHuiRosterImpl::DrawSelf(CHuiGc& aGc, CHuiDisplay* aDisplay) const
         DrawSelfFrozen(aGc, display);
         return;
         }
-
+    
+    // this was moved here because otherwise background clear did never end up to effect canvas buffers
+    display->DoBackgroundClear();
+    
     TInt visualCount = 0;
     TInt entryCount = iEntries.Count();
     // Draw the visuals tree in the display.

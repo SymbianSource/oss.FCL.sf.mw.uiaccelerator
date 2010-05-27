@@ -33,8 +33,6 @@ enum TAlfModuleTestType
     EAlfModuleTestTypeNone,
     
     // Render stage component specific tests
-    EAlfModuleTestTypeRenderStageCreateLayer,
-    EAlfModuleTestTypeRenderStageReleaseLayer,
     EAlfModuleTestTypeRenderStageCreateWindow,
     EAlfModuleTestTypeRenderStageReleaseWindow,    
     EAlfModuleTestTypeRenderStageCreateWindowGroup,
@@ -84,6 +82,11 @@ enum TAlfModuleTestType
     // Core toolkit component specific tests
     EAlfModuleTestTypeCoreToolkitDrawWindow,
     EAlfModuleTestTypeCoreToolkitDrawFromRenderBuffer,
+    
+    // Layer tests
+    EAlfModuleTestTypeCreateLayer,
+    EAlfModuleTestTypeReleaseLayer,    
+    EAlfModuleTestTypeLayerOrdinalPosition,    
     
     // Do not use this value when creating item.
     // This is just meant for Find operations when all tests are accepted.

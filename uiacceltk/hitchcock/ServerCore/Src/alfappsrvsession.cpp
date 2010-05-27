@@ -1592,9 +1592,9 @@ void CAlfAppSrvSession::TextureCreateL(const RMessage2& aMessage)
 
         // If we are reusing deleted texture, remove it from "deleted" array
         TInt index = iTextures.Find(&texture);
-        if (index != KErrNotFound)
+        if (index == KErrNotFound)
            {
-           iTextures.Remove(index);                
+           iTextures.Append(env->TextureManager().Texture(id));                
            }                    
 
 
@@ -1727,9 +1727,9 @@ void CAlfAppSrvSession::TextureLoadL(const RMessage2& aMessage)
 
         // If we are reusing deleted texture, remove it from "deleted" array
         TInt index = iTextures.Find(&textureRef);
-        if (index != KErrNotFound)
+        if (index == KErrNotFound)
            {
-           iTextures.Remove(index);                
+           iTextures.Append(env->TextureManager().Texture(id));                
            }                    
         
         // Add texture to skin content

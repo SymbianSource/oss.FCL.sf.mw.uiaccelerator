@@ -37,11 +37,16 @@
 #include <alflogger.h>
 #include <uiacceltk/HuiUtil.h>
 
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h" 
+
 // This sets the maximum time for an effect. Even if the fxml file has specified a longer duration, 
 // this will stop the effect.
-const TInt KAlfShortEffectTimeout = 4000000;
-const TInt KAlfLongEffectTimeout  = 5000000;
+const TInt KAlfShortEffectTimeout     = 4000000;
+const TInt KAlfAppStartEffectTimeout  = 300000;
+const TInt KAlfLongEffectTimeout      = 5000000;
 const TInt KAlfActiveControlFxGranularity = 4;
+const TInt KAlfLongApplicationStartContext = 20;
 
 //const TInt KAlfLongEffectTimeout  = 500000;
 // Timer to send finish full screen effect
@@ -63,6 +68,11 @@ NONSHARABLE_CLASS( CAlfFinishTimer ):public CTimer
         
         void DoCancel();
 
+    public:
+        
+        TBool iTimeoutTriggered;
+        TBool iIsStartEffect;
+        
     private:
 
         CAlfFinishTimer();
@@ -108,6 +118,7 @@ CAlfFinishTimer::~CAlfFinishTimer()
 void CAlfFinishTimer::Start( TTimeIntervalMicroSeconds32 aPeriod, TCallBack aTimeoutCallback )
     {
     iCallback = aTimeoutCallback; 
+    iTimeoutTriggered = EFalse;
     After( aPeriod );
     }
 
@@ -118,6 +129,7 @@ void CAlfFinishTimer::RunL()
     //
     if ( iStatus.Int() != KErrCancel )
         {
+        iTimeoutTriggered = ETrue;
         iCallback.CallBack();
         }
     }
@@ -266,6 +278,10 @@ CAlfServerDrawer::~CAlfServerDrawer()
     delete iFinishFullScreen;
     delete iFullScreenTimeout;
     iActiveControlFx.Close();
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    delete AMT_CONTROL();
+    Dll::FreeTls();
+#endif
     }
 
 // ---------------------------------------------------------------------------
@@ -501,11 +517,11 @@ void CAlfServerDrawer::BeginFullscreen(	TInt aAction, const TRect& aEffectRect,
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 //
-void CAlfServerDrawer::EndFullscreen()
+void CAlfServerDrawer::EndFullscreen(TBool aTimeout)
     {
     __ALFFXLOGSTRING("CAlfServerDrawer::EndFullscreen >>");
     CancelEndChecker();
-    iFullScreenController->EndFullscreen(EFalse);
+    iFullScreenController->EndFullscreen(aTimeout);
     iFullScreenController->AppInfoCache().ClearActions();
     __ALFFXLOGSTRING("CAlfServerDrawer::EndFullscreen <<");
     }
@@ -550,6 +566,11 @@ void CAlfServerDrawer::SendBeginFullscreen()
 //  
 void CAlfServerDrawer::DoSendBeginFullscreenL()
     {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    TTime time;
+    time.UniversalTime();
+    AMT_ADD_TIME(iToSid.iId, time.Int64(), ETrue);
+#endif    
     __ALFFXLOGSTRING(" <- CAlfServerDrawer::SendBeginFullscreen");
     __ALFFXLOGSTRING(" <- Original window server ids");
     __ALFFXLOGSTRING2("From UID: 0x%X, To UID: 0x%X", iFromUid.iUid, iToUid.iUid);    
@@ -666,6 +687,7 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
         stream.WriteInt32L( MAlfGfxEffectPlugin::EBeginFullscreen );
         stream.WriteInt32L(  iToSid.iId ); //iCurrentFullScreenHandle );
         stream.WriteInt32L( iType );
+        stream.WriteInt32L( 0 ); // timeout triggered
       	if ( iType == AknTransEffect::EParameterType && isExit )
       	    {
             stream.WriteInt32L( iToWg );
@@ -679,8 +701,6 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
             stream.WriteInt32L( iToSid.iId );
             stream.WriteInt32L( iFromSid.iId );
                         
-            stream.WriteInt32L( KErrNotFound ); //  was iToScreen, obsolete
-            stream.WriteInt32L( KErrNotFound ); // was iToScreen, obsolete
        	    }
        	else if ( iType == AknTransEffect::EParameterType )
        	    {
@@ -695,19 +715,22 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
             stream.WriteInt32L( iToSid.iId );
             stream.WriteInt32L( iFromSid.iId );
                         
-            stream.WriteInt32L( KErrNotFound );  // was iToScreen, obsolete
-            stream.WriteInt32L( KErrNotFound ); // was iToScreen, obsolete
             }
         else
             {
-            stream.WriteInt32L( KErrNotFound); // was iFocusWg 
-            stream.WriteInt32L( KErrNotFound); // was iFocusWg 
+            stream.WriteInt32L( KErrNotFound);  // dummy BEGIN
+            stream.WriteInt32L( KErrNotFound);  
+            stream.WriteInt32L( KErrNotFound);  
+            stream.WriteInt32L( KErrNotFound); 
+            stream.WriteInt32L( KErrNotFound);  
+            stream.WriteInt32L( KErrNotFound);  // dummy END
             }
         stream.WriteInt32L( iFlags );
         stream.WriteInt32L( iEffectRect.iTl.iX );
         stream.WriteInt32L( iEffectRect.iTl.iY );
         stream.WriteInt32L( iEffectRect.iBr.iX );
         stream.WriteInt32L( iEffectRect.iBr.iY );
+        
         stream << resourceDir;
         stream << fileName;    
         stream.CommitL();
@@ -725,13 +748,14 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
     // iFlags and iAction will contain some extra information that can be used to control the effect:
     
     // All of these actions may not produce effects, they are here for now for debugging.
-    
+    TBool isAppStartEffect(EFalse);
     switch ( iAction )
         {
         case AknTransEffect::EApplicationActivate:
             __ALFFXLOGSTRING("EApplicationActivate - 1");
             break;
         case AknTransEffect::EApplicationStart:
+            isAppStartEffect = ETrue;
             __ALFFXLOGSTRING("EApplicationStart - 3");
             break;
         case AknTransEffect::EEmbeddedApplicationStart:
@@ -741,12 +765,15 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
             __ALFFXLOGSTRING("EApplicationExit - 5");
             break;
         case AknTransEffect::EApplicationStartRect:
+            isAppStartEffect = ETrue;
             __ALFFXLOGSTRING("EApplicationStartRect - 6");
             break;
         case AknTransEffect::EApplicationStartSwitch:
+            isAppStartEffect = ETrue;
             __ALFFXLOGSTRING("EApplicationStartSwitch - 7");
             break;
         case AknTransEffect::EApplicationStartSwitchRect:
+            isAppStartEffect = ETrue;
             __ALFFXLOGSTRING("EApplicationStartSwitchRect - 8");
             break;
         case AknTransEffect::EEmbeddedApplicationExit:
@@ -783,15 +810,27 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
     // It appears that folder open and close never send endfullscreen, so for them the effect
     // must be started as soon as we get beginfullscreen
     
-    iFullScreenTimeout->Start( KAlfLongEffectTimeout, TCallBack( FullScreenTimeout, this ) );
+    isAppStartEffect = EFalse; // disable different timeout effect for appstart effects
+	
+    if (isAppStartEffect)
+        {
+		// The shorter timeout can be disabled here!
+        iFullScreenTimeout->Start( KAlfAppStartEffectTimeout, TCallBack( FullScreenTimeout, this ) );
+        iFullScreenTimeout->iIsStartEffect = ETrue;
+        }
+    else
+        {
+        iFullScreenTimeout->Start( KAlfLongEffectTimeout, TCallBack( FullScreenTimeout, this ) );
+        iFullScreenTimeout->iIsStartEffect = EFalse;
+        }
     }
     
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 //	
-TInt CAlfServerDrawer::SendEndFullscreen()
+TInt CAlfServerDrawer::SendEndFullscreen(TBool aTimeout)
     {
-    __ALFFXLOGSTRING("CAlfServerDrawer::SendEndFullscreen");
+    __ALFFXLOGSTRING3("CAlfServerDrawer::SendEndFullscreen - Timeout: %d, iFullScreenEndSent: %d, IsStartEffect: %d", aTimeout, iFullScreenEndSent, iFullScreenTimeout->iIsStartEffect);
     
     if ( iFullScreenEndSent )
         {
@@ -804,19 +843,13 @@ TInt CAlfServerDrawer::SendEndFullscreen()
     iFullScreenTransitionEndObserver->Cancel();
     iFullScreenTimeout->Cancel();
     iFinishFullScreen->Cancel();
-	/*
-    TUint action = iAction;   
-    if ( iType == AknTransEffect::EParameterAvkonInternal )
-        {
-        action = iOldAction;
-        }
-    */
-    // TEMPORARY HACK
-    // REMOVE AFTER APPSHELL HAS BEEN FIXED
-    //iDoNotClearEffectRect = EFalse;
+    TBool triggerStartEffectTimeout= iFullScreenTimeout->iTimeoutTriggered && iFullScreenTimeout->iIsStartEffect;
+    iFullScreenTimeout->iTimeoutTriggered = EFalse;
+    iFullScreenTimeout->iIsStartEffect = EFalse;
     
-    // This is where the second part of the effect should start
-    // The new window should already have something on the screen
+     // This is where the second part of the effect should start
+    // The new window should already have something on the screen.
+	// It might not be the case, if aTimeout is ETrue 
     
     // Send the data to CAlfAppUI via bridge
     
@@ -826,13 +859,27 @@ TInt CAlfServerDrawer::SendEndFullscreen()
     
 	TPtrC resourceDir;
 	TPtrC fileName;
+	TInt cachePriority = 0;
+    TInt wantedTime = 0;
+    TInt minTime = 0;
 
+	if (triggerStartEffectTimeout)
+	    {
+        // if the following fails, then the effect from beginfullscreen will be used.
+        TInt err = iPolicyHandler.GetFullscreenKml( KAlfLongApplicationStartContext, iToUid, iFromUid, resourceDir, fileName,
+        cachePriority, wantedTime, minTime );
+		if (err != KErrNone)
+			{
+			triggerStartEffectTimeout = EFalse;
+			}
+	    }
+	
     // We must make a stream of the data as the length may vary.
     // At the moment we only send some numbers, but we should probably include
     // also the effect file name or something else to identify the effect 
     // that is going to be used
     
-    TInt bufferSize = 11 * sizeof(TInt); // operation, type, 2 wg ids, 2 app uids, flags and rect
+    TInt bufferSize = 12 * sizeof(TInt); // operation, type, 2 wg ids, 2 app uids, flags and rect, timeoutTriggered
     bufferSize += sizeof(TPtrC);
     bufferSize += resourceDir.Length() * 2;
     bufferSize += sizeof(TPtrC);
@@ -856,29 +903,23 @@ TInt CAlfServerDrawer::SendEndFullscreen()
             stream.WriteInt32L( MAlfGfxEffectPlugin::EEndFullscreen );
             stream.WriteInt32L( iCurrentFullScreenHandle );
             stream.WriteInt32L( iType );
-
+            stream.WriteInt32L( triggerStartEffectTimeout );
             stream.WriteInt32L( iToWg );
             stream.WriteInt32L( iFromWg );
 
             // AppUid for the future. alfbridge can figure out the windog groups based on that
             stream.WriteInt32L( iToUid.iUid );
             stream.WriteInt32L( iFromUid.iUid );
+            
+            stream.WriteInt32L( iToSid.iId );
+            stream.WriteInt32L( iFromSid.iId );
 
-            if ( iType == AknTransEffect::EParameterType )
-                {
-                stream.WriteInt32L( iToScreen );
-                stream.WriteInt32L( iFromScreen );
-                }
-            /*else
-                {
-                //stream.WriteInt32L( iFocusWg );
-                //stream.WriteInt32L( iFocusWg );
-//              }*/
             stream.WriteInt32L( iFlags ); 
             stream.WriteInt32L( iEffectRect.iTl.iX );
             stream.WriteInt32L( iEffectRect.iTl.iY );
             stream.WriteInt32L( iEffectRect.iBr.iX );
             stream.WriteInt32L( iEffectRect.iBr.iY );
+            
             stream << resourceDir;
             stream << fileName;    
             stream.CommitL();    
@@ -892,6 +933,7 @@ TInt CAlfServerDrawer::SendEndFullscreen()
         }
 
     iFullScreenFinished = EFalse;
+    iFullScreenTimeout->iIsStartEffect = EFalse;
     if ( iAction == AknTransEffect::EApplicationExit /*||
         iAction == 1001*/  ) 
         {
@@ -987,6 +1029,11 @@ TInt CAlfServerDrawer::SendBeginControlTransition()
 	TPtrC actionString;
 	
 	TInt err = KErrNone;
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+	TTime time;
+    time.UniversalTime();
+    AMT_ADD_TIME(iControlHandle, time.Int64(), ETrue);
+#endif    
 	err = iPolicyHandler.GetControlKml( iControlUid, iControlAction, resourceDir,
 	    fileName, actionString, cachePriority, wantedTime, minTime );
 	    

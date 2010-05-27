@@ -218,6 +218,8 @@ EXPORT_C CHuiDisplay::~CHuiDisplay()
     iVisibleAreaObservers.Reset();
     iRosterObservers.Reset();
 
+    iTempDirtyRegions.Close();
+    
     iDirtyRegions.Close();
     iDirtyRegions2.Close();
     if ( iCurrentDirtyRegions )
@@ -649,6 +651,9 @@ TBool CHuiDisplay::Refresh()
  	
     iWholeDisplayAreaIsDirty = EFalse;    
     
+    // Restore state to defaults. Alf client may have done some NVG drawing outside refresh loop and main drawing context may be wrong
+    iGc->RestoreState();
+    
     if(iUpdateRenderState)
         {
         // Set state when requested.
@@ -734,16 +739,18 @@ TBool CHuiDisplay::Refresh()
     // this frame and the previous frame (this is needed when buffer swapping
     // is used; with buffer copying a single list of dirty regions would
     // suffice).
-    RDirtyRegions dirty;
+
+
+    iTempDirtyRegions.Reset();
     for(i = 0; i < iCurrentDirtyRegions->Count(); ++i)
         {
-        dirty.Append((*iCurrentDirtyRegions)[i]);
+        iTempDirtyRegions.Append((*iCurrentDirtyRegions)[i]);
         }
     if (iPreviousDirtyRegions)
     	{
     	for(i = 0; i < iPreviousDirtyRegions->Count(); ++i)
         	{
-        	AddDirtyRegion((*iPreviousDirtyRegions)[i], dirty, EFalse);
+        	AddDirtyRegion((*iPreviousDirtyRegions)[i], iTempDirtyRegions, EFalse);
         	}
     	}
 
@@ -794,25 +801,25 @@ TBool CHuiDisplay::Refresh()
 	// Set dirty rect in render surface to minimize screen update
 	// Only implemented for BitGdi renderer for now
     TRect mergedDirtyRect;
-    if (dirty.Count() > 0)
+    if (iTempDirtyRegions.Count() > 0)
     	{
-    	mergedDirtyRect = dirty[0];
+    	mergedDirtyRect = iTempDirtyRegions[0];
     	}
     	
 	if (useDirtyRects)
 	    {
 		// When Bitgdi renderer used set dirty rect in render surface
 		// to minimize screen update in CHuiBitgdiRenderSurface::SwapBuffers
-	    if (dirty.Count() == 1)
+	    if (iTempDirtyRegions.Count() == 1)
 		    {
             ClipDirtyRect(mergedDirtyRect, VisibleAreaClippingRect());
             iRenderSurface->SetDirtyRect(mergedDirtyRect);
 		    }
-		else if (dirty.Count() > 1) 
+		else if (iTempDirtyRegions.Count() > 1) 
 		    {
-			for(i = 1; i < dirty.Count(); ++i)
+			for(i = 1; i < iTempDirtyRegions.Count(); ++i)
 				{
-				TRect r(dirty[i]);
+				TRect r(iTempDirtyRegions[i]);
 				// check top left corner to expand or not
 				if (r.iTl.iX < mergedDirtyRect.iTl.iX)
 				    {
@@ -852,8 +859,8 @@ TBool CHuiDisplay::Refresh()
 	// Merge into max one dirty area when HW accelrated drawing is used
 	if (useDirtyRects && IsRendererHWAccelerated())
 	    {
-	    dirty.Reset();
-	    dirty.Append(mergedDirtyRect);
+        iTempDirtyRegions.Reset();
+        iTempDirtyRegions.Append(mergedDirtyRect);
 	    }
 	
 #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
@@ -865,10 +872,11 @@ TBool CHuiDisplay::Refresh()
 #endif	
 	
     // Usually there is only one dirty region (if any).
-    for(i = 0; i < dirty.Count(); ++i)
+    iCurrentDirtyIndx = 0;
+    for(; iCurrentDirtyIndx < iTempDirtyRegions.Count(); ++iCurrentDirtyIndx)
         {
         // Set up the clipping rectangle.
-        TRect dirtyRect = dirty[i];
+        TRect dirtyRect = iTempDirtyRegions[iCurrentDirtyIndx];
         ClipDirtyRect(dirtyRect, VisibleAreaClippingRect());
         
         iGc->PushClip();
@@ -886,34 +894,7 @@ TBool CHuiDisplay::Refresh()
             iBackgroundColor = oldBgColor;
             }
                 
-        // Clear background for the dirty area
-        if (iBackgroundItems.Count() != 0)
-            {
-            ClearWithBackgroundItems(dirtyRect);    
-            }
-        else
-            {
-            switch (iClearBackground)
-                {
-                case EClearWithColor:
-                    {
-                    ClearWithColor(dirtyRect);                            
-                    break;    
-                    }
-                case EClearWithSkinBackground:
-                    {
-                    ClearWithSkinBackground(dirtyRect);                                                    
-                    break;    
-                    }
-                case EClearNone:
-                default:
-                    {
-                    // Don't do anything
-                    break;    
-                    }                                                
-                }                                    
-            }                                        
-        
+         
         if ( iForegroundBitmapGc && iForegroundTextureTransparency )
             {
             // There is ALF content in the background, we have to
@@ -965,7 +946,7 @@ TBool CHuiDisplay::Refresh()
         iGc->PopClip();
         }
 
-    dirty.Reset();
+    iTempDirtyRegions.Reset();
 
     // There must be no disparity in the number of pushed clipping rectangles.
     // (equivalent to __ASSERT_ALWAYS)
@@ -1787,3 +1768,39 @@ EXPORT_C void CHuiDisplay::CopyScreenToBitmapL(CFbsBitmap* aBitmap)
         
     User::LeaveIfError( err );
     }
+
+void CHuiDisplay::DoBackgroundClear()
+    {
+    if(iForegroundTextureTransparency) // alf application is visible -> clear background as requested 
+        {
+        // Clear background for the dirty area
+        TRect dirtyRect = iTempDirtyRegions[iCurrentDirtyIndx];
+        if (iBackgroundItems.Count() != 0)
+            {
+            ClearWithBackgroundItems(dirtyRect);    
+            }
+        else
+            {
+            switch (iClearBackground)
+                {
+                case EClearWithColor:
+                    {
+                    ClearWithColor(dirtyRect);                            
+                    break;    
+                    }
+                case EClearWithSkinBackground:
+                    {
+                    ClearWithSkinBackground(dirtyRect);                                                    
+                    break;    
+                    }
+                case EClearNone:
+                default:
+                    {
+                    // Don't do anything
+                    break;    
+                    }                                                
+                }                                    
+            }
+        }
+    }
+

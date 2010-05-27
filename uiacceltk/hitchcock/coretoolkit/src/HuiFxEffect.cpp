@@ -22,6 +22,16 @@
 #include "HuiRenderPlugin.h"
 #include "HuiCmdBufferBrush.h" // MHuiEffectable
 
+#include "alfmoduletestconf.h"
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // Provides TLS object data for test cases.
+    // This is used only if module test hooks are set on.
+    #include "huistatictlsdata.h"
+#endif // USE_MODULE_TEST_HOOKS_FOR_ALF
+// Provides module test hook defines.
+#include "alfmoduletestdefines.h"
+
+
 EXPORT_C CHuiFxEffect* CHuiFxEffect::NewL(CHuiFxEngine& aEngine)
     {
     CHuiFxEffect* e = new (ELeave) CHuiFxEffect( aEngine );
@@ -107,6 +117,40 @@ TBool CHuiFxEffect::NotifyEffectEndObserver()
         {
         return ETrue; // fade effect does not have observer that would need notification
         }
+    
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    TTime endTime;
+    endTime.UniversalTime();
+    
+	// There might be several BeginFullScreen for single effects. We want to calculate
+	// reaction time from the first BeginFullScreen event to this point
+    TInt timeStamps = 0;
+    AMT_GET_TIME_POINT_COUNT(iHandle, timeStamps);
+    
+    TInt64 temp;
+    TBool effects(EFalse); // dummy, 1 if effects were on for this time stamp
+    AMT_GET_TIME(temp, iHandle, 0, effects);
+    TTime startTime(temp);
+    
+    AMT_GET_TIME(temp, iHandle, timeStamps - 1, effects);
+    TTime effectStartTime(temp);
+    
+    TInt64 effectTime = endTime.MicroSecondsFrom(effectStartTime).Int64();
+    TReal fps = (TReal)iFramesDrawn / ((TReal)effectTime / 1000000.0f) ; 
+
+    TInt64 totalEffectTime = endTime.MicroSecondsFrom(startTime).Int64();
+    TInt64 reactionTime = effectStartTime.MicroSecondsFrom(startTime).Int64();
+        
+    RDebug::Printf("CHuiFxEffect::NotifyEffectEndObserver - Reaction time \t0x%x\t%f\tVisible effect time:\t%f\ts. (%f FPS). Total effect time:\t%f", 
+            iHandle,
+            (TReal)reactionTime / 1000000.0f,
+            ((TReal)effectTime)/1000000,
+            fps,
+            ((TReal)totalEffectTime)/1000000.0f 
+            );
+    AMT_RESET_TIME(iHandle);
+#endif
+    
     if (iEffectEndObserver)
         {
         // The callback can be called only once when the effect finishes
@@ -553,6 +597,13 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
 
             if (iFramesDrawn == 1)
                 {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+				// This is about the time when first frame from the effect is on screen
+                TTime endTime;
+                endTime.UniversalTime();
+                
+                AMT_ADD_TIME(iHandle, endTime.Int64(), ETrue);
+#endif
                 aElapsedTime = 0;
                 iFramesDrawn++;
                 }

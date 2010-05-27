@@ -46,6 +46,9 @@
 #include "alfsrvsubsessionbase.h"
 #include "alfsrvtransformationsubsession.h"
 
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h" 
+
 #ifdef RD_ALF_IN_PLATFORM
 #include <aknlayout2hierarchy.h>
 #endif
@@ -768,6 +771,11 @@ EXPORT_C void CAlfVisualHandler::HandleCmdL(TInt aCommandId, const TDesC8& aInpu
             CHuiFxEngine* engine = iVisual->Env().EffectsEngine();
             if (engine)
                 {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+                TTime time;
+                time.UniversalTime();
+                AMT_ADD_TIME(params->iHandle, time.Int64(), ETrue);
+#endif  
                 CHuiFxEffect* effect = NULL;
                 engine->LoadEffectL( params->iFileName, effect, iVisual->Effectable(), NULL , NULL, params->iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn );
                 // The effect will be automatically set to the visual if parsing succeeds
@@ -781,6 +789,11 @@ EXPORT_C void CAlfVisualHandler::HandleCmdL(TInt aCommandId, const TDesC8& aInpu
             CHuiFxEngine* engine = iVisual->Env().EffectsEngine();
             if (engine)
                 {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+                TTime time;
+                time.UniversalTime();
+                AMT_ADD_TIME(params->iHandle, time.Int64(), ETrue);
+#endif  
                 CHuiFxEffect* effect = NULL;
                 // this will add the group, if it does not exist already
                 // Begin and End group events are supposed to come through GfxTransEffect API.
