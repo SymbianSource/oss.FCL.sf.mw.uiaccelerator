@@ -1142,7 +1142,7 @@ EXPORT_C void CAlfAppUi::HandleResourceChangeL( TInt aType )
     
     if ( aType == KEikDynamicLayoutVariantSwitch || aType == KAknsMessageSkinChange && iData->iHuiEnv)
         {
-        iData->iHuiEnv->Skin().NotifyDisplaySizeChangedL();
+        iData->iHuiEnv->Display(0).SetSkinSizeChangePending();
         }
         
     // Send notification events to clients here if needed    

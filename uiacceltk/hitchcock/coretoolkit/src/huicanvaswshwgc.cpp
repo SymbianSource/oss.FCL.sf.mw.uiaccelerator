@@ -1906,8 +1906,8 @@ void CHuiCanvasWsHwGc::EndDrawL(const TRegion& aUpdateRegion, TBool aUpdateDispl
     if (aUpdateDisplay && renderbuffer && iCanvasGc->Gc())
         {
         THuiRealRect updatedRect = aUpdateRegion.BoundingRect();
-				  TInt w; 
-				  TInt h ;
+        TInt w = 0; 
+		TInt h = 0;
         // Handle relative rotation
         if (iVisual->Display())
             {
@@ -2136,6 +2136,15 @@ void CHuiCanvasWsHwGc::DisableUpdateRegion()
         }
     }
 
+static TRect CalculateClipRect(CHuiCanvasRenderBuffer* aRenderbuffer)
+    {
+    const TInt KHuiDefaultSize = 2048;
+    return 
+        aRenderbuffer && aRenderbuffer->IsInitialized() ? 
+        TRect( aRenderbuffer->Size() ) :
+        TRect( TSize( KHuiDefaultSize, KHuiDefaultSize ) );
+    }
+
 void CHuiCanvasWsHwGc::BindRenderBuffer(CHuiCanvasRenderBuffer* aRenderbuffer, const TRegion& aUpdateRegion)
     {
     // Disable effective opacity when rendering to a buffer
@@ -2158,15 +2167,15 @@ void CHuiCanvasWsHwGc::BindRenderBuffer(CHuiCanvasRenderBuffer* aRenderbuffer, c
     
     // Set new clipping region which does not clip anything. 
     // We want always draw aUpdateRegion fully to the aRenderbuffer. 
-    TRect displayArea = iCanvasGc->Gc()->DisplayArea(); 
-    
-    iCanvasGc->Gc()->SetClip(displayArea); // this call does not transform region anymore
+            
+    iCanvasGc->Gc()->SetClip(CalculateClipRect(aRenderbuffer)); // this call does not transform region anymore
     
     // We use translation to get screen coordinates to match render buffer coordinates
     iCanvasGc->PushTransformationMatrix();
     iCanvasGc->Translate(x, y, 0.f);
         
     // Handle relative rotation
+    TRect displayArea = iCanvasGc->Gc()->DisplayArea();
     TInt w = displayArea.Width();
     TInt h = displayArea.Height();
     

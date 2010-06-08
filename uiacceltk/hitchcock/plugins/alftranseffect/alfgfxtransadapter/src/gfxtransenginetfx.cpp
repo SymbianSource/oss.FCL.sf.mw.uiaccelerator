@@ -295,6 +295,8 @@ CGfxTransAdapterTfx::CGfxTransAdapterTfx(MGfxTransClient* aClient) :
 CGfxTransAdapterTfx::~CGfxTransAdapterTfx()
 	{
 	
+    
+    iControlEffects.Close();
 	__ALFFXLOGSTRING("CGfxTransAdapterTfx for HWA transitionn effects, destructor ");
 //	iIgnoredWOChildControls.Close();
 	//iControlInfo.ResetAndDestroy();
@@ -462,6 +464,16 @@ TInt CGfxTransAdapterTfx::HandleClientState( TClientState aState, const CCoeCont
 	switch(aState)
 		{
 		case EFallback:
+	    case EAbort:
+	        for(TInt i = 0 ; i < iControlEffects.Count(); i++ )
+	            {
+	            // clear ongoing effect for this handle
+	            if( iControlEffects[i].iHandle == aHandle)
+	                {
+	                iControlEffects.Remove(i);
+	                i--;
+	                }
+	            }
 		    break;
 		case EPreBeginCapture:
 		    break;
@@ -470,35 +482,45 @@ TInt CGfxTransAdapterTfx::HandleClientState( TClientState aState, const CCoeCont
 			// GfxTransEffect::Begin(). This makes it possible (NOT QUARANTEENED)
 			// that effect request arrives to Alf before possible visiblity changes are made to 
 			// the control.
-		    if ( iHasPlugin && aKey && aKey->DrawableWindow())
+		    if (aKey && aKey->DrawableWindow() && err == KErrNone)
 		        {
-		        // We must generate our own transition as we won't be sending 
-		        // iClient->TransitionFinished back.
-		        // (Client did not ask for transition to be started, and won't be
-		        // interested in the end.)
-          		TRAP( err, GenerateTransitionL( aKey, transdata ) );
+                TControlEffect newEffect;
+                newEffect.iHandle = aHandle;
+                newEffect.iWindowGroup = aKey->DrawableWindow()->WindowGroupId();
+                newEffect.iWindowHandle =aKey->DrawableWindow()->ClientHandle(); 
+                iControlEffects.Append(newEffect);
 		        }
 		    break;
 		case EPreEndCapture:	
 		    break;
 		case EPostEndCapture:
-		    break;
-		case EAbort:
-		// Abort component transition, handle given.
+            if (aKey && err == KErrNone)
+                {
+                TRAP( err, GenerateComponentTransitionEventL( transdata, MAlfGfxEffectPlugin::EBeginComponentTransition, aHandle ) );
+                }
 		    break;
 		case EGlobalAbort:
-		// abort component transition, no handle.
+		    // abort component transition, no handle.
+		    for(TInt i = 0 ; i < iControlEffects.Count(); i++ )
+                {
+                // clear all on going effects
+                iControlEffects.Remove(i);
+                i--;
+                }
+          // TODO: send abort to server
+		   // TRAP( err, GenerateComponentTransitionEventL( transdata, MAlfGfxEffectPlugin::EAbortComponentTransition) );
+		    
 	        break;
 		case EBeginGroup:
 			{
-			__ALFFXLOGSTRING1("-- BeginGroup: New transition group for groupid: %d)",aHandle);
-			SendGroupCommand(aHandle, EFalse);
+            __ALFFXLOGSTRING1("-- BeginGroup: New transition group for groupid: %d)",aHandle);
+            SendGroupCommand(aHandle, EFalse);
 		    break;
 			}
 		case EEndGroup:
 			{
-			__ALFFXLOGSTRING1("-- EndGroup: closing transition group: %d)",aHandle);
-			SendGroupCommand(aHandle, ETrue);
+            __ALFFXLOGSTRING1("-- EndGroup: closing transition group: %d)",aHandle);
+            SendGroupCommand(aHandle, ETrue);
 		    break;
 			}
 		default:
@@ -777,90 +799,109 @@ TSecureId CGfxTransAdapterTfx::SecureIdFromAppUid( TUid aAppUid )
     TSecureId result(aAppUid);
     if ( aAppUid == TUid::Null() )
         {
+        iCachedUidMapping.iWindowGroupId = -1;
         return result;
         }
-
-    TBool found = EFalse;
+    
+    __ALFFXLOGSTRING1("CGfxTransAdapterTfx::SecureIdFromAppUid Searching SID&WGID for aAppUid: 0x%x", aAppUid.iUid );
 
     // first check the cache
     if ( iCachedUidMapping.iAppUid == aAppUid.iUid && iCachedUidMapping.iSecureId != 0 )
         {
-        result = iCachedUidMapping.iSecureId;
-        found = ETrue;
-    }
-    
-    if ( !found )
-        {
-        // do the hard work
-        // first check this process - this is quick
-        // also, if this is the start-up effect on an application, the TApaTask is not yet updated with the 
-        // window group created by this application (yet).
-        TInt windowGroupId = -1;
-        RProcess thisProcess;
-        TUidType uidType = thisProcess.Type();
-        if ( uidType.IsValid() )
-            {
-            if ( uidType[2] == aAppUid ) // 0 = UID1, 1 = UID2, 2 = UID3
-                { 
-                result = thisProcess.SecureId();
-                // take the window gruop ID as well if available
-                CCoeEnv* env = CCoeEnv::Static();
-                if ( env )
-                    {
-                    windowGroupId = env->RootWin().Identifier();
-                    }
-                found = ETrue;
-                }
-            }
-        thisProcess.Close();
+        __ALFFXLOGSTRING2( "CGfxTransAdapterTfx::SecureIdFromAppUid using cached SID 0x%x and WGID: %d", 
+                iCachedUidMapping.iSecureId,
+                iCachedUidMapping.iWindowGroupId );
+        return TSecureId(iCachedUidMapping.iSecureId);
+        }
 
-        // If not this application, find UID using the TApaTask
-        if ( !found )
-            {
-            TApaTaskList taskList( CCoeEnv::Static()->WsSession() ); 
-            const TApaTask task = taskList.FindApp( aAppUid );
-            const TThreadId threadId = task.ThreadId();
-            RThread otherThread;
-            if ( otherThread.Open( threadId ) == KErrNone ) // ignore error
-                {
-                result = otherThread.SecureId();
-                windowGroupId = task.WgId(); // take it for free at this point.
-                found = ETrue;
-                }
-            otherThread.Close();
+    TInt windowGroupId = -1;
+    RProcess thisProcess;
+    TUidType uidType = thisProcess.Type();
+    
+    if ( uidType.IsValid() )
+        {
+        bool thisApplication = false;
+        if ( uidType[2] == aAppUid ) // 0 = UID1, 1 = UID2, 2 = UID3
+            { 
+            // this application
+            result = thisProcess.SecureId();
+            thisApplication = ETrue;
+            __ALFFXLOGSTRING2("CGfxTransAdapterTfx::SecureIdFromAppUid Own SID 0x%x in thread %S", 
+                    result.iId, 
+                    &RThread().Name() );
             }
         
-        if ( found )
+        CCoeEnv* env = CCoeEnv::Static();
+        RWsSession localSession;
+        RWsSession* usedWsSession = NULL;
+        if ( env ) 
             {
-            // update cache
-            if ( iCachedUidMapping.iAppUid == aAppUid.iUid )
+            usedWsSession = &env->WsSession();
+            }
+        else 
+            {
+            if ( localSession.Connect() == KErrNone ) 
                 {
-                // found the missing secure ID
-                iCachedUidMapping.iSecureId = result.iId;
-                
-                if ( windowGroupId > 0 )
-                    {
-                    // if we got the window group ID, update that as well to the cache
-                    iCachedUidMapping.iWindowGroupId = windowGroupId;
-                    }
-                }
-            else 
-                {
-                iCachedUidMapping.iAppUid = aAppUid.iUid;
-                iCachedUidMapping.iSecureId = result.iId;
-                // wgid might not be updated at this point.
-                iCachedUidMapping.iWindowGroupId = Max(windowGroupId,0); // might be -1 -> treat 0 and -1 is just 0
+                usedWsSession = &localSession;
                 }
             }
+        
+        // check if the AppArcServer has already information about this Application
+        if ( usedWsSession  ) 
+            {
+            TApaTaskList taskList( *usedWsSession ); 
+            const TApaTask task = taskList.FindApp( aAppUid );
+            const TThreadId otherThreadId = task.ThreadId();
+            
+            if ( thisApplication ) 
+                {
+                // if security ID of the other thread matched, we take the WG ID from AppArcServer
+                RThread otherThread;
+                if ( otherThread.Open( otherThreadId ) == KErrNone ) 
+                    {
+                    __ALFFXLOGSTRING1("CGfxTransAdapterTfx::SecureIdFromAppUid Exising TApaTask found using thread %S", &otherThread.Name() );
+                    if ( otherThread.SecureId() == result )
+                        {
+                        windowGroupId = task.WgId();
+                        __ALFFXLOGSTRING1("CGfxTransAdapterTfx::SecureIdFromAppUid SID match -> WGID : &d found from TApaTask", windowGroupId );
+                        }
+                    else 
+                        {
+                        __ALFFXLOGSTRING2("CGfxTransAdapterTfx::SecureIdFromAppUid otherSID 0x%x otherWGID : &d not matching in TApaTask", otherThread.SecureId().iId , task.WgId() );
+                        }
+                    }
+                otherThread.Close();
+
+                if ( windowGroupId == -1 && env )
+                    {
+                    // take the root WG ID
+                    windowGroupId = env->RootWin().Identifier();
+                    __ALFFXLOGSTRING1("CGfxTransAdapterTfx::SecureIdFromAppUid root WGID %d used", windowGroupId );
+                    }
+                }
+            else  
+                {
+                RThread otherThread;
+                if ( otherThread.Open( otherThreadId ) == KErrNone )
+                    {
+                    result = otherThread.SecureId();
+                    windowGroupId = task.WgId();
+                    __ALFFXLOGSTRING3("CGfxTransAdapterTfx::SecureIdFromAppUid Taking SID 0x%x WGID %d from thread %S via TApaTask", result.iId, windowGroupId, &otherThread.Name() );
+                    }
+                otherThread.Close();
+                }
+            }
+
+        localSession.Close();
         }
+    thisProcess.Close();
     
-    if ( !found )
+    if ( windowGroupId != -1 )
         {
-        __ALFFXLOGSTRING1( "CGfxTransAdapterTfx::SecureIdFromAppUid AppUid 0x%x not found (yet)", aAppUid.iUid );
-        }
-    else if ( aAppUid.iUid != result.iId )
-        {
-        __ALFFXLOGSTRING2( "CGfxTransAdapterTfx::SecureIdFromAppUid SecureID 0x%x differs form AppUid 0x%x", result.iId, aAppUid.iUid );
+        // update cache
+        iCachedUidMapping.iAppUid = aAppUid.iUid;
+        iCachedUidMapping.iSecureId = result;
+        iCachedUidMapping.iWindowGroupId = windowGroupId;
         }
 
     return result;
@@ -872,55 +913,13 @@ TSecureId CGfxTransAdapterTfx::SecureIdFromAppUid( TUid aAppUid )
 //
 TInt32 CGfxTransAdapterTfx::WindowGroupIdFromAppUid( TUid aAppUid )
     {
-    if ( aAppUid == TUid::Null() )
+    TInt32 result = 0; 
+    if ( iCachedUidMapping.iAppUid == aAppUid.iUid ) 
         {
-        return 0;
+        result = iCachedUidMapping.iWindowGroupId;
         }
-    
-    TInt result = 0;
-    TBool found = EFalse;
-    
-    // check the cache. most likely this is already up-to-date due the previous execution of SecureIdFromAppUid
-    if ( iCachedUidMapping.iAppUid == aAppUid.iUid )
-        {
-        if ( iCachedUidMapping.iWindowGroupId > 0 )
-            {
-            result = iCachedUidMapping.iWindowGroupId;
-            iCachedUidMapping.iSecureId = 0;
-            found = true;
-            }
-        }
-    
-    if ( !found )
-        {
-        // do the hard work
-        TApaTaskList taskList( CCoeEnv::Static()->WsSession() ); 
-        const TApaTask task = taskList.FindApp( aAppUid );
-        result = TInt32(task.WgId());
-        
-        if ( result > 0 )
-            {
-            // update cache
-            found = ETrue;
-            if ( iCachedUidMapping.iAppUid != aAppUid.iUid )
-                {
-                iCachedUidMapping.iAppUid = aAppUid.iUid;
-                iCachedUidMapping.iSecureId = 0;
-                }
-            iCachedUidMapping.iWindowGroupId = result;
-            }
-        else
-            {
-            result = 0; // might be -1 -> treat 0 and -1 is just 0
-            }
-        }
-    
-    if ( !found )
-        {
-        __ALFFXLOGSTRING1( "CGfxTransAdapterTfx::WindowGroupIdFromAppUid AppUid 0x%x not found (yet)", aAppUid.iUid );
-        }
-
-    return TInt32(result);
+    iCachedUidMapping.iSecureId = 0;
+    return result;
     }
 
 
@@ -1264,20 +1263,41 @@ void CGfxTransAdapterTfx::DoStartTransitionL( TInt /*aHandle*/, const CTransitio
 	__ALFFXLOGSTRING("CGfxTransAdapterTfx::DoStartTransitionL <<");
 	}
 
-void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CTransitionData* aTransData)
+void CGfxTransAdapterTfx::GenerateComponentTransitionEventL(const CTransitionData* aTransData, TInt aOp, TInt aHandle)
     {
 
     // We generate a transition call from begin capture for control exit transitions
-	TPtr8 inPtr = iTransferBuffer->Des();
-	inPtr.Zero();
-	TPtr8 outPtr = iReturnBuffer->Des();
-	outPtr.Zero();
-	RDesWriteStream inBuf( inPtr );
-    TInt op = MAlfGfxEffectPlugin::EBeginComponentTransition;
-    TInt windowGroup = aKey->DrawableWindow()->WindowGroupId();
-    TInt windowHandle = aKey->DrawableWindow()->ClientHandle(); 
+    TPtr8 inPtr = iTransferBuffer->Des();
+    inPtr.Zero();
+    TPtr8 outPtr = iReturnBuffer->Des();
+    outPtr.Zero();
+    RDesWriteStream inBuf( inPtr );
+    TInt op = aOp;
     
-    __ALFFXLOGSTRING4("CGfxTransAdapterTfx::GenerateTransitionL - Operation: MAlfGfxEffectPlugin::EBeginComponentTransition Action: %d,  Uid: 0x%x, WindowGroup: %d, WindowHandle: %d  >>",
+    TInt windowGroup = KErrNotFound;
+    TInt windowHandle = KErrNotFound;
+    if( aHandle != KErrNotFound )
+        {
+        for(TInt i = 0 ; i < iControlEffects.Count(); i++ )
+            {
+            // we take the last one. to make hopefully clean up any earlier effect that was not finished for some reason.
+            if( iControlEffects[i].iHandle == aHandle)
+                {
+                windowGroup = iControlEffects[i].iWindowGroup;
+                windowHandle = iControlEffects[i].iWindowHandle;
+                iControlEffects.Remove(i);
+                i--;
+                }
+            }
+        }
+    if(aHandle != KErrNotFound && (windowGroup == KErrNotFound  || windowHandle == KErrNotFound))
+        {
+        return;
+        }
+    
+    __ALFFXLOGSTRING1("CGfxTransAdapterTfx::GenerateComponentTransitionEventL - Operation: %d", op );
+
+    __ALFFXLOGSTRING4("CGfxTransAdapterTfx::GenerateComponentTransitionEventL - Action: %d,  Uid: 0x%x, WindowGroup: %d, WindowHandle: %d  >>",
         aTransData->iAction,
         aTransData->iUid.iUid,
         windowGroup,
@@ -1298,17 +1318,17 @@ void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CT
     inBuf.Release();
     inBuf.Close();
 
-    __ALFFXLOGSTRING( "CGfxTransAdapterTfx::GenerateTransitionL" );
+    __ALFFXLOGSTRING( "CGfxTransAdapterTfx::GenerateTransitionL - iTfxServer.SendSynchronousData " );
     iTfxServer.SendSynchronousData( iPluginImplementation, inPtr, outPtr );
     // clear out used data    
-	inPtr.Zero();
-	outPtr.Zero();
-	
-	// Don't signal client because client did not request the transition to start
+    inPtr.Zero();
+    outPtr.Zero();
+    
+    // Don't signal client because client did not request the transition to start
     __ALFFXLOGSTRING("CGfxTransAdapterTfx::GenerateTransitionL <<");
-    }
-	
-	
+    }	
+
+
 // ---------------------------------------------------------------------------
 // finds a control
 // ---------------------------------------------------------------------------

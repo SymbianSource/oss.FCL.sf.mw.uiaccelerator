@@ -120,22 +120,20 @@ enum TSgcCanvasCommands
 
      // 80
      EAlfSetShapeRegion,
-     
      EAlfContentTag,
      EAlfFrameFlags,
-     EAlfFrameOrientation,
-    
+     EAlfFrameOrientation,    
      EAlfPacketReady,
      EAlfPacketNotReady,
      EAlfPacketPadding,
      EAlfDrawCommandsEnd,
      EAlfSetWindowId,
      EAlfWindowInactivateWindow,
+     
+     // 90
      EAlfWrap,
      EAlfJumpToAnotherChunk,
 	 EAlfDestroyChunk,
-
-     // 90
      EAlfSetExtent,
      EAlfNodeCreated,
      EAlfNodeReleased,
@@ -143,11 +141,11 @@ enum TSgcCanvasCommands
      EAlfNodeExtentChanged,
      EAlfNodeSiblingOrderChanged,
      EAlfNodeFlagChanged,
+     
+     // 100
      EAlfNodeAttributeChanged,
      EAlfNodeFadeCountChanged,
      EAlfNodeTransparentRegionChanged,
-
-     // 100
      EAlfNodeLayerAdded,
      EAlfNodeMovedToWindowGroup,
      EAlfNodeWindowGroupChained,
@@ -155,11 +153,11 @@ enum TSgcCanvasCommands
      EAlfCommandNotInitialized,
      EAlfCommitBatch,
      EAlfFrameContainsUnsupportedCommands,
+     
+     // 110     
      EAlfDebugTrackNode,
      EAlfNodeLayerExtentChanged,
      EAlfNodeLayerUsesAlphaFlagChanged,
-
-     // 110
      EAlfNodeFadeAllChildren,
      EAlfCommandIndexArray,
      EAlfCommandIndexArrayHeader,

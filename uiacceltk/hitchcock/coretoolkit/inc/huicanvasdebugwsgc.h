@@ -116,6 +116,8 @@ public:
 
     // Canvas functionality
     virtual void BeginActionL(TInt aAction, TRect aDisplayRect,const CHuiCanvasVisual& aUser, TBool aIsCachePrepared, const TRegion& aUpdateRegion);
+    virtual void EnableUpdateRegion(const TRegion& aUpdateRegion, TBool aClear);
+    virtual void DisableUpdateRegion();
     virtual void EndActionL(const TRegion& aUpdateRegion, TBool aUpdateDisplay);
     virtual TInt SetCapturingBufferL(CFbsBitmap* aTarget);
     virtual CHuiCanvasGc& CanvasGc() const;     
@@ -131,12 +133,13 @@ public:
     
     virtual THuiCanvasWsGcType Type() const;
     
-    virtual void EnableUpdateRegion(const TRegion& aUpdateRegion, TBool aClear);
-    virtual void DisableUpdateRegion();
+    virtual void ClearCapturingBufferArea(const TRect& aRect);
     
   ~CHuiCanvasDebugWsGc();
   
   static CHuiCanvasDebugWsGc* NewL( CHuiCanvasWsGc* aHuiCanvasGc, CAlfCommandDebug& aCommandDebugger ); 
+  
+  void SetInternalGc(CHuiCanvasWsGc* aHuiCanvasGc);
   
 private:
     
@@ -146,8 +149,8 @@ private:
   
   	private:
   	    
-  	CHuiCanvasWsGc* iCanvasWsGc;
-  	CAlfCommandDebug& iCommandDebugger;
+  	CHuiCanvasWsGc* iCanvasWsGc; // not owned
+  	CAlfCommandDebug& iCommandDebugger; // not owned
     };
     
 #endif  // __HUICANVASDEBUGWSGC_H__

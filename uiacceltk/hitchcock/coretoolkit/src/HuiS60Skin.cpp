@@ -196,12 +196,8 @@ EXPORT_C void CHuiS60Skin::SkinConfigurationChanged(
     {
     if (aReason == EAknsSkinStatusConfigurationDeployed)
         {
-        FreeAllBackgroundTextureResources();
-        Env().NotifySkinChangedL();
-        Env().TextStyleManager().NotifyDisplaySizeChangedL();
-        ReloadBgTexturesL();
+        Env().Display(0).SetSkinSizeChangePending();
         }
-    
     }
 
 EXPORT_C void CHuiS60Skin::SkinPackageChanged(
@@ -256,9 +252,11 @@ EXPORT_C void CHuiS60Skin::ReleaseTexture(TInt aSkinTextureResource)
 
 EXPORT_C void CHuiS60Skin::NotifyDisplaySizeChangedL()
     {
-    // The background is now different.
-     SkinConfigurationChanged(EAknsSkinStatusConfigurationDeployed);
-    
+    // Reload all the skin bitmaps
+     FreeAllBackgroundTextureResources();
+     Env().NotifySkinChangedL();
+     Env().TextStyleManager().NotifyDisplaySizeChangedL();
+     ReloadBgTexturesL();
     }
 
 

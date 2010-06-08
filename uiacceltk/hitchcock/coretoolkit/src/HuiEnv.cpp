@@ -46,6 +46,7 @@
 #include "uiacceltk/HuiThemeManager.h"
 #include "huicanvastexturecache.h"
 #include "HuiFxEngine.h"
+#include "appiconcache.h"
 
 #include "huisynchronizationobserver.h"
 
@@ -326,6 +327,7 @@ void CHuiEnv::ConstructL(THuiRenderer aRenderer)
     //iThemeManager = CHuiThemeManager::NewL();
 
     iCanvasTextureCache = CHuiCanvasTextureCache::NewL();
+    iAppIconCache = CAppIconCache::NewL(128);
 
 #ifndef SYMBIAN_BUILD_GCE
 #ifndef __WINSCW__
@@ -372,6 +374,7 @@ CHuiEnv::~CHuiEnv()
     iDisplays.Reset();
     iOverlaidDisplays.Reset();
 
+	delete iAppIconCache;
     delete iCanvasTextureCache;
 
     delete iSharedRoster;
@@ -1716,6 +1719,11 @@ void CHuiEnv::CloseHandleToIdleCPUValueThread()
 CHuiCanvasTextureCache& CHuiEnv::CanvasTextureCache() const
     {
     return *iCanvasTextureCache;    
+    }
+    
+EXPORT_C CAppIconCache& CHuiEnv::AppIconCache() const
+    {
+    return *iAppIconCache;
     }
 
 EXPORT_C CHuiFxEngine* CHuiEnv::EffectsEngine() const

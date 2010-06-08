@@ -22,6 +22,8 @@
     #define AMT_MAP_PTR_TO_KEY_CAST(keyPtr)
     #define AMT_MAP_CANVAS_WS_PAINTER_SELECT_GC()
     #define AMT_MAP_GCE_SET_LAYER_POSITIONS()
+    #define AMT_SET_TLS()
+    #define AMT_FREE_TLS()
 
 #else
     // Module test hook has been set.
@@ -107,6 +109,22 @@
                 gceLayer = gceLayer->Above(); \
                 }
 
+    // Setup TLS and open global module testing chunk and mutex.
+    // Create only for the first object!
+    #define AMT_SET_TLS() \
+            if (!Dll::Tls()) \
+                { \
+                User::LeaveIfError(Dll::SetTls(new(ELeave) CAlfModuleTestDataControl())); \
+                User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects()); \
+                }
+
+    #define AMT_FREE_TLS() \
+            if (Dll::Tls()) \
+                { \
+                delete AMT_CONTROL(); \
+                Dll::FreeTls(); \
+                }
+
 #endif // USE_MODULE_TEST_HOOKS_FOR_ALF
 
 
@@ -169,8 +187,27 @@
         AMT_MAP_APPEND_IF( ( MWsWindowTreeNode::EWinTreeNodeStandardTextCursor == nodeType ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, 0, EAlfModuleTestTypeRenderStageChangeTextCursorFlag ); \
         AMT_MAP_APPEND_IF( ( MWsWindowTreeNode::EWinTreeNodeStandardTextCursor == nodeType ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, 0, EAlfModuleTestTypeRenderStageChangeTextCursorColor ); \
         \
+        AMT_MAP_APPEND_AND_LINK_IF( ( MWsWindowTreeNode::EWinTreeNodeClient == nodeType && aWindowTreeNode.Window() ), iSurfaceMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeCreateLayer ); \
+        AMT_MAP_APPEND_AND_LINK_IF( ( MWsWindowTreeNode::EWinTreeNodeClient == nodeType && aWindowTreeNode.Window() ), iSurfaceMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeReleaseLayer ); \
+        AMT_MAP_APPEND_AND_LINK_IF( ( MWsWindowTreeNode::EWinTreeNodeClient == nodeType && aWindowTreeNode.Window() ), iIntMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), 0, EAlfModuleTestTypeLayerOrdinalPosition ); \
+        AMT_MAP_APPEND_AND_LINK_IF( ( MWsWindowTreeNode::EWinTreeNodeClient == nodeType && aWindowTreeNode.Window() ), iIntMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), 0, EAlfModuleTestTypeLayerNodeOrdinalPosition ); \
+        \
         AMT_MAP_INC_VALUE_IF( ( MWsWindowTreeNode::EWinTreeNodeClient == nodeType && aWindowTreeNode.Window() ), iIntMap, aWindowTreeNode.Window()->Handle(), EAlfModuleTestTypeRenderStageCreateWindow ); \
         AMT_MAP_INC_VALUE_IF( ( MWsWindowTreeNode::EWinTreeNodeGroup == nodeType && aWindowTreeNode.WindowGroup() ), iIntMap, aWindowTreeNode.WindowGroup()->Identifier(), EAlfModuleTestTypeRenderStageCreateWindowGroup )
+
+#define AMT_MAP_RENDER_STAGE_NODE_RELEASED() \
+        AMT_MAP_INC_VALUE_IF( ( MWsWindowTreeNode::EWinTreeNodeClient == nodeType && aWindowTreeNode.Window() ), iIntMap, aWindowTreeNode.Window()->Handle(), EAlfModuleTestTypeRenderStageReleaseWindow ); \
+        AMT_MAP_INC_VALUE_IF( ( MWsWindowTreeNode::EWinTreeNodeGroup == nodeType && aWindowTreeNode.WindowGroup() ), iIntMap, aWindowTreeNode.WindowGroup()->Identifier(), EAlfModuleTestTypeRenderStageReleaseWindowGroup )
+
+#define AMT_MAP_RENDER_STAGE_NODE_ACTIVATED() \
+        AMT_MAP_SET_VALUE_IF( nodeType == MWsWindowTreeNode::EWinTreeNodeClient, iBoolMap, aWindowTreeNode.Window()->Handle(), ETrue, EAlfModuleTestTypeRenderStageActiveWindow )
+
+#define AMT_MAP_RENDER_STAGE_NODE_EXTENT_CHANGED() \
+        AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() ), iSizeMap, aWindowTreeNode.Window()->Handle(), aRect.Size(), EAlfModuleTestTypeRenderStageChangeWindowSize ); \
+        AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() ), iPositionMap, aWindowTreeNode.Window()->Handle(), aRect.iTl, EAlfModuleTestTypeRenderStageChangeWindowPosition )
+
+#define AMT_MAP_RENDER_STAGE_FLAG_CHANGED() \
+        AMT_MAP_SET_VALUE_IF( ( aWindowTreeNode.Window() && MWsWindowTreeObserver::EVisible == aFlag ), iBoolMap, aWindowTreeNode.Window()->Handle(), aNewValue, EAlfModuleTestTypeRenderStageChangeWindowVisibility )
 
 #define AMT_MAP_RENDER_STAGE_TEXT_CURSOR_CHANGE() \
         AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor && aAttribute == ECursorType ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeRenderStageChangeTextCursorType ); \
@@ -178,28 +215,18 @@
         AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor && aAttribute == ECursorFlags ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeRenderStageChangeTextCursorFlag ); \
         AMT_MAP_INC_VALUE_IF( ( aWindowTreeNode.NodeType() == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor && aAttribute == ECursorColor ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeRenderStageChangeTextCursorColor )
 
-#define AMT_MAP_RENDER_STAGE_ADD_LAYER() \
-        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeCreateLayer ); \
-        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeReleaseLayer ); \
-        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeLayerOrdinalPosition ); \
-        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeLayerNodeOrdinalPosition )
-
-#define AMT_MAP_RENDER_STAGE_ADD_LAYER_LINK() \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeCreateLayer ); \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeCreateLayer ); \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeReleaseLayer ); \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeReleaseLayer ); \
-        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeLayerOrdinalPosition ); \
-        AMT_MAP_APPEND_LINK( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeLayerOrdinalPosition ); \
-        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeLayerNodeOrdinalPosition ); \
-        AMT_MAP_APPEND_LINK( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeLayerNodeOrdinalPosition ); \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceCreateLayer ); \
-        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceReleaseLayer ); \
-        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerPosition ); \
-        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerOpacity ); \
-        AMT_MAP_APPEND_LINK( iRectMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerExtent ); \
+#define AMT_MAP_RENDER_STAGE_LAYER_ADDED() \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), EAlfModuleTestTypeCreateLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), EAlfModuleTestTypeReleaseLayer ); \
+        AMT_MAP_APPEND_LINK( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), EAlfModuleTestTypeLayerOrdinalPosition ); \
+        AMT_MAP_APPEND_LINK( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), EAlfModuleTestTypeLayerNodeOrdinalPosition ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceCreateLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceReleaseLayer ); \
+        AMT_MAP_APPEND_LINK( iIntMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerPosition ); \
+        AMT_MAP_APPEND_LINK( iIntMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerOpacity ); \
+        AMT_MAP_APPEND_LINK( iRectMap, aWindowTreeNode.Window()->Handle(), AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerExtent ); \
         \
-        AMT_MAP_SET_VALUE( iSurfaceMap, windowId, aLayer.Surface(), EAlfModuleTestTypeCreateLayer )
+        AMT_MAP_SET_VALUE( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), aLayer.Surface(), EAlfModuleTestTypeCreateLayer )
 
 #define AMT_MAP_RENDER_STAGE_REMOVE_LAYER() \
         AMT_MAP_SET_VALUE_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), aLayer->Surface(), EAlfModuleTestTypeReleaseLayer )
@@ -231,8 +258,26 @@
         AMT_MAP_INC_VALUE_IF( ( attribute == MWsWindowTreeObserver::ECursorFlags ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeHierarchyModelChangeTextCursorFlag ); \
         AMT_MAP_INC_VALUE_IF( ( attribute == MWsWindowTreeObserver::ECursorColor ), iIntMap, AMT_MAP_TEXT_CURSOR_HANDLE, EAlfModuleTestTypeHierarchyModelChangeTextCursorColor )
 
-                                 
+
 // Alfserver defines
+
+#define AMT_MAP_NODE_CREATED() \
+        AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient, iIntMap, node->iId, EAlfModuleTestTypeHierarchyModelCreateWindow ); \
+        AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeGroup, iIntMap, node->iId, EAlfModuleTestTypeHierarchyModelCreateWindowGroup )
+
+#define AMT_MAP_NODE_RELEASED() \
+        AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient, iIntMap, nodeId, EAlfModuleTestTypeHierarchyModelReleaseWindow ); \
+        AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeGroup, iIntMap, nodeId, EAlfModuleTestTypeHierarchyModelReleaseWindowGroup )
+
+#define AMT_MAP_NODE_ACTIVATED() \
+        AMT_MAP_SET_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient, iBoolMap, nodeId, ETrue, EAlfModuleTestTypeHierarchyModelActiveWindow )
+
+#define AMT_MAP_NODE_EXTENT_CHANGED() \
+        AMT_MAP_SET_VALUE_IF( node && node->iWindow, iSizeMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, rect.Size(), EAlfModuleTestTypeHierarchyModelChangeWindowSize ); \
+        AMT_MAP_SET_VALUE_IF( node && node->iWindow, iPositionMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, rect.iTl, EAlfModuleTestTypeHierarchyModelChangeWindowPosition )
+
+#define AMT_MAP_NODE_FLAG_CHANGED() \
+        AMT_MAP_SET_VALUE_IF( node && node->iWindow && MWsWindowTreeObserver::EVisible == flag, iBoolMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, newValue, EAlfModuleTestTypeHierarchyModelChangeWindowVisibility )
 
 #define AMT_MAP_BRIDGE_ADD_VISUAL() \
         AMT_MAP_APPEND_AND_LINK( iIntMap, aWindowNodeId, aClientSideId, 0, EAlfModuleTestTypeBridgeCreateWindow ); \
@@ -294,7 +339,7 @@
         AMT_MAP_SET_VALUE_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), aLayer->Surface(), EAlfModuleTestTypeGceReleaseLayer )
 
 #define AMT_MAP_GCE_SET_LAYER_OPACITY() \
-        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( static_cast< MWsLayer* >( this ) ), Opacity(), EAlfModuleTestTypeGceLayerOpacity )
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( static_cast< MWsLayer* >( this ) ), iLayer->Opacity(), EAlfModuleTestTypeGceLayerOpacity )
 
 #define AMT_MAP_GCE_SET_LAYER_EXTENT() \
         AMT_MAP_SET_VALUE( iRectMap, AMT_MAP_PTR_TO_KEY_CAST( static_cast< MWsLayer* >( this ) ), aExtent, EAlfModuleTestTypeGceLayerExtent )

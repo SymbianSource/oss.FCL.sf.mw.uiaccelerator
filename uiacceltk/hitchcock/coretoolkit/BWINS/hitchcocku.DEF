@@ -1598,4 +1598,9 @@ EXPORTS
 	?AddEffectToGroup@CHuiFxEngine@@QAEHH@Z @ 1597 NONAME ; int CHuiFxEngine::AddEffectToGroup(int)
 	?FxmlUsesOpaqueHint@CHuiFxEngine@@QAEHABVTDesC16@@@Z @ 1598 NONAME ; int CHuiFxEngine::FxmlUsesOpaqueHint(class TDesC16 const &)
 	?InitializeL@CHuiCanvasRenderBuffer@@UAEXABVTSize@@H@Z @ 1599 NONAME ; void CHuiCanvasRenderBuffer::InitializeL(class TSize const &, int)
+	?Clear@CAppIconCache@@QAEXXZ @ 1600 NONAME ; void CAppIconCache::Clear(void)
+	?Insert@CAppIconCache@@QAEHAAUTRasterizedBitmap@@@Z @ 1601 NONAME ; int CAppIconCache::Insert(struct TRasterizedBitmap &)
+	?AppIconCache@CHuiEnv@@QBEAAVCAppIconCache@@XZ @ 1602 NONAME ; class CAppIconCache & CHuiEnv::AppIconCache(void) const
+	?Find@CAppIconCache@@QAEPAVCFbsBitmap@@_JVTSize@@@Z @ 1603 NONAME ; class CFbsBitmap * CAppIconCache::Find(long long)
+	?SetSkinSizeChangePending@CHuiDisplay@@QAEXXZ @ 1604 NONAME ; void CHuiDisplay::SetSkinSizeChangePending(void)	
 

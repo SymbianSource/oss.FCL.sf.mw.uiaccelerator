@@ -26,7 +26,6 @@ enum TEffectState
     EWaitEndFullScreen,
     EEndFullScreenReceivedWaitingWindowGroup,
     EEndFullscreenReceived,
-    ESecondPhaseSetupActive,
     EFinalEffectActive
     };
 // Timer to send finish full screen effect
@@ -55,6 +54,7 @@ NONSHARABLE_CLASS( CAlfRosterFreezeEndTimer ):public CTimer
         CAlfBridge& iBridge;
  	public:
 	   	TInt iSafeCounter;
+	   	TInt iSafeCounterDelta;
         TCallBack iCallBack;        
     };
 
@@ -134,6 +134,9 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         TState NextBlankState(TEvent aEvent);
         TState NextThemeState(TEvent aEvent);
 
+        void HandleFreezeEvent(TEvent aEvent);
+        void HandleThemeEvent(TEvent aEvent);
+
         void FreezeFinished();
 
     public:            
@@ -162,6 +165,7 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         void FreezeRoster(TBool aFrozen);
         
         static TInt DoFreezeFinished(TAny* aAny);
+        static TInt DoNextLayoutSwitchContext(TAny* aAny);
         
     private: // Data
         
@@ -273,13 +277,14 @@ public:
             {
             EOnlyOnePart = 0,
             EFirstPartActive,
-            ESecondPartActive
+            EFirstPartRunning,
+            ESecondPartActive,
+            ESecondPartRunning
             };
         
         TEffectPhase iTwoPhaseEffect;
         // used for resolving the iCleanupStackItem that holds the frozen app layout underneath the starting application
         TInt iAppStartScreenshotItemHandle;
-        
         
         enum TEffectType
         {
@@ -290,16 +295,6 @@ public:
         
         TEffectType iEffectType;
         
-        // Display dimension, iPaintedRegion is clipped to this when determining, if there is enough drawing to the group
-        TSize iDisplaySize;
-        
-        // gathers the painted region for the effected application. When enough region has been painted, the effect is forced.
-        RRegion iPaintedRegion;
-        
-        CAlfBridge* iBridge; // for callback. not own.
-        
         // If the visual is shown by some other visual by a screenshot, this is set ETrue.
         TBool iCanDestroyOrHideImmediately;
-        
-        CPeriodic* iDrawingCompleteTimer;
         };

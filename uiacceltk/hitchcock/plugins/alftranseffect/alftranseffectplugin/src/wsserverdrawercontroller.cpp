@@ -744,11 +744,17 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 		//Adding uid to block list			
 		if(flags & AknTransEffect::TParameter::ENoEffects)
 			{
+            __ALFFXLOGSTRING1("CWsServerDrawerController::BeginFullscreen - Add to block list 0x%x", toUid);
 			iStates->AddBlockUid(toUid);
+			if (iLastToUid == aUid1)
+			    {
+                AbortTransition(EAbortFullscreen);
+			    }
 			}
 		//Removing uid from blocklist
 		if(flags & AknTransEffect::TParameter::EEnableEffects)	
 			{
+            __ALFFXLOGSTRING1("CWsServerDrawerController::BeginFullscreen - Remove from block list 0x%x", toUid);
 			iStates->RemoveBlockUid(toUid);
 			}
 		}
@@ -915,6 +921,7 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
     // Convert 
 
     // Signal statemachine
+    SaveLastActionAndUid();
     iStates->Signal(CStateBase::EBeginFullscreen);
 	// Start end checker always.
 	if(flags & AknTransEffect::TParameter::EEndCheck)

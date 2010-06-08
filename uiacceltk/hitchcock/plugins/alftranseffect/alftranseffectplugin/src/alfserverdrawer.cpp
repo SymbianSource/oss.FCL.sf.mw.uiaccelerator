@@ -944,9 +944,10 @@ TInt CAlfServerDrawer::SendEndFullscreen(TBool aTimeout)
 
     iFullScreenFinished = EFalse;
     iFullScreenTimeout->iIsStartEffect = EFalse;
+ 	
     if (triggerStartEffectTimeout)
         {
-        return KErrNone;
+        //return KErrNone;  // even long app start effects need some hardcore timeout
         }
     if ( iAction == AknTransEffect::EApplicationExit /*||
         iAction == 1001*/  ) 
@@ -958,7 +959,7 @@ TInt CAlfServerDrawer::SendEndFullscreen(TBool aTimeout)
         {
         iFinishFullScreen->Start( KAlfLongEffectTimeout, TCallBack( FinishFullScreenTimeout, this ) );
         }
-    return KErrNone;
+    return triggerStartEffectTimeout;
     }
 
 // ---------------------------------------------------------------------------
@@ -975,7 +976,8 @@ TInt CAlfServerDrawer::SendAbortFullscreen()
         }
 
     iFullScreenTransitionEndObserver->Cancel();
-    
+    iFinishFullScreen->Cancel();
+    iFullScreenTimeout->Cancel();
     iFullScreenFxSent = EFalse;
     iFullScreenEndSent = ETrue;
     

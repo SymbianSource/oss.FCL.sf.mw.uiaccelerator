@@ -243,9 +243,9 @@ private:
 	void DoStartTransitionL(TInt aHandle, const CTransitionData* aTransData);
 
     /*
-     * Generate start transition from begin capture in case of contol exit transition
+     * Generate transition event
      */
-	void GenerateTransitionL( const CCoeControl* aKey, const CTransitionData* aTransData);
+	void GenerateComponentTransitionEventL(const CTransitionData* aTransData, TInt aOp, TInt aHandle = KErrNotFound);
 	
 	/*
 	 * Connect to server and load plugin
@@ -324,6 +324,14 @@ private: // data
 
     TInt iCurrHandle;
 
+    struct TControlEffect
+        {
+        TInt iHandle;
+        TInt iWindowGroup;
+        TInt iWindowHandle;
+        };
+    RArray<TControlEffect> iControlEffects;
+    
 //	TBool iIsWO;
 
 	TThreadId iClientId;

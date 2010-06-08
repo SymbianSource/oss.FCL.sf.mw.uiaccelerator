@@ -739,7 +739,7 @@ void CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL(const RMessage2& aM
     
     for ( TInt i = 0; i<count; i++ ) 
         {
-        __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL adding %d", arrayPtr[i].iWindowGroup);
+        __ALFLOGSTRING1("CAlfStreamerServer::GetListOfWGsHavingInactiveSurfacesL adding %d", arrayRef[i].iWindowGroup);
         *array = arrayRef[i].iWindowGroup;
         array++;
         if (optionalOnly)

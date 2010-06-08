@@ -281,11 +281,6 @@ RESOURCE ALF_COMMAND_DESCRIPTIONS_ARRAY r_alf_command_description_array
                 },
             ALF_COMMAND_DESCRIPTION
                 {
-                command = EAlfSetBrushColor;
-                description = "EAlfSetBrushColor";
-                },
-            ALF_COMMAND_DESCRIPTION
-                {
                 command = EAlfSetBrushOrigin;
                 description = "EAlfSetBrushOrigin";
                 },
@@ -378,11 +373,6 @@ RESOURCE ALF_COMMAND_DESCRIPTIONS_ARRAY r_alf_command_description_array
                 {
                 command = EAlfUpdateJustificationVertical;
                 description = "EAlfUpdateJustificationVertical";
-                },
-            ALF_COMMAND_DESCRIPTION
-                {
-                command = EAlfDrawRoundRect;
-                description = "EAlfDrawRoundRect";
                 },
             ALF_COMMAND_DESCRIPTION
                 {
@@ -731,11 +721,6 @@ RESOURCE ALF_COMMAND_DESCRIPTIONS_ARRAY r_alf_bridge_command_description_array
                 {
                 command = EAlfDSRequestCommandsEnd;
                 description = "EAlfDSRequestCommandsEnd";
-                },
-            ALF_COMMAND_DESCRIPTION
-                {
-                command = EAlfDSRequestCommandsStart;
-                description = "EAlfDSRequestCommandsStart";
                 },
             ALF_COMMAND_DESCRIPTION
                 {

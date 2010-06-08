@@ -36,6 +36,10 @@ class CHuiCanvasWsSwGc;
 class CHuiCanvasWsHwGc;
 class CAlfCommandDebug;
 class CHuiCanvasWsBitGc;
+#ifdef HUI_DEBUG_TRACK_DRAWING
+class CHuiCanvasDebugWsGc;
+#endif
+    
 
 /**
  * This class is used internally by the toolkit and thus should
@@ -391,7 +395,7 @@ private:
     mutable RRegionBuf<KHuiCanvasWsPainterRegionGranularity> iTempIntersectingRegion;
 
 #ifdef HUI_DEBUG_TRACK_DRAWING
-    CAlfCommandDebug* iCommandDebugger;
+    CHuiCanvasDebugWsGc* iCanvasDebugWsGc; 
 #endif
     
     // Boolean flag indicating if render buffer ought to be used.
