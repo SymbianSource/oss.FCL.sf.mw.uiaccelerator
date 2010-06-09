@@ -824,6 +824,7 @@ public:
     void ScanningAlfContent(TBool aScanning );
     void SetAlfContentChanged(TBool aChanged);
     TBool AlfContentChanged();
+    TRect CurrentDirtyRect();
     
 private:
 
@@ -1034,6 +1035,8 @@ private:
     
     /** Current dirty region for this refresh instance */
     RDirtyRegions iTempDirtyRegions;
+    TRect iCurrentDirtyRect;
+
     
 	/** For handling alf content update */
     TBool iScanningAlfContent;

@@ -233,7 +233,7 @@ EXPORT_C TBool CHuiFxVisualLayer::PrepareDrawL(CHuiFxEngine& aEngine)
     return ETrue;
     }
 
-EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer &aTarget, CHuiFxRenderbuffer& /*aSource*/)
+EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer &aTarget, CHuiFxRenderbuffer& /*aSource*/, TBool /*aHasSurface*/)
     {
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxVisualLayer::Draw - 0x%x "), this);

@@ -295,6 +295,8 @@ CGfxTransAdapterTfx::CGfxTransAdapterTfx(MGfxTransClient* aClient) :
 CGfxTransAdapterTfx::~CGfxTransAdapterTfx()
 	{
 	
+    
+    iControlEffects.Close();
 	__ALFFXLOGSTRING("CGfxTransAdapterTfx for HWA transitionn effects, destructor ");
 //	iIgnoredWOChildControls.Close();
 	//iControlInfo.ResetAndDestroy();
@@ -456,17 +458,22 @@ TInt CGfxTransAdapterTfx::HandleClientState( TClientState aState, const CCoeCont
 	    }
 	 
 	TInt err = KErrNone;    
-	TInt action = 0;
 	const CTransitionData* transdata;
 	err = iClient->GetTransitionData( aHandle, transdata );
-	if ( err == KErrNone )
-	    {
-    	action = transdata->iAction;
-	    }
 
 	switch(aState)
 		{
 		case EFallback:
+	    case EAbort:
+	        for(TInt i = 0 ; i < iControlEffects.Count(); i++ )
+	            {
+	            // clear ongoing effect for this handle
+	            if( iControlEffects[i].iHandle == aHandle)
+	                {
+	                iControlEffects.Remove(i);
+	                i--;
+	                }
+	            }
 		    break;
 		case EPreBeginCapture:
 		    break;
@@ -475,35 +482,45 @@ TInt CGfxTransAdapterTfx::HandleClientState( TClientState aState, const CCoeCont
 			// GfxTransEffect::Begin(). This makes it possible (NOT QUARANTEENED)
 			// that effect request arrives to Alf before possible visiblity changes are made to 
 			// the control.
-		    if ( iHasPlugin && aKey && aKey->DrawableWindow())
+		    if (aKey && aKey->DrawableWindow() && err == KErrNone)
 		        {
-		        // We must generate our own transition as we won't be sending 
-		        // iClient->TransitionFinished back.
-		        // (Client did not ask for transition to be started, and won't be
-		        // interested in the end.)
-          		TRAP( err, GenerateTransitionL( aKey, transdata ) );
+                TControlEffect newEffect;
+                newEffect.iHandle = aHandle;
+                newEffect.iWindowGroup = aKey->DrawableWindow()->WindowGroupId();
+                newEffect.iWindowHandle =aKey->DrawableWindow()->ClientHandle(); 
+                iControlEffects.Append(newEffect);
 		        }
 		    break;
 		case EPreEndCapture:	
 		    break;
 		case EPostEndCapture:
-		    break;
-		case EAbort:
-		// Abort component transition, handle given.
+            if (aKey && err == KErrNone)
+                {
+                TRAP( err, GenerateComponentTransitionEventL( transdata, MAlfGfxEffectPlugin::EBeginComponentTransition, aHandle ) );
+                }
 		    break;
 		case EGlobalAbort:
-		// abort component transition, no handle.
+		    // abort component transition, no handle.
+		    for(TInt i = 0 ; i < iControlEffects.Count(); i++ )
+                {
+                // clear all on going effects
+                iControlEffects.Remove(i);
+                i--;
+                }
+          // TODO: send abort to server
+		   // TRAP( err, GenerateComponentTransitionEventL( transdata, MAlfGfxEffectPlugin::EAbortComponentTransition) );
+		    
 	        break;
 		case EBeginGroup:
 			{
-			__ALFFXLOGSTRING1("-- BeginGroup: New transition group for groupid: %d)",aHandle);
-			SendGroupCommand(aHandle, EFalse);
+            __ALFFXLOGSTRING1("-- BeginGroup: New transition group for groupid: %d)",aHandle);
+            SendGroupCommand(aHandle, EFalse);
 		    break;
 			}
 		case EEndGroup:
 			{
-			__ALFFXLOGSTRING1("-- EndGroup: closing transition group: %d)",aHandle);
-			SendGroupCommand(aHandle, ETrue);
+            __ALFFXLOGSTRING1("-- EndGroup: closing transition group: %d)",aHandle);
+            SendGroupCommand(aHandle, ETrue);
 		    break;
 			}
 		default:
@@ -1269,20 +1286,41 @@ void CGfxTransAdapterTfx::DoStartTransitionL( TInt /*aHandle*/, const CTransitio
 	__ALFFXLOGSTRING("CGfxTransAdapterTfx::DoStartTransitionL <<");
 	}
 
-void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CTransitionData* aTransData)
+void CGfxTransAdapterTfx::GenerateComponentTransitionEventL(const CTransitionData* aTransData, TInt aOp, TInt aHandle)
     {
 
     // We generate a transition call from begin capture for control exit transitions
-	TPtr8 inPtr = iTransferBuffer->Des();
-	inPtr.Zero();
-	TPtr8 outPtr = iReturnBuffer->Des();
-	outPtr.Zero();
-	RDesWriteStream inBuf( inPtr );
-    TInt op = MAlfGfxEffectPlugin::EBeginComponentTransition;
-    TInt windowGroup = aKey->DrawableWindow()->WindowGroupId();
-    TInt windowHandle = aKey->DrawableWindow()->ClientHandle(); 
+    TPtr8 inPtr = iTransferBuffer->Des();
+    inPtr.Zero();
+    TPtr8 outPtr = iReturnBuffer->Des();
+    outPtr.Zero();
+    RDesWriteStream inBuf( inPtr );
+    TInt op = aOp;
     
-    __ALFFXLOGSTRING4("CGfxTransAdapterTfx::GenerateTransitionL - Operation: MAlfGfxEffectPlugin::EBeginComponentTransition Action: %d,  Uid: 0x%x, WindowGroup: %d, WindowHandle: %d  >>",
+    TInt windowGroup = KErrNotFound;
+    TInt windowHandle = KErrNotFound;
+    if( aHandle != KErrNotFound )
+        {
+        for(TInt i = 0 ; i < iControlEffects.Count(); i++ )
+            {
+            // we take the last one. to make hopefully clean up any earlier effect that was not finished for some reason.
+            if( iControlEffects[i].iHandle == aHandle)
+                {
+                windowGroup = iControlEffects[i].iWindowGroup;
+                windowHandle = iControlEffects[i].iWindowHandle;
+                iControlEffects.Remove(i);
+                i--;
+                }
+            }
+        }
+    if(aHandle != KErrNotFound && (windowGroup == KErrNotFound  || windowHandle == KErrNotFound))
+        {
+        return;
+        }
+    
+    __ALFFXLOGSTRING1("CGfxTransAdapterTfx::GenerateComponentTransitionEventL - Operation: %d", op );
+
+    __ALFFXLOGSTRING4("CGfxTransAdapterTfx::GenerateComponentTransitionEventL - Action: %d,  Uid: 0x%x, WindowGroup: %d, WindowHandle: %d  >>",
         aTransData->iAction,
         aTransData->iUid.iUid,
         windowGroup,
@@ -1303,17 +1341,17 @@ void CGfxTransAdapterTfx::GenerateTransitionL( const CCoeControl* aKey, const CT
     inBuf.Release();
     inBuf.Close();
 
-    __ALFFXLOGSTRING( "CGfxTransAdapterTfx::GenerateTransitionL" );
+    __ALFFXLOGSTRING( "CGfxTransAdapterTfx::GenerateTransitionL - iTfxServer.SendSynchronousData " );
     iTfxServer.SendSynchronousData( iPluginImplementation, inPtr, outPtr );
     // clear out used data    
-	inPtr.Zero();
-	outPtr.Zero();
-	
-	// Don't signal client because client did not request the transition to start
+    inPtr.Zero();
+    outPtr.Zero();
+    
+    // Don't signal client because client did not request the transition to start
     __ALFFXLOGSTRING("CGfxTransAdapterTfx::GenerateTransitionL <<");
-    }
-	
-	
+    }	
+
+
 // ---------------------------------------------------------------------------
 // finds a control
 // ---------------------------------------------------------------------------

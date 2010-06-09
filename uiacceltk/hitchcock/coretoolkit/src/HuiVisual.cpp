@@ -156,6 +156,19 @@ EXPORT_C void CHuiVisual::SetStoredRenderBuffer(CHuiCanvasRenderBuffer *aRenderB
         delete iVisualData->iStoredRenderBuffer;
         iVisualData->iStoredRenderBuffer = aRenderBuffer;
         }
+    else
+        {
+        if (aRenderBuffer != iVisualData->iStoredRenderBuffer)
+            {
+#ifdef _DEBUG
+            RDebug::Printf("CHuiVisual::SetStoredRenderBuffer - Warning: Not enabled (%x / %x)", 
+                aRenderBuffer, iVisualData->iStoredRenderBuffer);
+#endif
+            // Ownership was passed, but we do not need it.
+            delete aRenderBuffer;
+            aRenderBuffer = NULL;
+            }
+        }
     }
 EXPORT_C void CHuiVisual::SetStoredRenderBufferModificationsEnabled(TBool aEnabled)
     {
@@ -2154,8 +2167,6 @@ TBool CHuiVisual::IsDelayedEffectSource() const
 
 EXPORT_C void CHuiVisual::SetEffect(CHuiFxEffect* aEffect)
     {
-    SetFreezeState(EFalse);
-
     __ALFFXLOGSTRING2("CHuiVisual::SetEffect - : 0x%d on visual 0x%x", aEffect, this );
     // If effect is replaced by a new effect, we don't want the effect end callback
     // as it would end the new effect

@@ -154,7 +154,7 @@ void CHuiFxVg10TransformFilter::CalculateMargin(TMargins &aMargin) const
 
 TBool CHuiFxVg10TransformFilter::Draw(CHuiFxEngine& /*aEngine*/, CHuiGc& /*aGc*/,
         CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource,
-        const TRect& /*aTargetRect*/, const TRect& aSourceRect)
+        const TRect& /*aTargetRect*/, const TRect& aSourceRect, TBool /*aHasSurface*/)
     {
     aSource.BindAsTexture(ERenderbufferUsageReadOnly);
     aTarget.BindAsRenderTarget();

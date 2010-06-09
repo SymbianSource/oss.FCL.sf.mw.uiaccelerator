@@ -50,6 +50,10 @@
 #include "HuiFxEngine.h"
 #include "huiextension.h"
 
+#include <e32math.h>
+
+//#define DEBUG_SW_MODE_DIRTY_AREAS
+
 const TUid KHuiInternalFbsBitmapBufferGcUid = {0x2000e5a3}; 
 
 //#define HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
@@ -884,7 +888,7 @@ TBool CHuiDisplay::Refresh()
         // Set up the clipping rectangle.
         TRect dirtyRect = iTempDirtyRegions[iCurrentDirtyIndx];
         ClipDirtyRect(dirtyRect, VisibleAreaClippingRect());
-        
+        iCurrentDirtyRect = dirtyRect;
         iGc->PushClip();
         iGc->Clip(dirtyRect);        
         
@@ -914,7 +918,7 @@ TBool CHuiDisplay::Refresh()
             iForegroundBitmapGc->SetPenColor(clearColor);
             iForegroundBitmapGc->SetBrushColor(clearColor);
             iForegroundBitmapGc->SetBrushStyle(CGraphicsContext::ESolidBrush);
-  	        iForegroundBitmapGc->Clear();
+  	        iForegroundBitmapGc->Clear(dirtyRect);
   	        iForegroundBitmapGc->Reset();
             }
         		
@@ -975,34 +979,7 @@ TBool CHuiDisplay::Refresh()
 		
 	// Clear current dirty regions	
 	iCurrentDirtyRegions->Reset();
-	
-	// Trick to swap gles buffers if we are drawing idle screens before refresh loop is going to
-	// sleep. 
-	if(	IsRendererHWAccelerated() && !iGotDirtyReports && !iScreenBufferObserver) 
-    		{
-	    	//RenderSurface().SwapBuffers(); [ohi]
-	    	}
-	    	
-	// Tell the screen buffer observer that the buffer is complete 
-	if(iScreenBufferObserver)
-		{
-		SetScreenBufferLock(ETrue); // the observer should do unlock!
-		
-		TRect rect(VisibleArea()); // This is not the real display rect in ALF display case(!)
-		TRect dirtyRect(mergedDirtyRect);
-		
-		// Update screen buffer GC bitmap
-		if (DisplayType() != CHuiDisplay::EDisplayOffScreenBuffer)
-			{
-			TRAP_IGNORE(CHuiStatic::Renderer().UpdateOffScreenBitmapL(*this));			
-			}
-						
-		if (iScreenBufferObserver->ScreenBufferComplete(iScreenBufferUid, rect, dirtyRect))
-			{
-			SetScreenBufferLock(EFalse);
-			}
-		}
-
+		    	
     iWholeDisplayAreaIsDirty = EFalse;    
 	
     HUI_PROBE_PROGRAMFLOW_EXIT(MHuiProbe::EProgramFlowPointRefresh)
@@ -1671,6 +1648,15 @@ void CHuiDisplay::UpdateForegroundTexture(const TRect& aRect)
     {
     if (iForegroundTexture && iForegroundBitmap && !aRect.IsEmpty())
         {
+#if defined(DEBUG_SW_MODE_DIRTY_AREAS)
+        TRgb penColor = TRgb(Math::Random());
+        penColor.SetAlpha(128);
+        iForegroundBitmapGc->SetPenStyle(CGraphicsContext::ESolidPen);
+        iForegroundBitmapGc->SetBrushStyle(CGraphicsContext::ESolidBrush);
+        iForegroundBitmapGc->SetPenColor(penColor);
+        iForegroundBitmapGc->SetBrushColor(penColor);
+        iForegroundBitmapGc->DrawRect(aRect);
+#endif
         TRAP_IGNORE(DoUpdateForegroundTextureL(aRect));
         }
     }
@@ -1822,3 +1808,7 @@ void CHuiDisplay::DoBackgroundClear()
         }
     }
 
+TRect CHuiDisplay::CurrentDirtyRect()
+    {
+    return iCurrentDirtyRect;
+    }

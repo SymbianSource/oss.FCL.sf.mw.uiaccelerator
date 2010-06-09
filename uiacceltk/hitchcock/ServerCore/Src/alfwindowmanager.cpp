@@ -74,8 +74,6 @@ class CAlfWindowManager::TAlfWindowMgrData
     RPointerArray<CAlfWindow> iWindows;
     RArray<TPluginInfo> iPlugins;
     CAlfHierarchyModel* iTree;
-    
-    RPointerArray<CAlfWindow> iChangedWindows;    
     };
 
 // ---------------------------------------------------------------------------
@@ -440,10 +438,6 @@ void CAlfWindowManager::SetWindowVisibility(CAlfWindow& /*aWindow*/, TBool /*aVi
 //
 void CAlfWindowManager::ContentReady(CAlfWindow& aWindow, CAlfWindowBuffer* aOutBuffer)
     {
-    //ASSERT(iData->iChangedWindows.Find(&aWindow) == KErrNotFound); // no plugin should produce more frames
-                                                            // than actually bound to scene
-    iData->iChangedWindows.Append(&aWindow);
-
     if(!aWindow.IsInsertedToScene())
     	{
     	TRAPD( err, BindWindowToHitchL(&aWindow, this) );
@@ -648,7 +642,6 @@ EXPORT_C CAlfStreamerBridge* CAlfWindowManager::Bridge()
 //   
 void CAlfWindowManager::PrepareNewFrame(TUint aEstimatedInterval)
     {
-    iData->iChangedWindows.Reset();
     for (TInt i = iData->iPlugins.Count()-1; i >= 0 ; i--)
         {
         TRAP_IGNORE(iData->iPlugins[i].iPlugin->PrepareFrameL(aEstimatedInterval));

@@ -566,6 +566,12 @@ void CHuiCanvasWsPainter::DoHandleAllBuffersL( TRect& aDisplayRect,
             
             // Clip drawing to update area. This seems to improve performance although
             // it may depend on used HW.
+
+            // Set position delta to zero, otherwise updateregion is adjusted incorrectly
+            // in SW mode. No effect on HW mode as it does not adjust the updateregion in
+            // EnableUpdateRegion call...
+            TPoint delta(0,0);
+            iCanvasWsGc->SetPositionDelta(delta);
             iCanvasWsGc->EnableUpdateRegion(iCommandBuffers[cb]->iUpdateRegion, aClearBeforeHandlingBuffers);
 
             #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL

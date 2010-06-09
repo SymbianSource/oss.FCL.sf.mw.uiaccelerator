@@ -283,7 +283,15 @@ public:
      * 
      */
     void GfxTriggerEndFullScreen(CFullScreenEffectState* aFullScreenEffectData);
-    
+
+    /**
+	 * UpdateSecondaryEffectL
+	 *
+	 * Resolve filename for two part effect that is used with slowly starting applications
+	 * 
+	 */
+    TBool UpdateSecondaryEffectL(const CFullScreenEffectState& aState);
+
    /*
 	*	GfxTriggerEffectWhenFullScreenDrawn
 	*
@@ -614,6 +622,15 @@ private:
 
     void ShowWindowGroupControlGroupL(CHuiRoster& aRoster, CHuiControlGroup& aGroup, TInt aWhere, TInt aScreenNumber );
     
+	/**
+	 * HasActiveAlfContent
+	 *
+	 * Determine if the window group in question has active Alf visuals
+	 *
+	 *	@return 	ETrue, if active clients
+	 */
+    TBool HasActiveAlfContent( TInt aClientWgId );
+    
 private:
          
     /**
@@ -923,6 +940,8 @@ public:
      */
     CFullScreenEffectState* iFullScreenEffectData;
     
+    CFullScreenEffectState* iSecondaryFullScreenEffectData;
+    
     /**
      * Control effect state.
      * Own.
@@ -932,10 +951,7 @@ public:
     // these save the current full screen transition data
     // so that the correct transition can be ended from the callback
     // when the effect ends
-    TInt iLastFullScreenEffectWindowGroup;
-    TInt iLastFullScreenScreen;
-    TInt iLastAction;
-    TInt iLastEffectHandle;
+    
     CAlfEffectEndTimer* iEffectEndTimer;
     TBool iLayoutInitializedForExitEffect;
     

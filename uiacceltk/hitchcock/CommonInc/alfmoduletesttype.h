@@ -71,8 +71,14 @@ enum TAlfModuleTestType
     
     // Layer tests
     EAlfModuleTestTypeCreateLayer,
-    EAlfModuleTestTypeReleaseLayer,    
-    EAlfModuleTestTypeLayerOrdinalPosition,    
+    EAlfModuleTestTypeReleaseLayer,
+    EAlfModuleTestTypeLayerOrdinalPosition,
+    EAlfModuleTestTypeLayerNodeOrdinalPosition,
+    EAlfModuleTestTypeGceCreateLayer,
+    EAlfModuleTestTypeGceReleaseLayer,
+    EAlfModuleTestTypeGceLayerPosition,
+    EAlfModuleTestTypeGceLayerExtent,
+    EAlfModuleTestTypeGceLayerOpacity,
     
     // Do not use this value when creating item.
     // This is just meant for Find operations when all tests are accepted.

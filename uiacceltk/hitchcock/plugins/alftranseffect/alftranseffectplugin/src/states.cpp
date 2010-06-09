@@ -238,6 +238,9 @@ CStateBase* CPhase2State::SignalL(TSignal aSignal)
 				return CPhase1State::NewL(iEngine,iHandler);
 				}
 			return NULL;
+	     case EEndFullscreen:
+	            iEngine.SendEndFullscreen();
+	        return NULL;
 		case EBeginComponent:
 		    error = iEngine.SendBeginControlTransition();
 		    if ( error == KErrNone )

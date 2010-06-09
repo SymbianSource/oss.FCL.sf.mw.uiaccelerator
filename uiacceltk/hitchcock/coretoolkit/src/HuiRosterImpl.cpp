@@ -504,7 +504,7 @@ void CHuiRosterImpl::Draw(CHuiGc& aGc, CHuiDisplay* aDisplay) const
             iEffect->ForceCachedRenderTargetUsage(ETrue);
             }        
         RRegion dummy;
-        didDrawEffect = iEffect->CachedDraw(aGc, displayRect, refreshCache, opaque, dummy, iEffectOpacity*255);        
+        didDrawEffect = iEffect->CachedDraw(aGc, displayRect, refreshCache, opaque, dummy, EFalse, iEffectOpacity*255);        
         dummy.Close();
         }
     

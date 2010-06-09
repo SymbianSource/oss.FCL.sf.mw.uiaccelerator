@@ -42,10 +42,10 @@ public:
     static CGOomWindowGroupList* NewL(RWsSession& aWs);
     
     // Update the list of window groups
-    void RefreshL();
+    void RefreshL(TBool aOptionalOnly = EFalse);
     
     // Update the list of window groups, non-leaving version
-    void Refresh();
+    void Refresh(TBool aOptionalOnly = EFalse);
     
     // Return the number of application instances in this list
     inline TUint Count() const;
@@ -133,6 +133,7 @@ private:
     CApaWindowGroupName* iWgName;
     HBufC* iWgNameBuf;              // owned by iWgName
     RArray<TInt> iLowOnMemWgs;
+    RArray<TInt> iOptionalUids;
     RAlfBridgerClient iAlfClient;
     };
 

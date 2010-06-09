@@ -66,16 +66,23 @@ public:
      */    
     IMPORT_C TInt GetListOfWindowGroupsWSurfaces(RArray<TInt>* aWindowGroups);
 
-
      /**
      * Asks the number of active effects
      * @return error code or number of active effects (>= 0).
      */    
      IMPORT_C TInt EffectsCount();
+
+     /**
+     * Asks list of window groups that potentially use graohics memory even no direct EGL nor surface access on main display
+     * @param aArray array to be populated
+     * @return error code.
+     */   
+    IMPORT_C void RAlfBridgerClient::GetOptionalGraphicsMemUsers(RArray<TInt>* aOptionalCandidates);
+
      
 private:
     
-    TInt GetListOfWindowGroups(RArray<TInt>* aWindowGroups, TBool aListAll);
+    TInt GetListOfWindowGroups(RArray<TInt>* aWindowGroups, TInt aType);
     TInt iSpare1;
     TInt iSpare2;
     };

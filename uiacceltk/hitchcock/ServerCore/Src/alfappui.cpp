@@ -944,17 +944,21 @@ void CAlfAppUi::EndPointerEventHandling()
 
 void CAlfAppUi::UpdateActiveSession(CAlfAppSrvSessionBase* aSession)
     {
-    EndPointerEventHandling();
-    iData->iActiveSession = aSession;
-    
-    iData->iResourceManager->SetActiveSession( iData->iActiveSession );
-
-    if(!aSession)
+    if( iData->iActiveSession  != aSession )
         {
-        if (iData->iMainDisplay) // TBD: multiple display support once again...
+        EndPointerEventHandling();
+        iData->iActiveSession = aSession;
+        
+        iData->iResourceManager->SetActiveSession( iData->iActiveSession );
+    
+        if(!aSession)
             {
-            TRAP_IGNORE(iData->iMainDisplay->SetClearBackgroundL(CHuiDisplay::EClearNone));
+            if (iData->iMainDisplay) // TBD: multiple display support once again...
+                {
+                TRAP_IGNORE(iData->iMainDisplay->SetClearBackgroundL(CHuiDisplay::EClearNone));
+                }
             }
+        iData->iBridgeObj->HandleVisualVisibility( 0 );
         }
     }
     
@@ -1401,6 +1405,15 @@ void CAlfAppUi::DoBlankScreen(const RMessage2& aMessage)
     
     __ALFLOGSTRING("CAlfAppUi::DoBlankScreen <<");
     // let the session complete message  
+    }
+
+RAlfBridgerClient* CAlfAppUi::BridgerClient()
+    {
+    if (iData)
+        {
+        return iData->iBridgeObj->BridgerClient();  
+        }    
+    return 0;
     }
 
 // end of file

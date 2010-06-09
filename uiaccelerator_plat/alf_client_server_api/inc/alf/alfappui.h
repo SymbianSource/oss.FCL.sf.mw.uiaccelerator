@@ -33,6 +33,7 @@ class CHuiDisplay;
 class CAlfAppSrvSessionBase;
 class CAlfSrvResourceManager;
 class CAlfSrvSettingsHandler;
+class RAlfBridgerClient;
 
 enum TAlfSrvSetting
     {
@@ -207,6 +208,7 @@ public: // internal utilities
     void DoBlankScreen(const RMessage2& aMessage);
     
     TInt GetLastActiveClient();
+    RAlfBridgerClient* BridgerClient();
 
 private:
 
