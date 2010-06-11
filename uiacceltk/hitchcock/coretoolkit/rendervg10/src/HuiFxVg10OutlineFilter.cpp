@@ -70,7 +70,7 @@ void CHuiFxVg10OutlineFilter::CalculateMargin(TMargins &aMargin) const
 }
 
 
-void CHuiFxVg10OutlineFilter::DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight)
+void CHuiFxVg10OutlineFilter::DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool /*aHasSurface*/)
     {
     VGfloat outline_x = clamp(iOutlineX, EPSILON, 128.0f);
     VGfloat outline_y = clamp(iOutlineY, EPSILON, 128.0f);

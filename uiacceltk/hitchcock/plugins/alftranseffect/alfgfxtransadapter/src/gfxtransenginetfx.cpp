@@ -456,13 +456,8 @@ TInt CGfxTransAdapterTfx::HandleClientState( TClientState aState, const CCoeCont
 	    }
 	 
 	TInt err = KErrNone;    
-	TInt action = 0;
 	const CTransitionData* transdata;
 	err = iClient->GetTransitionData( aHandle, transdata );
-	if ( err == KErrNone )
-	    {
-    	action = transdata->iAction;
-	    }
 
 	switch(aState)
 		{

@@ -59,7 +59,7 @@ CHuiFxVg10BevelFilter *CHuiFxVg10BevelFilter::CloneL() const
     return filter;
     }
 
-void CHuiFxVg10BevelFilter::DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight)
+void CHuiFxVg10BevelFilter::DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool /*aHasSurface*/)
     {
     VGfloat outline_x = clamp(iOutlineX, EPSILON, 128.0f);
     VGfloat outline_y = clamp(iOutlineY, EPSILON, 128.0f);

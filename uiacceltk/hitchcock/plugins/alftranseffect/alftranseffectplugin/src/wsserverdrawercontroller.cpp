@@ -66,7 +66,8 @@ const TUint KNoEffectApps[] =
 		// startup blocked because startup exit leaves the screen black.
 		// must be debugged
         0x100058F4, // startup blocked for the time being
-        0x101f857A // camera
+        0x101f857A, // camera
+        0x2002d07f	// ovistore_2002D07F.exe, this does not draw anything, but launcher 
         // Application shell is Ok, folder open and close have KAknApplicationShellViewId
         // as both to and from ids. There is only one visual, so some sort of blur effect works...
 		//, KAknApplicationShellViewId
@@ -84,8 +85,8 @@ const TUint KCustomNoEffectApps[] =
     {
 	0x0, // DO NOT REMOVE 0x0! this is here for compile reasons, it will not be included in the AllowedCustomUid check
     0x101f857A, // camera
-    0x2002A540  // conversation.exe , other launchable from messaging don't have effect either
-
+    0x2002A540,  // conversation.exe , other launchable from messaging don't have effect either
+    0x2002d07f // ovistore_2002D07F.exe, this does not draw anything, but launcher 
   //0xUID //Add UIds of applications that shouldn't have effects here
 	};
 
@@ -485,7 +486,7 @@ TInt CAppInfoCache::SetAction(const TUid& aUid, TInt aAction)
             }
         
         iAppInfo[index].iAction = aAction;
-        RDebug::Printf("CAppInfoCache::SetAction - Returned action %d", iAppInfo[index].iAction);
+        __ALFFXLOGSTRING1("CAppInfoCache::SetAction - Returned action %d", iAppInfo[index].iAction);
         return iAppInfo[index].iAction;
     }
 
@@ -804,15 +805,14 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 	//we should know if its a dsa app before end can be called
 	if(iDSAActive)
 	    {
-        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Phone is booting. Abort.");
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - DSA active. Abort.");
 	    return; //Do nothing if dsa active.
 	    }
 
 	//Special argument calls does not initiate any FS effect and is caught here.
-	// TODO: remove && !iEngine->WaitingForRootWgId() when appuids available from wserv
 	if(fstype == CStateHandler::ENone) 
 		{
-        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Phone is booting. Abort.");
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Special argument. Abort.");
 		return;
 		}
 

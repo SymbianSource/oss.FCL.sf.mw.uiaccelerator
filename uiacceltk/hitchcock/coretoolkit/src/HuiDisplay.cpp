@@ -582,6 +582,11 @@ void CHuiDisplay::CombineAndAddDirtyRegion(const TRect& aPrevDirtyRegion, TRect&
     	}
     // We must only transform the (new) dirtyregion, not combine or anything else here
     aDirtyRegion = transformedNewDirtyRect;
+    
+    if(iScanningAlfContent)
+        {
+		SetAlfContentChanged(ETrue);
+        }
     }
 
 
@@ -633,6 +638,7 @@ TBool CHuiDisplay::Refresh()
     startTime.UniversalTime();
 #endif
     
+    SetAlfContentChanged(EFalse);
     
     // Prevent display refresh, if the display is on background.
     if(!iOnForeground || IsScreenBufferLocked())
@@ -1612,6 +1618,21 @@ TBool CHuiDisplay::IsVisibleAreaClippingEnabled() const
 #endif
     }
 
+void CHuiDisplay::ScanningAlfContent(TBool aScanning )
+    {
+    iScanningAlfContent = aScanning;
+    }
+
+void CHuiDisplay::SetAlfContentChanged(TBool aChanged)
+    {
+    iDisplayContainsChangedAlfContent = aChanged;
+    }
+
+TBool CHuiDisplay::AlfContentChanged()
+    {
+    return iDisplayContainsChangedAlfContent;
+    }
+
 void CHuiDisplay::ClipDirtyRect(TRect& aRect, TRect aClippingRect)
     {
     if (aRect.Intersects(aClippingRect))
@@ -1771,36 +1792,33 @@ EXPORT_C void CHuiDisplay::CopyScreenToBitmapL(CFbsBitmap* aBitmap)
 
 void CHuiDisplay::DoBackgroundClear()
     {
-    if(iForegroundTextureTransparency) // alf application is visible -> clear background as requested 
+    // Clear background for the dirty area
+    TRect dirtyRect = iTempDirtyRegions[iCurrentDirtyIndx];
+    if (iBackgroundItems.Count() != 0)
         {
-        // Clear background for the dirty area
-        TRect dirtyRect = iTempDirtyRegions[iCurrentDirtyIndx];
-        if (iBackgroundItems.Count() != 0)
+        ClearWithBackgroundItems(dirtyRect);    
+        }
+    else
+        {
+        switch (iClearBackground)
             {
-            ClearWithBackgroundItems(dirtyRect);    
-            }
-        else
-            {
-            switch (iClearBackground)
+            case EClearWithColor:
                 {
-                case EClearWithColor:
-                    {
-                    ClearWithColor(dirtyRect);                            
-                    break;    
-                    }
-                case EClearWithSkinBackground:
-                    {
-                    ClearWithSkinBackground(dirtyRect);                                                    
-                    break;    
-                    }
-                case EClearNone:
-                default:
-                    {
-                    // Don't do anything
-                    break;    
-                    }                                                
-                }                                    
-            }
+                ClearWithColor(dirtyRect);                            
+                break;    
+                }
+            case EClearWithSkinBackground:
+                {
+                ClearWithSkinBackground(dirtyRect);                                                    
+                break;    
+                }
+            case EClearNone:
+            default:
+                {
+                // Don't do anything
+                break;    
+                }                                                
+            }                                    
         }
     }
 

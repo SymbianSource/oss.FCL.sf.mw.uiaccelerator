@@ -36,6 +36,8 @@
 #include "alf/alfextensionfactory.h"
 #include "alf/alfversion.h"
 #include "alfsrvsettingshandler.h"
+#include "alfstreamerconsts.h"
+#include "alfdecoderserverclient.h"
 
 const TUint KAlfMaxCpuUsageDuringPointerEvent = 35; // Percentage
 
@@ -106,6 +108,7 @@ NONSHARABLE_CLASS(CAlfAppSrvSessionBase::TPrivateData)
     RMessagePtr2 iSystemEvent;
     TInt iParentId;
     TBool iActive;
+    TUint iSecureId;
     }; 
 
 // ======== MEMBER FUNCTIONS ========
@@ -129,11 +132,17 @@ EXPORT_C CAlfAppSrvSessionBase::CAlfAppSrvSessionBase()
 // ---------------------------------------------------------------------------
 //
 EXPORT_C CAlfAppSrvSessionBase::~CAlfAppSrvSessionBase()
-    { 
+    {
+        
     iHost->HandleClientExit(reinterpret_cast<TInt>(this));
     
     if ( iData )
         {
+        if (AlfAppUi()->BridgerClient())
+            {
+            AlfAppUi()->BridgerClient()->SendBlind(EAlfExcludeFromGoomTargets, TIpcArgs(iData->iSecureId,iData->iClientWindowGroupId));
+            }
+            
         iData->iHandles.Close();
         delete iData->iObjectIx;
     
@@ -153,6 +162,11 @@ EXPORT_C CAlfAppSrvSessionBase::~CAlfAppSrvSessionBase()
         if (!iData->iSystemEvent.IsNull())
             {
             iData->iSystemEvent.Complete(KErrCancel);
+            }
+        
+        if ( iData->iContainer )
+            {
+            iHost->ReleaseContainer( *iData->iContainer );
             }
         delete iData;
         }
@@ -203,6 +217,7 @@ EXPORT_C CAlfAppUi* CAlfAppSrvSessionBase::AlfAppUi()
 //
 EXPORT_C void CAlfAppSrvSessionBase::ServiceL(const RMessage2& aMessage)
     {
+    iData->iSecureId = aMessage.SecureId(); // one time would be enough    
     if(iHost->MetricsInterface())
         {
         iHost->MetricsInterface()->EnterClientMessageL(reinterpret_cast<TInt>(this), aMessage);
@@ -391,6 +406,10 @@ EXPORT_C void CAlfAppSrvSessionBase::SetClientWindowGroupId(TInt aId)
     {
     __ASSERT_DEBUG(iData, USER_INVARIANT());
     iData->iClientWindowGroupId = aId;
+    if (AlfAppUi()->BridgerClient())
+        {
+        AlfAppUi()->BridgerClient()->SendBlind(EAlfVolunteerForGoomTarget, TIpcArgs(iData->iSecureId, iData->iClientWindowGroupId));
+        }
     }
 
 // ---------------------------------------------------------------------------

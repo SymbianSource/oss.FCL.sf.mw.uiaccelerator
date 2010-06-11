@@ -261,13 +261,13 @@ TBool CHuiFxEffect::IsCachedRenderTargetSupported() const
 TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque)
     {
     RRegion dummy;
-    TBool ret = CachedDraw(aGc, aDisplayRect, aRefreshCachedRenderTarget, aOpaque, dummy);
+    TBool ret = CachedDraw(aGc, aDisplayRect, aRefreshCachedRenderTarget, aOpaque, dummy,EFalse);
     dummy.Close();
     return ret;
     }
 
 // TODO: effect area should be reduced if aClipRegion is smaller than aDisplayRect.
-TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque, const TRegion& aClipRegion, TInt aAlpha)
+TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque, const TRegion& aClipRegion, TBool aHasSurface, TInt aAlpha)
     {
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxEffect::CachedDraw - 0x%x"), this);
@@ -364,7 +364,7 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
             if (cachedRenderTargetNeedsRefresh)
                 {
                 // Render to cached render target
-                iRoot->Draw(*iEngine, aGc, *iCachedRenderTarget, *iCachedRenderTarget);                
+                iRoot->Draw(*iEngine, aGc, *iCachedRenderTarget, *iCachedRenderTarget, aHasSurface);                
 #ifdef HUIFX_TRACE    
                 RDebug::Print(_L("CHuiFxEffect::CachedDraw - refreshed cached render buffer 0x%x"), this);
 #endif
@@ -420,13 +420,13 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
             }
         
         // Normal drawing
-        iRoot->Draw(*iEngine, aGc, *target, *target);
+        iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
         }
                 
     return ETrue;    
     }
 
-EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect)
+EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aHasSurface)
     {
     // Prepare all layers
 #ifdef HUIFX_TRACE    
@@ -483,7 +483,7 @@ EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect)
         return EFalse;
         }
 
-    iRoot->Draw(*iEngine, aGc, *target, *target);
+    iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
     return ETrue;
     }
 

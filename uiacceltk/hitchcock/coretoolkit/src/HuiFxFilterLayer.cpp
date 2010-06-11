@@ -90,7 +90,7 @@ EXPORT_C void CHuiFxFilterLayer::AdvanceTime(TReal32 aElapsedTime)
     iFilter->AdvanceTime(aElapsedTime);
     }
 
-EXPORT_C void CHuiFxFilterLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource)
+EXPORT_C void CHuiFxFilterLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface)
     {
 #ifdef HUIFX_TRACE 
 	RDebug::Print(_L("CHuiFxFilterLayer::Draw - 0x%x "), this);
@@ -107,7 +107,7 @@ EXPORT_C void CHuiFxFilterLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
     TRect targetRect(TPoint(0, 0), TargetRect().Size());
     TInt alpha = 0xff; // TODO
 
-    iFilter->Draw(aEngine, aGc, *backBuffer, aSource, targetRect, SourceRect());
+    iFilter->Draw(aEngine, aGc, *backBuffer, aSource, targetRect, SourceRect(), aHasSurface);
 
     // Composite the result
     TRect compositionSourceRect(targetRect);

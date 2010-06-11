@@ -29,7 +29,7 @@ public:
     CHuiFxVg10BevelFilter *CloneL() const;
 protected:
     void ConstructL();
-    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight);
+    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool aHasSurface);
 private:
     TReal32             iOutlineX;
     TReal32             iOutlineY;

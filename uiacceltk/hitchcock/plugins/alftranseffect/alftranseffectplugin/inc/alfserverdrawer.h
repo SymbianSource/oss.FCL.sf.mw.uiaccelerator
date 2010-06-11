@@ -95,7 +95,6 @@ public:
 	void IncreaseControlHandle();
 	TInt CurrentControlHandle();
 	
-	void IncreaseFullScreenHandle();
 	TInt CurrentFullScreenHandle();
 	
 	void StartEndChecker();

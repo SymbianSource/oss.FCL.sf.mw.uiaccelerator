@@ -142,7 +142,7 @@ void CAlfScreen::CommonConstructL( MHuiDisplayRefreshObserver& aObserver, CHuiEn
 	CHuiControl* cntrl = new (ELeave) CHuiControl(aHuiEnv);
 	CleanupStack::PushL(cntrl); 
 	cntrl->ConstructL();
-	cntrl->SetRole(EAlfWindowFloatingSpriteContainer);
+	cntrl->SetRole(EHuiWindowFloatingSpriteContainer);
 	iFloatingSpriteControlGroup->AppendL(cntrl);
 	CleanupStack::Pop(cntrl);
 	CHuiCanvasVisual* layout = CHuiCanvasVisual::AddNewL(*cntrl);            
@@ -153,7 +153,7 @@ void CAlfScreen::CommonConstructL( MHuiDisplayRefreshObserver& aObserver, CHuiEn
 	CHuiControl* effectCntrl = new (ELeave) CHuiControl(aHuiEnv);		    
 	CleanupStack::PushL(effectCntrl); 
 	effectCntrl->ConstructL();
-	effectCntrl->SetRole(EAlfFullScreenEffectContainer);
+	effectCntrl->SetRole(EHuiFullScreenEffectContainer);
 	iFullscreenEffectControlGroup->AppendL(effectCntrl);
 	CleanupStack::Pop(effectCntrl);
 	CHuiCanvasVisual* effectLayout = CHuiCanvasVisual::AddNewL(*effectCntrl);            
@@ -169,7 +169,7 @@ void CAlfScreen::CommonConstructL( MHuiDisplayRefreshObserver& aObserver, CHuiEn
     	CHuiControl* fpsCntrl = new (ELeave) CHuiControl(aHuiEnv);	    
 	    CleanupStack::PushL(fpsCntrl);
 	    fpsCntrl->ConstructL();
-	    fpsCntrl->SetRole(EAlfFpsIndicatorContainer);
+	    fpsCntrl->SetRole(EHuiFpsIndicatorContainer);
 	    iFpsControlGroup->AppendL(fpsCntrl);
 	    CleanupStack::Pop(fpsCntrl);
         

@@ -42,7 +42,6 @@ public:
 	virtual TUint& Action() = 0;
 	virtual TInt& Flags() = 0;
 	virtual void IncreaseControlHandle() = 0;
-	virtual void IncreaseFullScreenHandle() = 0;
 	virtual TInt CurrentControlHandle() = 0;
 	virtual TInt CurrentFullScreenHandle() = 0;
 	virtual void StartEndChecker() = 0;

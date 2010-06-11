@@ -1,19 +1,3 @@
-/*
-* Copyright (c) 2009 Nokia Corporation and/or its subsidiary(-ies).
-* All rights reserved.
-* This component and the accompanying materials are made available
-* under the terms of "Eclipse Public License v1.0"
-* which accompanies this distribution, and is available
-* at the URL "http://www.eclipse.org/legal/epl-v10.html".
-*
-* Initial Contributors:
-* Nokia Corporation - initial contribution.
-*
-* Contributors:
-*
-* Description: 
-*
-*/
 /**
  * @see alfmoduletest.h for class implementations that these defines use.
  */
@@ -35,40 +19,9 @@
     #define AMT_FUNC_EXC_RET(ret, func)
     #define AMT_FUNC_EXC_IF(cond, func)
     #define AMT_FUNC_EXC_IF_RET(cond, ret, func)
-    #define AMT_INC_COUNTER(member)
-    #define AMT_DEC_COUNTER(member)
-    #define AMT_SET_VALUE(member, val)
-    #define AMT_GET_VALUE(x, member)
-    #define AMT_INC_COUNTER_IF(cond, member)
-    #define AMT_DEC_COUNTER_IF(cond, member)
-    #define AMT_SET_VALUE_IF(cond, member, val)
-    #define AMT_GET_VALUE_IF(cond, x, member)
-
-    #define AMT_ADD_TIME(handle, member, effects)
-    #define AMT_GET_TIME(x, handle, index, effects)
-    #define AMT_GET_TIME_POINT_COUNT(handle, x)
-    #define AMT_RESET_TIME(handle)
-    
-    #define AMT_MAP_PTR_TO_KEY_CAST( keyPtr )
-    #define AMT_MAP_CPTR_TO_KEY_CAST( keyCPtr )
-    #define AMT_MAP_APPEND_IF(cond, memberMap, key, defaultValue, type)
-    #define AMT_MAP_APPEND(memberMap, key, defaultValue, type)
-    #define AMT_MAP_APPEND_LINK_IF(cond, memberMap, linkKey, targetKey, type)
-    #define AMT_MAP_APPEND_LINK(memberMap, linkKey, targetKey, type)
-    #define AMT_MAP_APPEND_AND_LINK_IF(cond, memberMap, linkKey, actualKey, defaultValue, type)
-    #define AMT_MAP_APPEND_AND_LINK(memberMap, linkKey, actualKey, defaultValue, type)
-    #define AMT_MAP_SET_VALUE_IF(cond, memberMap, key, value, type)
-    #define AMT_MAP_INC_VALUE_IF(cond, memberMap, key, type)
-    #define AMT_MAP_DEC_VALUE_IF(cond, memberMap, key, type)
-    #define AMT_MAP_SET_VALUE(memberMap, key, value, type)
-    #define AMT_MAP_INC_VALUE(memberMap, key, type)
-    #define AMT_MAP_DEC_VALUE(memberMap, key, type)
-    #define AMT_MAP_APPEND_ACCEPT_IF(cond, memberMap, testType)
-    #define AMT_MAP_APPEND_ACCEPT(memberMap, testType)
-    #define AMT_MAP_RESET_ITEMS(memberMap, defaultValue, type)
-    #define AMT_MAP_RESET(memberMap)
-    
-    #define AMT_PRINT_STATE()
+    #define AMT_MAP_PTR_TO_KEY_CAST(keyPtr)
+    #define AMT_MAP_CANVAS_WS_PAINTER_SELECT_GC()
+    #define AMT_MAP_GCE_SET_LAYER_POSITIONS()
 
 #else
     // Module test hook has been set.
@@ -83,6 +36,23 @@
     #endif // AMT_CONTROL
 
 
+    // *** General test variable defines
+    
+    // Text cursor handle is defined as constant because correct handle is not provided
+    // from the window server for render stage.
+    #define AMT_MAP_TEXT_CURSOR_HANDLE 0
+    
+    #define AMT_MAP_FORCE_SW_HANDLE 0
+    #define AMT_MAP_SW_ENABLED_HANDLE 1
+    #define AMT_MAP_LOW_MEMORY_MODE_HANDLE 2
+    
+    #define AMT_MAP_CANVAS_WS_GC_TYPE 0
+    #define AMT_MAP_TEXTURE_CACHE_MEMORY_LEVEL 1
+    #define AMT_MAP_CACHED_IMAGES_COUNT 2
+    #define AMT_MAP_CACHED_TEXTS_COUNT 3
+    #define AMT_MAP_CACHED_RENDER_BUFFERS_COUNT 4
+
+
     //  *** Use these macros to access global memory chunk
     
     
@@ -92,65 +62,95 @@
     
     // Note: Be careful not to lock the the mutex for a long time as it will halt other processes if they are using the lock during that time!
     
-    // Generic macros
+    // *** Generic macros
+
     #define AMT_DATA()                              AMT_CONTROL()->iModuleTestData
     #define AMT_FUNC(func)                          if (AMT_DATA()->iIsEnabled) {func;}                                         
     #define AMT_FUNC_EXC(func)                      {AMT_CONTROL()->Lock(); if (AMT_DATA()->iIsEnabled) {func;} AMT_CONTROL()->Unlock();}
     #define AMT_FUNC_EXC_RET(ret, func)             {AMT_CONTROL()->Lock(); if (AMT_DATA()->iIsEnabled) {ret = func;} AMT_CONTROL()->Unlock();}
     #define AMT_FUNC_EXC_IF(cond, func)             {AMT_CONTROL()->Lock(); if (AMT_DATA()->iIsEnabled && (cond)) {func;} AMT_CONTROL()->Unlock();}        
     #define AMT_FUNC_EXC_IF_RET(cond, ret, func)    {AMT_CONTROL()->Lock(); if (AMT_DATA()->iIsEnabled && (cond)) {ret = func;} AMT_CONTROL()->Unlock();}
-    
-    // Single operation macros, that will do lock/unlock.
-    #define AMT_INC_COUNTER(member)                 AMT_FUNC_EXC(AMT_DATA()->member++)
-    #define AMT_DEC_COUNTER(member)                 AMT_FUNC_EXC(AMT_DATA()->member--)
-    #define AMT_SET_VALUE(member, val)              AMT_FUNC_EXC(AMT_DATA()->member=(val))
-    #define AMT_GET_VALUE(x, member)                AMT_FUNC_EXC((x) = AMT_DATA()->member)
-    
-    // Conditional single operation macros, that will do lock/unlock.
-    #define AMT_INC_COUNTER_IF(cond, member)        AMT_FUNC_EXC_IF((cond), AMT_DATA()->member++)
-    #define AMT_DEC_COUNTER_IF(cond, member)        AMT_FUNC_EXC_IF((cond), AMT_DATA()->member--)
-    #define AMT_SET_VALUE_IF(cond, member, val)     AMT_FUNC_EXC_IF((cond), AMT_DATA()->member=(val))
-    #define AMT_GET_VALUE_IF(cond, x, member)       AMT_FUNC_EXC_IF((cond), (x) = AMT_DATA()->member)
-    
-    #define AMT_ADD_TIME(handle, member, effects)   AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ TInt nextFreeIndex = AMT_DATA()->iTimeMap[timemapIndex].iCounter; AMT_DATA()->iTimeMap[timemapIndex].iTimeStamp[nextFreeIndex] = member; AMT_DATA()->iTimeMap[timemapIndex].iCounter++; timemapIndex = 100; break;} timemapIndex++; } if (timemapIndex == 10) { if (AMT_DATA()->iNextFreeMap == 10) { AMT_DATA()->iNextFreeMap = 0;} TInt nextFreeMap = AMT_DATA()->iNextFreeMap; AMT_DATA()->iTimeMap[nextFreeMap].iCounter = 1; AMT_DATA()->iTimeMap[nextFreeMap].iHandle = handle; AMT_DATA()->iTimeMap[nextFreeMap].iTimeStamp[0] = member; AMT_DATA()->iTimeMap[nextFreeMap].iEffects = effects; AMT_DATA()->iNextFreeMap++; /*RDebug::Printf("Handle: %d, %d %d %d", handle, timemapIndex, AMT_DATA()->iNextFreeMap, member)*/;})
-    #define AMT_GET_TIME(x, handle, index, effects) AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ (x) = AMT_DATA()->iTimeMap[timemapIndex].iTimeStamp[index];(effects) = AMT_DATA()->iTimeMap[timemapIndex].iEffects;break;}timemapIndex++;}if(timemapIndex == 10){(x) = KErrNotFound;(effects) = EFalse;})
-    #define AMT_GET_TIME_POINT_COUNT(handle, x)     AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ (x) = AMT_DATA()->iTimeMap[timemapIndex].iCounter;timemapIndex = 100;}timemapIndex++;}if(timemapIndex == 10){(x) = KErrNotFound;})
-    #define AMT_RESET_TIME(handle)                  AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ AMT_DATA()->iTimeMap[timemapIndex].iHandle = 0; AMT_DATA()->iTimeMap[timemapIndex].iCounter = 0;AMT_DATA()->iTimeMap[timemapIndex].iEffects = 0;break;}timemapIndex++;})
-    
-    // Map operation macros, that will do lock/unlock
-    #define AMT_MAP_PTR_TO_KEY_CAST( keyPtr )                                                   reinterpret_cast< TInt >( keyPtr )
-    #define AMT_MAP_CPTR_TO_KEY_CAST( keyCPtr )                                                 AMT_MAP_PTR_TO_KEY_CAST( static_cast< const CBase* >( keyCPtr ) )
-    #define AMT_MAP_APPEND_IF(cond, memberMap, key, defaultValue, type)                         AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.Append(type, key, defaultValue))
-    #define AMT_MAP_APPEND(memberMap, key, defaultValue, type)                                  AMT_MAP_APPEND_IF(ETrue, memberMap, key, defaultValue, type)
-    #define AMT_MAP_APPEND_LINK_IF(cond, memberMap, linkKey, targetKey, type)                   AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.AppendLink(type, linkKey, targetKey))
-    #define AMT_MAP_APPEND_LINK(memberMap, linkKey, targetKey, type)                            AMT_MAP_APPEND_LINK_IF(ETrue, memberMap, linkKey, targetKey, type)
-    #define AMT_MAP_APPEND_AND_LINK_IF(cond, memberMap, linkKey, actualKey, defaultValue, type) AMT_MAP_APPEND_IF(cond, memberMap, actualKey, defaultValue, type ); AMT_MAP_APPEND_LINK_IF(cond, memberMap, linkKey, actualKey, type)
-    #define AMT_MAP_APPEND_AND_LINK(memberMap, linkKey, actualKey, defaultValue, type)          AMT_MAP_APPEND_AND_LINK_IF(ETrue, memberMap, linkKey, actualKey, defaultValue, type)
-    #define AMT_MAP_SET_VALUE_IF(cond, memberMap, key, value, type)                             AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.SetActualValue(type, key, value))
-    #define AMT_MAP_INC_VALUE_IF(cond, memberMap, key, type)                                    AMT_FUNC_EXC_IF((cond && AMT_DATA()->memberMap.FindActual(type, key)), AMT_DATA()->memberMap.SetActualValue(type, key, AMT_DATA()->memberMap.FindActual(type, key)->Value() + 1))
-    #define AMT_MAP_DEC_VALUE_IF(cond, memberMap, key, type)                                    AMT_FUNC_EXC_IF((cond && AMT_DATA()->memberMap.FindActual(type, key)), AMT_DATA()->memberMap.SetActualValue(type, key, AMT_DATA()->memberMap.FindActual(type, key)->Value() - 1))
-    #define AMT_MAP_SET_VALUE(memberMap, key, value, type)                                      AMT_FUNC_EXC_IF(ETrue, AMT_DATA()->memberMap.SetActualValue(type, key, value))
-    #define AMT_MAP_INC_VALUE(memberMap, key, type)                                             AMT_MAP_INC_VALUE_IF(ETrue, memberMap, key, type)              
-    #define AMT_MAP_DEC_VALUE(memberMap, key, type)                                             AMT_MAP_DEC_VALUE_IF(ETrue, memberMap, key, type)
-    #define AMT_MAP_APPEND_ACCEPT_IF(cond, memberMap, testType)                                 AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.AppendAccept(testType))
-    #define AMT_MAP_APPEND_ACCEPT(memberMap, testType)                                          AMT_MAP_APPEND_ACCEPT_IF(ETrue, memberMap, testType)
-    #define AMT_MAP_RESET_ITEMS(memberMap, defaultValue, type)                                  AMT_FUNC_EXC(AMT_DATA()->memberMap.ResetItems(type, defaultValue))
-    #define AMT_MAP_RESET(memberMap)                                                            AMT_FUNC_EXC(AMT_DATA()->memberMap.Reset())
-    
-    #define AMT_PRINT_STATE()   AMT_FUNC_EXC(AMT_DATA()->PrintState())
+    #define AMT_MAP_PTR_TO_KEY_CAST(keyPtr)         reinterpret_cast< TInt >( keyPtr )
+
+
+    // *** Macros to define function content
+
+    #define AMT_MAP_CANVAS_WS_PAINTER_SELECT_GC() \
+            if ( iCanvasWsGc ) \
+                { \
+                AMT_MAP_SET_VALUE( \
+                        iIntMap, \
+                        AMT_MAP_CANVAS_WS_GC_TYPE, \
+                        iCanvasWsGc->Type(), \
+                        EAlfModuleTestTypeCoreToolkitGoom ); \
+                } \
+            else \
+                { \
+                AMT_MAP_SET_VALUE( \
+                        iIntMap, \
+                        AMT_MAP_CANVAS_WS_GC_TYPE, \
+                        KErrNotFound, \
+                        EAlfModuleTestTypeCoreToolkitGoom ); \
+                }
+
+    // Sets the position of the layer into the map. 
+    // Zero means the bottom and the top layer has the greates position value.
+    #define AMT_MAP_GCE_SET_LAYER_POSITIONS() \
+            TInt gceLayerPosition( -1 ); \
+            const MWsLayer* gceLayer( iBottomLayer ); \
+            while( gceLayer ) \
+                { \
+                ++gceLayerPosition; \
+                AMT_MAP_SET_VALUE( \
+                    iIntMap, AMT_MAP_PTR_TO_KEY_CAST( gceLayer ), \
+                    gceLayerPosition, EAlfModuleTestTypeGceLayerPosition ); \
+                gceLayer = gceLayer->Above(); \
+                }
 
 #endif // USE_MODULE_TEST_HOOKS_FOR_ALF
-
-
-// General defines
-// Text cursor handle is defined as constant because correct handle is not provided
-// from the window server for render stage.
-#define AMT_MAP_TEXT_CURSOR_HANDLE 0
 
 
 // Notice: 
 // Defines below will be empty if module test hook is not set.
 // If module test hook is set on, then these defines also use functionality defined above.  
+
+
+// Single operation macros, that will do lock/unlock.
+#define AMT_PRINT_STATE()                       AMT_FUNC_EXC(AMT_DATA()->PrintState())
+#define AMT_INC_COUNTER(member)                 AMT_FUNC_EXC(AMT_DATA()->member++)
+#define AMT_DEC_COUNTER(member)                 AMT_FUNC_EXC(AMT_DATA()->member--)
+#define AMT_SET_VALUE(member, val)              AMT_FUNC_EXC(AMT_DATA()->member=(val))
+#define AMT_GET_VALUE(x, member)                AMT_FUNC_EXC((x) = AMT_DATA()->member)
+
+// Conditional single operation macros, that will do lock/unlock.
+#define AMT_INC_COUNTER_IF(cond, member)        AMT_FUNC_EXC_IF((cond), AMT_DATA()->member++)
+#define AMT_DEC_COUNTER_IF(cond, member)        AMT_FUNC_EXC_IF((cond), AMT_DATA()->member--)
+#define AMT_SET_VALUE_IF(cond, member, val)     AMT_FUNC_EXC_IF((cond), AMT_DATA()->member=(val))
+#define AMT_GET_VALUE_IF(cond, x, member)       AMT_FUNC_EXC_IF((cond), (x) = AMT_DATA()->member)
+
+#define AMT_ADD_TIME(handle, member, effects)   AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ TInt nextFreeIndex = AMT_DATA()->iTimeMap[timemapIndex].iCounter; AMT_DATA()->iTimeMap[timemapIndex].iTimeStamp[nextFreeIndex] = member; AMT_DATA()->iTimeMap[timemapIndex].iCounter++; timemapIndex = 100; break;} timemapIndex++; } if (timemapIndex == 10) { if (AMT_DATA()->iNextFreeMap == 10) { AMT_DATA()->iNextFreeMap = 0;} TInt nextFreeMap = AMT_DATA()->iNextFreeMap; AMT_DATA()->iTimeMap[nextFreeMap].iCounter = 1; AMT_DATA()->iTimeMap[nextFreeMap].iHandle = handle; AMT_DATA()->iTimeMap[nextFreeMap].iTimeStamp[0] = member; AMT_DATA()->iTimeMap[nextFreeMap].iEffects = effects; AMT_DATA()->iNextFreeMap++; /*RDebug::Printf("Handle: %d, %d %d %d", handle, timemapIndex, AMT_DATA()->iNextFreeMap, member)*/;})
+#define AMT_GET_TIME(x, handle, index, effects) AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ (x) = AMT_DATA()->iTimeMap[timemapIndex].iTimeStamp[index];(effects) = AMT_DATA()->iTimeMap[timemapIndex].iEffects;break;}timemapIndex++;}if(timemapIndex == 10){(x) = KErrNotFound;(effects) = EFalse;})
+#define AMT_GET_TIME_POINT_COUNT(handle, x)     AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ (x) = AMT_DATA()->iTimeMap[timemapIndex].iCounter;timemapIndex = 100;}timemapIndex++;}if(timemapIndex == 10){(x) = KErrNotFound;})
+#define AMT_RESET_TIME(handle)                  AMT_FUNC_EXC(TInt timemapIndex = 0; while(timemapIndex < 10){ if (AMT_DATA()->iTimeMap[timemapIndex].iHandle == handle){ AMT_DATA()->iTimeMap[timemapIndex].iHandle = 0; AMT_DATA()->iTimeMap[timemapIndex].iCounter = 0;AMT_DATA()->iTimeMap[timemapIndex].iEffects = 0;break;}timemapIndex++;})
+
+// Map operation macros, that will do lock/unlock
+#define AMT_MAP_CPTR_TO_KEY_CAST(keyCPtr)                                                   AMT_MAP_PTR_TO_KEY_CAST( static_cast< const CBase* >( keyCPtr ) )
+#define AMT_MAP_APPEND_IF(cond, memberMap, key, defaultValue, type)                         AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.Append(type, key, defaultValue))
+#define AMT_MAP_APPEND(memberMap, key, defaultValue, type)                                  AMT_MAP_APPEND_IF(ETrue, memberMap, key, defaultValue, type)
+#define AMT_MAP_APPEND_LINK_IF(cond, memberMap, linkKey, targetKey, type)                   AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.AppendLink(type, linkKey, targetKey))
+#define AMT_MAP_APPEND_LINK(memberMap, linkKey, targetKey, type)                            AMT_MAP_APPEND_LINK_IF(ETrue, memberMap, linkKey, targetKey, type)
+#define AMT_MAP_APPEND_AND_LINK_IF(cond, memberMap, linkKey, actualKey, defaultValue, type) AMT_MAP_APPEND_IF(cond, memberMap, actualKey, defaultValue, type ); AMT_MAP_APPEND_LINK_IF(cond, memberMap, linkKey, actualKey, type)
+#define AMT_MAP_APPEND_AND_LINK(memberMap, linkKey, actualKey, defaultValue, type)          AMT_MAP_APPEND_AND_LINK_IF(ETrue, memberMap, linkKey, actualKey, defaultValue, type)
+#define AMT_MAP_SET_VALUE_IF(cond, memberMap, key, value, type)                             AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.SetActualValue(type, key, value))
+#define AMT_MAP_INC_VALUE_IF(cond, memberMap, key, type)                                    AMT_FUNC_EXC_IF((cond && AMT_DATA()->memberMap.FindActual(type, key)), AMT_DATA()->memberMap.SetActualValue(type, key, AMT_DATA()->memberMap.FindActual(type, key)->Value() + 1))
+#define AMT_MAP_DEC_VALUE_IF(cond, memberMap, key, type)                                    AMT_FUNC_EXC_IF((cond && AMT_DATA()->memberMap.FindActual(type, key)), AMT_DATA()->memberMap.SetActualValue(type, key, AMT_DATA()->memberMap.FindActual(type, key)->Value() - 1))
+#define AMT_MAP_SET_VALUE(memberMap, key, value, type)                                      AMT_FUNC_EXC_IF(ETrue, AMT_DATA()->memberMap.SetActualValue(type, key, value))
+#define AMT_MAP_INC_VALUE(memberMap, key, type)                                             AMT_MAP_INC_VALUE_IF(ETrue, memberMap, key, type)              
+#define AMT_MAP_DEC_VALUE(memberMap, key, type)                                             AMT_MAP_DEC_VALUE_IF(ETrue, memberMap, key, type)
+#define AMT_MAP_APPEND_ACCEPT_IF(cond, memberMap, testType)                                 AMT_FUNC_EXC_IF((cond), AMT_DATA()->memberMap.AppendAccept(testType))
+#define AMT_MAP_APPEND_ACCEPT(memberMap, testType)                                          AMT_MAP_APPEND_ACCEPT_IF(ETrue, memberMap, testType)
+#define AMT_MAP_RESET_ITEMS(memberMap, defaultValue, type)                                  AMT_FUNC_EXC(AMT_DATA()->memberMap.ResetItems(type, defaultValue))
+#define AMT_MAP_RESET(memberMap)                                                            AMT_FUNC_EXC(AMT_DATA()->memberMap.Reset())
 
 
 // Render stage defines
@@ -181,7 +181,8 @@
 #define AMT_MAP_RENDER_STAGE_ADD_LAYER() \
         AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeCreateLayer ); \
         AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeReleaseLayer ); \
-        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeLayerOrdinalPosition )
+        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeLayerOrdinalPosition ); \
+        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeLayerNodeOrdinalPosition )
 
 #define AMT_MAP_RENDER_STAGE_ADD_LAYER_LINK() \
         AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeCreateLayer ); \
@@ -190,6 +191,13 @@
         AMT_MAP_APPEND_LINK( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeReleaseLayer ); \
         AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeLayerOrdinalPosition ); \
         AMT_MAP_APPEND_LINK( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeLayerOrdinalPosition ); \
+        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeLayerNodeOrdinalPosition ); \
+        AMT_MAP_APPEND_LINK( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( &aWindowTreeNode ), windowId, EAlfModuleTestTypeLayerNodeOrdinalPosition ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceCreateLayer ); \
+        AMT_MAP_APPEND_LINK( iSurfaceMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceReleaseLayer ); \
+        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerPosition ); \
+        AMT_MAP_APPEND_LINK( iIntMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerOpacity ); \
+        AMT_MAP_APPEND_LINK( iRectMap, windowId, AMT_MAP_PTR_TO_KEY_CAST( &aLayer ), EAlfModuleTestTypeGceLayerExtent ); \
         \
         AMT_MAP_SET_VALUE( iSurfaceMap, windowId, aLayer.Surface(), EAlfModuleTestTypeCreateLayer )
 
@@ -265,6 +273,40 @@
 
 #define AMT_MAP_BRIDGE_SET_ORDINAL_POSITION() \
         AMT_MAP_SET_VALUE_IF( windowAttributes, iIntMap, windowNodeId, windowAttributes->iOrdinalPosition, EAlfModuleTestTypeLayerOrdinalPosition )
+
+#define AMT_MAP_NODE_SET_ORDINAL_POSITION() \
+        AMT_MAP_SET_VALUE( iIntMap, iId, ordinal, EAlfModuleTestTypeLayerNodeOrdinalPosition )
+
+
+// GCE defines
+
+#define AMT_MAP_GCE_ADD_LAYER() \
+        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeGceCreateLayer ); \
+        AMT_MAP_APPEND_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TSurfaceId::CreateNullId(), EAlfModuleTestTypeGceReleaseLayer ); \
+        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeGceLayerPosition ); \
+        AMT_MAP_APPEND_IF( aLayer, iIntMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), 0, EAlfModuleTestTypeGceLayerOpacity ); \
+        AMT_MAP_APPEND_IF( aLayer, iRectMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), TRect(), EAlfModuleTestTypeGceLayerExtent )
+
+#define AMT_MAP_GCE_SET_SURFACE() \
+        AMT_MAP_SET_VALUE( iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( static_cast< MWsLayer* >( this ) ), aSurface, EAlfModuleTestTypeGceCreateLayer )
+
+#define AMT_MAP_GCE_REMOVE_LAYER() \
+        AMT_MAP_SET_VALUE_IF( aLayer, iSurfaceMap, AMT_MAP_PTR_TO_KEY_CAST( aLayer ), aLayer->Surface(), EAlfModuleTestTypeGceReleaseLayer )
+
+#define AMT_MAP_GCE_SET_LAYER_OPACITY() \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_PTR_TO_KEY_CAST( static_cast< MWsLayer* >( this ) ), Opacity(), EAlfModuleTestTypeGceLayerOpacity )
+
+#define AMT_MAP_GCE_SET_LAYER_EXTENT() \
+        AMT_MAP_SET_VALUE( iRectMap, AMT_MAP_PTR_TO_KEY_CAST( static_cast< MWsLayer* >( this ) ), aExtent, EAlfModuleTestTypeGceLayerExtent )
+
+
+// Goom defines
+
+#define AMT_MAP_CANVAS_TEXTURE_CACHE_SET_MEMORY_LEVEL() \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_TEXTURE_CACHE_MEMORY_LEVEL, iMemoryLevel, EAlfModuleTestTypeCoreToolkitGoom ); \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_CACHED_IMAGES_COUNT, iCachedImages.Count(), EAlfModuleTestTypeCoreToolkitGoom ); \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_CACHED_TEXTS_COUNT, iCachedTexts.Count(), EAlfModuleTestTypeCoreToolkitGoom ); \
+        AMT_MAP_SET_VALUE( iIntMap, AMT_MAP_CACHED_RENDER_BUFFERS_COUNT, iCachedRenderBuffers.Count(), EAlfModuleTestTypeCoreToolkitGoom )
 
 
 #endif // ALF_MODULE_TEST_DEFINES_H

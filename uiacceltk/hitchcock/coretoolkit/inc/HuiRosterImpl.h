@@ -336,6 +336,12 @@ public:
     // From MHuiMemoryLevelObserver
     void SetMemoryLevel(THuiMemoryLevel aLevel);
     
+	// For handling native ALF applications drawing 
+    void SetAlfEventWindow(CHuiVisual* aVisual);
+    const CHuiVisual* AlfEventWindow();
+    TBool NativeAppsContentChanged();
+    void DrawNativeAppsContent( CHuiGc &aGc, CHuiDisplay* aDisplay) const;
+    
 protected:
 
     /* Methods. */
@@ -512,6 +518,10 @@ private:
 	
 	TBool iRosterIsFrozen;
 	TBool iMonitorMemoryLevel;
+	
+	/* not owned */
+	CHuiVisual* iAlfEventWindowVisual;
+	TBool iPreviousAlfContentDrawn;
 	};
 
 #endif  // __HUIROSTERIMPL_H__

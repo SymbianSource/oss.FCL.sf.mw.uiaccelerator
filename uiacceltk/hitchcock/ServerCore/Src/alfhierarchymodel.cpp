@@ -139,7 +139,7 @@ CAlfHierarchyModel::~CAlfHierarchyModel()
 #ifdef ALF_DEBUG_TRACK_DRAWING 
     delete iCommandDebugger;
 #endif
-    
+    iUpdateRegion.Close();    
 #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
     delete AMT_CONTROL();
     Dll::FreeTls();
@@ -1034,6 +1034,8 @@ void CAlfHierarchyModel::DoNodeTransparentRegionChangedL()
     iStream->ReadInt8L();
     ReadRegionL( iStream, newOpaqueRegion );
     // TODO: Implement actions
+    newTransparentRegion.Close();
+    newOpaqueRegion.Close();
     }
 
 // ---------------------------------------------------------------------------

@@ -84,7 +84,7 @@ void CHuiFxVg10BlurFilter::CalculateMargin(TMargins &aMargin) const
 }
 
 TBool CHuiFxVg10BlurFilter::Draw(CHuiFxEngine& aEngine, CHuiGc& /* aGc */, CHuiFxRenderbuffer& aTarget,
-                                 CHuiFxRenderbuffer& aSource, const TRect& aTargetRect, const TRect& aSourceRect)
+                                 CHuiFxRenderbuffer& aSource, const TRect& aTargetRect, const TRect& aSourceRect, TBool aHasSurface)
     {
     aTarget.BindAsTexture(ERenderbufferUsageWriteOnly);
     aSource.BindAsTexture(ERenderbufferUsageReadOnly);
@@ -96,7 +96,7 @@ TBool CHuiFxVg10BlurFilter::Draw(CHuiFxEngine& aEngine, CHuiGc& /* aGc */, CHuiF
 
     if(opacity > EPSILON)
         {
-        DrawEffect(aEngine, destImage, srcImage, aSourceRect.Width(), aSourceRect.Height());
+        DrawEffect(aEngine, destImage, srcImage, aSourceRect.Width(), aSourceRect.Height(), aHasSurface);
         }
     else
         {
@@ -116,7 +116,7 @@ TBool CHuiFxVg10BlurFilter::Draw(CHuiFxEngine& aEngine, CHuiGc& /* aGc */, CHuiF
     return wasEnoughMemory();
     }
 
-void CHuiFxVg10BlurFilter::DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight)
+void CHuiFxVg10BlurFilter::DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool /*aHasSurface*/)
     {
     const VGfloat blur_x = clamp(iBlurX, EPSILON, 128.0f);
     const VGfloat blur_y = clamp(iBlurY, EPSILON, 128.0f);

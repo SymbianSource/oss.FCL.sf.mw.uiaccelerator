@@ -28,9 +28,9 @@ public:
     static CHuiFxVg10BlurFilter* NewL();
     TBool Draw(CHuiFxEngine& aEngine, CHuiGc& aGc,
             CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource,
-            const TRect& aTargetRect, const TRect& aSourceRect);
+            const TRect& aTargetRect, const TRect& aSourceRect, TBool aHasSurface);
 
-    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight);
+    void DrawEffect(CHuiFxEngine& aEngine, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight, TBool aHasSurface);
     void CalculateMargin(TMargins &aMargin) const;  
     CHuiFxVg10BlurFilter *CloneL() const;
 protected:

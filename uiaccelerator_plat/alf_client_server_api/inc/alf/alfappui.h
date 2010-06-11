@@ -33,6 +33,7 @@ class CHuiDisplay;
 class CAlfAppSrvSessionBase;
 class CAlfSrvResourceManager;
 class CAlfSrvSettingsHandler;
+class RAlfBridgerClient;
 
 enum TAlfSrvSetting
     {
@@ -177,6 +178,8 @@ public: // internal utilities
     void EndPointerEventHandling();
     void UpdateActiveSession(CAlfAppSrvSessionBase* aSession);
     
+    CAlfAppSrvSessionBase* ActiveSession();
+    
     TTypeUid::Ptr MopSupplyObject(TTypeUid aId);
 
     TInt FirstAlfControlGroupIndex( TInt aScreenNumber = 0);    
@@ -205,6 +208,7 @@ public: // internal utilities
     void DoBlankScreen(const RMessage2& aMessage);
     
     TInt GetLastActiveClient();
+    RAlfBridgerClient* BridgerClient();
 
 private:
 

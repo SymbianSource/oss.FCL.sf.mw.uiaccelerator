@@ -26,9 +26,9 @@ class CHuiFxVg10TransformFilter: public CHuiFxVg10FilterBase
 public: // from CHuiFxFilter
     virtual TBool Draw(CHuiFxEngine& aEngine, CHuiGc& aGc,
                        CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource,
-                       const TRect& aTargetRect, const TRect& aSourceRect);
+                       const TRect& aTargetRect, const TRect& aSourceRect, TBool aHasSurface);
     static CHuiFxVg10TransformFilter* NewL();
-    void DrawEffect(CHuiFxEngine& /*aEngine*/, VGImage /*aTargetImage*/, VGImage /*aSourceImage*/, TInt /*aWidth*/, TInt /*aHeight*/) {}
+    void DrawEffect(CHuiFxEngine& /*aEngine*/, VGImage /*aTargetImage*/, VGImage /*aSourceImage*/, TInt /*aWidth*/, TInt /*aHeight*/, TBool /*aHasSurface*/) {}
     void CalculateMargin(TMargins &aMargin) const;  
     CHuiFxVg10TransformFilter *CloneL() const;
 protected:

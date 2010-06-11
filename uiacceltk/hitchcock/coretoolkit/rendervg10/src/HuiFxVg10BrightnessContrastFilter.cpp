@@ -87,8 +87,5 @@ void CHuiFxVg10BrightnessContrastFilter::UpdateColorMatrix(void)
     iColorMatrix[16] = oOff;
     iColorMatrix[17] = oOff;
     iColorMatrix[18] = oOff;
-    iColorMatrix[19] = 0.5f; // add 0.5 to alpha so that surfaces fade aswell
-	                         // it should be considered if this should only
-							 // be done for visuals with a background
-							 // surface
+    iColorMatrix[19] = 0.0f; 
     }

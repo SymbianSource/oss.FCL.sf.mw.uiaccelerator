@@ -26,27 +26,6 @@
 #include <uiacceltk/HuiTextVisual.h>
 #include "alfshareddisplaycoecontrol.h"
 
-enum TAlfControlGroupRole
-    {
-    /** Unknown */
-    EAlfUnknownContainer,
-    
-    /** Alf application control group */
-    EAlfSessionContainer,
-    
-    /** WSERV window group */
-    EAlfWindowGroupContainer,
-    
-    /** WSERV floating sprite group */
-    EAlfWindowFloatingSpriteContainer,
-
-    /** Group for showing effects */
-    EAlfFullScreenEffectContainer,
-    
-    /** Group for FPS indicator */
-    EAlfFpsIndicatorContainer
-    };
-
 NONSHARABLE_CLASS( TAlfControlGroupEntry )  
     {
 public:
