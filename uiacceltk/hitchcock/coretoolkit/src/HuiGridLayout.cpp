@@ -273,7 +273,8 @@ EXPORT_C void CHuiGridLayout::SetColumnsL(const RArray<TInt>& aWeights)
     axis.iWeights.Reset();
     for(TInt i = 0; i < aWeights.Count(); ++i)
         {
-        THuiMetric weight(TReal32(aWeights[i]), EHuiUnitWeight);
+	TInt weight_value(aWeights[i]); //evaluate this first and then use the value to initialize TReal (this fixes gcc 4.4.1 issue)
+        THuiMetric weight(TReal32(weight_value), EHuiUnitWeight); 
         User::LeaveIfError(axis.iWeights.Append(weight));
         }
     }
@@ -284,7 +285,8 @@ EXPORT_C void CHuiGridLayout::SetRowsL(const RArray<TInt>& aWeights)
     axis.iWeights.Reset();
     for(TInt i = 0; i < aWeights.Count(); ++i)
         {
-        THuiMetric weight(TReal32(aWeights[i]), EHuiUnitWeight);
+        TInt weight_value(aWeights[i]); //evaluate this first and then use the value to initialize TReal (this fixes gcc 4.4.1 issue)
+	THuiMetric weight(TReal32(weight_value), EHuiUnitWeight); 
         User::LeaveIfError(axis.iWeights.Append(weight));
         }
     }

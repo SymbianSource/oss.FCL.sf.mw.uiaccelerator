@@ -34,6 +34,6 @@
 /**
 * Prefix macro for strings
 */
-#define _PREFIX_CHAR( aMsg ) (const char*)"[GOOM]: " ##aMsg
+#define _PREFIX_CHAR( aMsg ) (const char*)"[GOOM]: " #aMsg
 
 #endif // TRACEDEFS_H
