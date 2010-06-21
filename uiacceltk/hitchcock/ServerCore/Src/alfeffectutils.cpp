@@ -20,7 +20,13 @@
 #include <akntransitionutils.h>
 #include <alflogger.h>
 
+// Delay after which first end check is performed.
 const TInt KRosterFreezeEndTimeoutInMs = 100;
+// Interval between end checks.
+const TInt KRosterFreezeEndIntervalInMs = 50;
+// Maximum amount of end checks to be performed. 
+// This can be lower, should be visible enough to see, if heuristics fail.
+const TInt KRosterFreezeEndAttempts = 50;
 
 // ---------------------------------------------------------
 // CAlfRosterFreezeEndTimer
@@ -59,6 +65,7 @@ void CAlfRosterFreezeEndTimer::Start( TTimeIntervalMicroSeconds32 aPeriod, TCall
     if (!IsActive())
         {
         iSafeCounter = 0;
+        iSafeCounterDelta = Min(1, aPeriod.Int() / (KRosterFreezeEndIntervalInMs*1000));
         After( aPeriod );
         }
     }
@@ -71,22 +78,24 @@ void CAlfRosterFreezeEndTimer::RunL()
 	
 	if (iSafeCounter >= 0)	
 	    {
-		iSafeCounter++;
-		if (iSafeCounter == 100) // can be lower, 100 should be visible enough to see, if heuristics fail
+		iSafeCounter += iSafeCounterDelta;
+		if (iSafeCounter >= KRosterFreezeEndAttempts)
 			{
 			timeout = ETrue;
 			iSafeCounter = 0;
 			}
 		}
 
-    if (!iBridge.IsFullScreenDrawn(0) && !timeout)
+    if (!iBridge.IsLayoutSwitchReady(iSafeCounter) && !timeout)
         {
         __ALFLOGSTRING("CAlfRosterFreezeEndTimer::RunL - Not ready in new orientation. waiting 50ms more");
-        After( 50000 );
+        iSafeCounterDelta = 1;
+        After( KRosterFreezeEndIntervalInMs * 1000 );
         return;
         }
     else
         {
+        __ALFLOGSTRING("CAlfRosterFreezeEndTimer::RunL - Ready in new orientation.");
         iCallBack.CallBack();
         }
     }
@@ -168,16 +177,18 @@ void CAlfLayoutSwitchEffectCoordinator::Event(TEvent aEvent)
     // - EEventLayoutSwitch: If effect available, EStateThemeFx. Otherwise EStateFreezeFx.
     //
     // From EStateFreezeFx:
-    // - EEventBlankOn: EStateBlankFx
     // - implicit Finish - EStateIdle
     //
     // From EStateBlankFx:
     // - EEventBlankOff: EStateFreezeFx (we use freeze to ensure that result is ok)
-    // - EEventLayoutSwitch: If effect available, EStateThemeFx.
+    // - EEventLayoutSwitch: If effect available, EStateThemeFx. Otherwise EStateFreezeFx.
     //
     // From EStateThemeFx:
     // - EEventLowMemory: If blank still on, EStateBlankFx. Otherwise EStateFreezeFx.
     // - implicit Finish - EStateIdle
+    //
+    // There is special handling if layout switch event is received while previous
+    // layout switch is ongoing.
 
     TState nextState = EStateIdle;
     
@@ -205,6 +216,69 @@ void CAlfLayoutSwitchEffectCoordinator::Event(TEvent aEvent)
         {
         Transition( nextState, iCurrentState );
         }
+    else
+        {
+        // We stay in the same state, but still need special handling in a couple of scenarios
+        if ( nextState == EStateFreezeFx )
+            {
+            HandleFreezeEvent( aEvent );
+            }
+        if ( nextState == EStateThemeFx )
+            {
+            HandleThemeEvent( aEvent );
+            }                        
+        }
+    }
+
+// ---------------------------------------------------------
+// CAlfLayoutSwitchEffectCoordinator::HandleFreezeEvent
+// Special handling for Freeze effect.
+// ---------------------------------------------------------
+//
+void CAlfLayoutSwitchEffectCoordinator::HandleFreezeEvent(TEvent aEvent)
+    {
+    if ( aEvent == EEventLayoutSwitch && iRosterFreezeEndTimer && iRosterFreezeEndTimer->IsActive() )
+        {                                
+        // New layout switch while previous is ongoing => restart freeze end timer.
+        __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::HandleFreezeEvent restart timer");
+        iRosterFreezeEndTimer->Cancel();
+        iRosterFreezeEndTimer->Start(KRosterFreezeEndTimeoutInMs*1000, TCallBack(DoFreezeFinished, this));                
+        }
+    }
+
+// ---------------------------------------------------------
+// CAlfLayoutSwitchEffectCoordinator::HandleFreezeEvent
+// Special handling for Theme effect.
+// ---------------------------------------------------------
+//
+void CAlfLayoutSwitchEffectCoordinator::HandleThemeEvent(TEvent aEvent)
+    {
+    if ( aEvent == EEventLayoutSwitch )
+        {                                
+        // If layout switch occurs while freeze end timer is ongoing, restart.
+        if ( iRosterFreezeEndTimer && iRosterFreezeEndTimer->IsActive() )
+            {
+            __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::HandleThemeEvent restart timer");
+            iRosterFreezeEndTimer->Cancel();
+            iRosterFreezeEndTimer->Start(KRosterFreezeEndTimeoutInMs*1000, TCallBack(DoNextLayoutSwitchContext, this));                
+            }
+
+        // If layout switch occurs while theme effect is ongoing in exit phase, restart.
+        if ( iLayoutSwitchEffectContext == AknTransEffect::ELayoutSwitchExit )
+            {
+            __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::HandleThemeEvent restart themefx");
+            TBool oldLayoutSwitchNotCompleted = iLayoutSwitchNotCompleted;
+            iLayoutSwitchNotCompleted = EFalse;
+                
+            Transition( EStateIdle, iCurrentState );
+            Transition( EStateThemeFx, iCurrentState );
+                
+            if (oldLayoutSwitchNotCompleted)
+                {
+                iLayoutSwitchNotCompleted = ETrue;
+                }  
+            }
+        }
     }
 
 // ---------------------------------------------------------
@@ -214,7 +288,7 @@ void CAlfLayoutSwitchEffectCoordinator::Event(TEvent aEvent)
 void CAlfLayoutSwitchEffectCoordinator::Transition(
         TState aNewState, TState aPreviousState)
     {
-    __ALFLOGSTRING2("CAlfLayoutSwitchEffectCoordinator::Transition from: %d to: %d", aNewState, aPreviousState);
+    __ALFLOGSTRING2("CAlfLayoutSwitchEffectCoordinator::Transition from: %d to: %d", aPreviousState, aNewState);
     iCurrentState = aNewState;
         
     // Undo previous state - don't unfreeze roster.
@@ -269,7 +343,7 @@ void CAlfLayoutSwitchEffectCoordinator::Transition(
                 
             // Remove all other effects
             iBridge.HandleGfxStopEvent( EFalse );
-            iBridge.RemoveAllTemporaryPresenterVisuals();
+            iBridge.CleanAllFxVisuals();
 
             // Set remove freeze timer
             __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::Transition - Freeze timer started");
@@ -299,7 +373,7 @@ void CAlfLayoutSwitchEffectCoordinator::Transition(
             
         // Remove all other effects
         iBridge.HandleGfxStopEvent( EFalse );
-        iBridge.RemoveAllTemporaryPresenterVisuals();
+        iBridge.CleanAllFxVisuals();
             
         // Set first layout switch effect 
         SetLayoutSwitchEffect(AknTransEffect::ELayoutSwitchStart);
@@ -324,6 +398,7 @@ void CAlfLayoutSwitchEffectCoordinator::Transition(
         FreezeRoster(EFalse);
         iBridge.iHuiEnv->Display(0).SetDirty();
         iBridge.SetVisualTreeVisibilityChanged(ETrue);
+        iBridge.AsynchRefresh();
         }
         break;
         }    
@@ -394,9 +469,6 @@ CAlfLayoutSwitchEffectCoordinator::TState
     switch ( aEvent )
         {
     case EEventBlankOn:
-        state = EStateBlankFx;
-        break;
-    
     case EEventLayoutSwitch:    
     case EEventBlankOff:
     case EEventLowMemory:
@@ -423,6 +495,10 @@ CAlfLayoutSwitchEffectCoordinator::TState
         if ( IsThemeEffectEnabled() )
             {
             state = EStateThemeFx;
+            }
+        else
+            {
+            state = EStateFreezeFx;
             }
         break;
     
@@ -592,7 +668,8 @@ void CAlfLayoutSwitchEffectCoordinator::AlfGfxEffectEndCallBack( TInt aHandle )
 // ---------------------------------------------------------
 //
 // todo: rename
-TInt DoNextLayoutSwitchContext(TAny* aLayoutSwitchCoordinator)
+TInt CAlfLayoutSwitchEffectCoordinator::DoNextLayoutSwitchContext(
+        TAny* aLayoutSwitchCoordinator)
     {
     CAlfLayoutSwitchEffectCoordinator* coordinator = (CAlfLayoutSwitchEffectCoordinator*)aLayoutSwitchCoordinator;
     coordinator->AlfGfxEffectEndCallBack(KErrNotFound);
@@ -803,13 +880,6 @@ void CEffectState::ResolveFileNameL(RMemReadStream& aStream)
 
 CFullScreenEffectState::~CFullScreenEffectState()
     {
-    iPaintedRegion.Close();
-    if (iDrawingCompleteTimer)
-        {
-        iDrawingCompleteTimer->Cancel();
-        delete iDrawingCompleteTimer;
-        iDrawingCompleteTimer = NULL;
-        }
     }
 
 void CFullScreenEffectState::ConstructL(const CFullScreenEffectState& aEffectState)
@@ -872,6 +942,7 @@ void CFullScreenEffectState::SetState(TEffectState aState)
     {
     if (aState >= iState)
         {
+        __ALFFXLOGSTRING2("CFullScreenEffectState::SetState - Set %d -> %d", iState, aState);
         iState = aState;
         }
     else
@@ -882,6 +953,7 @@ void CFullScreenEffectState::SetState(TEffectState aState)
         
 TEffectState CFullScreenEffectState::State()
     {
+    __ALFFXLOGSTRING1("CFullScreenEffectState::State - %d", iState);
     return iState;
     }
       

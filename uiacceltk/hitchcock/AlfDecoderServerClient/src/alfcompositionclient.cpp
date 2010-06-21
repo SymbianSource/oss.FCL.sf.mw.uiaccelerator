@@ -832,6 +832,8 @@ NONSHARABLE_CLASS(CAlfCompositionPixelSource::CAlfCompositionPixelSourceData):pu
     TRect iSurfaceRect;
     
     TInt iWaiterAoPriority;
+    
+    TTimeStamp iTimeStamp; // not used but is required parameter for NotifyWhenDisplayed
     };
 
 
@@ -1198,7 +1200,7 @@ TBool CAlfCompositionPixelSource::DrawFrameL(TRequestStatus& aStatus, TInt aBuff
     TBool draw = iData->iProvider.ProduceNewFrameL(region, buffer);
     if(draw)
         {
-        iData->iSurfaceUpdateSession.NotifyWhenAvailable(aStatus);        
+        iData->iSurfaceUpdateSession.NotifyWhenDisplayed(aStatus, iData->iTimeStamp);        
     
         iData->iSurfaceUpdateSession.SubmitUpdate(KAllScreens, iData->iSurfaceId, aBufferNumber);
         }

@@ -102,6 +102,11 @@ public:
 
 	TInt SendBeginFullscreen(TInt aHandle, TUint aAction, const TUid& aUid, 
 							 const TUid& aPreviousUid, const TRect& aEffectRect);
+	/**
+	 *  SendEndFullscreen
+	 *  
+	 *  @return    1, If longer app start effect was triggered. Otherwise returns 0.
+	 */
 	TInt SendEndFullscreen(TBool aTimeout = EFalse);
 	TInt SendAbortFullscreen();
 	TInt SendAbortControlTransition();

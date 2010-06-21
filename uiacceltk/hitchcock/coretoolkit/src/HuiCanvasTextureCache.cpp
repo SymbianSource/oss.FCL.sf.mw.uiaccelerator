@@ -69,7 +69,7 @@ const TReal32 KHuiCanvasRenderBufferEstimatedBpp = 32;
 
 /** Constant to define target how much memory UI textures should use, 
     this is not a hard limit but effects how long unused textures are cached */
-const TInt KHuiMaxRecommendedTextureAmountInKBytes = 4096;
+const TInt KHuiMaxRecommendedTextureAmountInKBytes = 6114;
 
 /** Constant to define target how much memory UI render buffers should use, 
     this is not a hard limit but effects how long unused render buffers are cached */
@@ -2940,7 +2940,11 @@ void CHuiCanvasTextureCache::SelectPreservedUnusedImageEntries(RPointerArray<CHu
         // Always delete bitmaps from unused entries, we can again duplicate pointers from handles when needed.
         // Pointers are kept only for perfromance reasons.
         CHuiCanvasGraphicImage* entry = aIndexEntries[i];
-
+        TBool is16bit = EFalse;
+        if (entry->iBitmap && !entry->iMask && entry->iBitmap->ExtendedBitmapType() == KNullUid && entry->iBitmap->DisplayMode() == EColor64K)
+            {
+            is16bit = ETrue;
+            }
         delete entry->iBitmap;    
         entry->iBitmap = NULL;
 
@@ -2957,7 +2961,7 @@ void CHuiCanvasTextureCache::SelectPreservedUnusedImageEntries(RPointerArray<CHu
             }
                     
         TSize textureSize = entry->iTexture->Size();    
-        TInt textureEstimatedSizeInBytes = textureSize.iWidth * textureSize.iHeight * KHuiCanvasImageEstimatedBpp/8.f;
+        TInt textureEstimatedSizeInBytes = textureSize.iWidth * textureSize.iHeight * (is16bit ? KHuiCanvasImageEstimatedBpp/16.f : KHuiCanvasImageEstimatedBpp/8.f);
 
         if (totalUnusedTextureBytes + textureEstimatedSizeInBytes < iUnusedCanvasImageTextureCacheSizeInKBytes*1024)
             {
@@ -3156,8 +3160,14 @@ TInt CHuiCanvasTextureCache::CalculateUnusedCanvasTextureUsageInKbytes()
 
     for(TInt i=imageEntries.Count() - 1; i >= 0; i--)
         {
+        TBool is16bit = EFalse;
+        if (imageEntries[i]->iBitmap && !imageEntries[i]->iMask && imageEntries[i]->iBitmap->ExtendedBitmapType() == KNullUid &&imageEntries[i]->iBitmap->DisplayMode() == EColor64K)
+            {
+            is16bit = ETrue;
+            }
+
         TSize textureSize = imageEntries[i]->iTexture->Size();    
-        totalUnusedTextureBytes += textureSize.iWidth * textureSize.iHeight * KHuiCanvasImageEstimatedBpp/8.f;
+        totalUnusedTextureBytes += textureSize.iWidth * textureSize.iHeight * (is16bit ? KHuiCanvasImageEstimatedBpp/16.f : KHuiCanvasImageEstimatedBpp/8.f);
         }            
     
     imageEntries.Close();        

@@ -304,6 +304,8 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
     iGOomActionList->SetCurrentTarget(iCurrentTarget);
 
     iTrigger = aTrigger;
+    
+    iGOomActionList->SetUseSwRendering(ETrue); //Always use SW rendering in low mode .. (for now..) 
     // Run the memory freeing actions
     iGOomActionList->FreeMemory(aMaxPriority);
     
@@ -736,7 +738,6 @@ TBool CMemoryMonitor::IsSafeToProcessNewRequest(TUint aClientId)
             }
         }
     
-    TRACES1("Going to process new request %d",iPostponeMemGood);
     return ETrue;
     }
 
@@ -776,15 +777,9 @@ void CMemoryMonitor::SynchroniseMemoryState()
     TInt current = GetFreeMemory();
     if(current >= iGoodThreshold)
         {
-        if(!NeedToPostponeMemGood())
-            {
-            TRACES("SynchroniseMemoryState calling MemoryGOOD");
-            iGOomActionList->MemoryGood();
-            }
-        else
-            {
-            iMemAllocationsGoingDown->Continue();
-            }
+        iClientsRequestingMemory.Reset();
+        TRACES("SynchroniseMemoryState calling MemoryGOOD");
+        iGOomActionList->MemoryGood();
         }
     else if(current < iLowThreshold)
         {

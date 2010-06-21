@@ -91,9 +91,10 @@ public: // event handlers
     void SessionInCriticalAllocation(TBool aPostponeMemGood, TUint aClientId)
         {
         FUNC_LOG;
+        TInt oldCount = iClientsRequestingMemory.Count();
+        
         if (aPostponeMemGood)
             {
-            iPostponeMemGood++;
             if(iClientsRequestingMemory.Find(aClientId) == KErrNotFound)
                 iClientsRequestingMemory.Append(aClientId);
             
@@ -101,21 +102,15 @@ public: // event handlers
             }
         else
             {
-            iPostponeMemGood--;
             TInt idx = iClientsRequestingMemory.Find(aClientId);
             if(idx != KErrNotFound)
                 {
                 iClientsRequestingMemory.Remove(idx);
                 TRACES2("SessionInCriticalAllocation : ENDING Critical Allocations for Client %x, ClientsRequestingMemory Count %d", aClientId, iClientsRequestingMemory.Count());
                 }
-            
-             if(iPostponeMemGood<0)
-                {
-                iPostponeMemGood = 0;
-                }
             }
         TRACES1("SessionInCriticalAllocation : ClientsRequestingMemory Count %d", iClientsRequestingMemory.Count());    
-        if (iClientsRequestingMemory.Count() == 0)
+        if (oldCount && iClientsRequestingMemory.Count() == 0)
             {
             DoPostponedMemoryGood();
             }
@@ -126,7 +121,6 @@ public: // event handlers
     
     TBool NeedToPostponeMemGood()
         {
-        //return (iPostponeMemGood != 0);
         return (iClientsRequestingMemory.Count() != 0);
         } 
     
@@ -201,7 +195,6 @@ private: //data
     CGoomThresholdCrossed* iMemAllocationsGoingDown;
     
     TInt iForegroundAppUid;
-    TInt iPostponeMemGood;
     
     RArray<TUint> iClientsRequestingMemory;
     

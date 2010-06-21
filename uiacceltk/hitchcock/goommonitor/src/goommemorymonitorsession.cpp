@@ -35,12 +35,7 @@ void CMemoryMonitorSession::CreateL()
 CMemoryMonitorSession::~CMemoryMonitorSession()
     {
     FUNC_LOG;
-	/* TODO - need to add the right condition
-    if (iUseAbsoluteTargets)
-        { // se3ssion terminated while on critical allocation, release lock
-        Server().Monitor().SessionInCriticalAllocation(0);
-        }
-	*/
+    Server().Monitor().SessionInCriticalAllocation(0,iClientId);
     CloseAppsFinished(0, EFalse);
     }
 
@@ -66,29 +61,29 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
     RThread t;
     aMessage.Client(t);
     
-    TUint clientId = t.SecureId();
+    iClientId = t.SecureId();
     t.Close();
     
-    TRACES1("NEW REQUEST from client %x", clientId);
+    TRACES1("NEW REQUEST from client %x", iClientId);
     switch (aMessage.Function())
         {
         case EGOomMonitorRequestFreeMemory:
 
             //Do not take any more requests from the same client if previous request being served
-            if (!iRequestFreeRam.IsNull() && !Server().Monitor().IsSafeToProcessNewRequest(clientId))
+            if (!iRequestFreeRam.IsNull() && !Server().Monitor().IsSafeToProcessNewRequest(iClientId))
                 {
-                TRACES1("CANNOT PROCESS NEW REQUEST from %x", clientId);
+                TRACES1("CANNOT PROCESS NEW REQUEST from %x", iClientId);
                 aMessage.Complete(KErrInUse);
                 return;
                 }
             
-            Server().Monitor().SetActiveClient(clientId);
+            Server().Monitor().SetActiveClient(iClientId);
             // message will be completed when CloseAppsFinished() is called.
             if (aMessage.Int1() == 0)
                 {
                 iRequestFreeRam = aMessage;
 
-                Server().Monitor().SessionInCriticalAllocation(1, clientId);
+                Server().Monitor().SessionInCriticalAllocation(1, iClientId);
                 
                 TRAPD(err, Monitor().RequestFreeMemoryL(aMessage.Int0()));
                 if (err)
@@ -108,8 +103,8 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
             break;
             
         case EGOomMonitorMemoryAllocationsComplete:
-            TRACES1("ServiceL : Memory Allocations complete from %x", clientId);
-            Server().Monitor().SessionInCriticalAllocation(0, clientId);
+            TRACES1("ServiceL : Memory Allocations complete from %x", iClientId);
+            Server().Monitor().SessionInCriticalAllocation(0, iClientId);
             aMessage.Complete(KErrNone);
             break;
 
@@ -118,7 +113,7 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
                 {
                 iRequestFreeRam.Complete(KErrCancel);
                 }
-            Server().Monitor().SessionInCriticalAllocation(0, clientId);
+            Server().Monitor().SessionInCriticalAllocation(0, iClientId);
             aMessage.Complete(KErrNone);
             break;
 
@@ -128,11 +123,11 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
             break;
 
         case EGOomMonitorRequestOptionalRam:
-            if (!iRequestFreeRam.IsNull() && !Server().Monitor().IsSafeToProcessNewRequest(clientId))
+            if (!iRequestFreeRam.IsNull() && !Server().Monitor().IsSafeToProcessNewRequest(iClientId))
                 {
                 aMessage.Complete(KErrInUse);
                 }
-            Server().Monitor().SetActiveClient(clientId);
+            Server().Monitor().SetActiveClient(iClientId);
             // message will be completed when CloseAppsFinished() is called.
             iRequestFreeRam = aMessage;
             iMinimumMemoryRequested = aMessage.Int1();

@@ -205,7 +205,7 @@ public:
     TInt FindClientWindowGroupId( TInt aScreenNumber, CHuiControlGroup& aControlGroup );
     TInt FindWindowGroupNodeId( TInt aScreenNumber, CHuiControlGroup& aControlGroup ) const;
     
-    void RemoveAllTemporaryPresenterVisuals();
+    void CleanAllFxVisuals();
 
     /**
      * Helper function to abort fullscreen effect
@@ -304,7 +304,20 @@ public:
     TBool GfxTriggerEffectWhenFullScreenDrawn(CHuiControlGroup* aToGroup = NULL);
     
 	// Experimental
-    TBool IsFullScreenDrawn( TInt aOrientation);
+	TBool IsLayoutSwitchReady( TInt aDuration );
+    TBool IsLayoutSwitchReadyRecursive(
+            CHuiLayout* aLayout,
+            CHuiControlGroup& aControlGroup,
+            CHuiControl& aControl,
+            TBool& aFullscreenCovered, 
+            const TRect& aFullscreen,
+            CAlfScreen* aScreen,
+            TBool aChildCanBeOpaque, 
+            TBool aOnlyForEmbeddedAlfApp,
+            TInt aOrientation,
+            TInt aDuration,
+            TBool& aCoverageRegionModified );
+
 	
     void LayoutSwitchStart();
     void LayoutSwitchComplete();
@@ -442,14 +455,14 @@ private:
     TBool SetupEffectLayoutContainerL(TInt aHandle,CHuiLayout* aSourceLayout, TBool aIsFullScreenEffect, TBool aIsExitEffect, TBool aCanDestroyOrHideImmediately);
 
     /*
-     *	AddEffectItemL
+     *	AddFxItemL
 	 *
 	 *	Prepares visual for the effect. Removes previous effect if necessary. @aItemDestroyed will return EFalse,
 	 *	if the visual has been destroyed during the previous effect.
 	 *	
 	 *	@param	aItemDestroyed	
      */
-    CHuiCanvasVisual* AddEffectItemL(
+    CHuiCanvasVisual* AddFxItemL(
             TInt aEffectHandle,
             CHuiVisual* aSourceVisual, 
             CHuiLayout* aTargetLayout, 
@@ -482,14 +495,14 @@ private:
     void ListFamilyTreeL( RPointerArray<CHuiLayout>& aArray, const CHuiLayout* aLayout );
 
     /*
-     * RemoveTemporaryPresenterItem
+     * CleanFxItem
      * 
      * Effects are shown indirectly by a another visual, that is in iFullScreenEffect control group. 
      * This methods unbinds the external content and the removes temporary presenter visual 
 	 * from iFullScreenEffect group and . It does not delete the CHuiFxEffect 
 	 * object associated with the content visual. See also iEffectCleanupStack.  
      */
-    TBool RemoveTemporaryPresenterItem(TEffectCleanupStruct& aEffectItem);
+    TBool CleanFxItem(TEffectCleanupStruct& aEffectItem);
 
     /*
      * FindTemporaryPresenterLayout
@@ -544,21 +557,21 @@ private:
 	*/
     TInt FindEffectHandle(CHuiVisual* aVisual);
     /*
-     * RemoveTemporaryPresenterVisual
+     * CleanFxVisual
      * 
      * Effects are shown indirectly by a another visual, that is in iFullScreenEffect control group. 
      * This methods unbinds the external content and the removes temporary presenter visual 
 	 * from iFullScreenEffect group and . It does not delete the CHuiFxEffect 
 	 * object associated with the content visual. See also iEffectCleanupStack.  
      */
-    TBool RemoveTemporaryPresenterVisual(CHuiVisual* aVisual, TInt aHandle = KErrNotFound);
+    TBool CleanFxVisual(CHuiVisual* aVisual, TInt aHandle = KErrNotFound);
     
     /*
-     *	RemoveTemporaryPresenterVisuals
+     *	CleanFxVisuals
      *	
      *	See above. 
      */
-    TBool RemoveTemporaryPresenterVisuals();
+    TBool CleanFxVisuals();
     
 	void HandleNewWindowL( TAlfBridgerData& aData );
 	
@@ -609,6 +622,7 @@ private:
     void HandleSetLayoutSwitchEffectL();
 	
     void ClearCanvasVisualCommandSets(TBool aInactiveOnly);
+    static void ClearCanvasVisualCommandSetsRecursive(CHuiCanvasVisual* aVisual, TBool aInactiveOnly);
     
     void ClipVisualRect(TRect& aRect, const TRect& aClippingRect);
 
@@ -930,7 +944,7 @@ public:
     RArray<TEffectCleanupStruct> iEffectCleanupStack;
     
     // Same as iEffectCleanupStack, but only the ones that can be now cleaned away.
-    // See method RemoveTemporaryPresenterVisuals.
+    // See method CleanFxVisuals.
     RArray<TInt> iFinishedCleanupStackEffects;
     
 	
@@ -938,9 +952,18 @@ public:
      * Full screen effect state.
      * Own.
      */
-    CFullScreenEffectState* iFullScreenEffectData;
+    CFullScreenEffectState* iFSFxData;
     
-    CFullScreenEffectState* iSecondaryFullScreenEffectData;
+    /**
+     *  Long app start effect consists of two effects. The app_start_long.fxml is 
+     *  applied after a short timeout. Then system waits the EndFullScreen event is
+     *  received or heuristics determine that new application has drawn itself 
+     *  properly. When application is drawn, the original requested effect is applied. 
+     *  
+     *  iFSFXDataPart2 defines the original requested effect, while iFSFxData
+     *  is used to define the coming or ongoing fullscreen app start effect.
+     */
+    CFullScreenEffectState* iFSFXDataPart2;
     
     /**
      * Control effect state.
@@ -1032,6 +1055,8 @@ private:
     mutable RRegionBuf<KAlfBridgeRegionGranularity> iTempVisualRegion;
     mutable RRegionBuf<KAlfBridgeRegionGranularity> iTempIntersectingRegion;
     mutable RRegionBuf<KAlfBridgeRegionGranularity> iTempRegion;
+    mutable RRegionBuf<KAlfBridgeRegionGranularity> iTempRegion2;
+    
     TBool iBgSurfaceFound;
     TBool iInLowMemMode;
     TBool iLayoutSwitchInProgress;

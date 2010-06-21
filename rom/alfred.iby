@@ -71,12 +71,13 @@ file=ABI_DIR\BUILD_DIR\!ftokenserver.exe                        PROGRAMS_DIR\!ft
 // Stub sis file
 data=ABI_DIR\BUILD_DIR\uiaccelerator_stub.sis system\install\uiaccelerator_stub.sis
 
-//#ifdef HUI_FX
 // For testing purposes we put our manifest file into the rom.
 // 101f84b9.sel file should be put to rom by aknskins even if we override the file during build.
 // After aknskins has taken over 101f84b9.sel and manifest.mf, we should no longe export them
 // or put them onto the rom.
 
+#ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+#ifndef ALF_USE_OPENWF_COMPOSITION
 data=DATAZ_/RESOURCE_FILES_DIR/effects/manifest.mf RESOURCE_FILES_DIR/effects/manifest.mf
 
 // Effect fxmls. Keep the list in alphabetical order. When updating the list below, REMEMBER TO ALSO UPDATE core_exports.inc!
@@ -172,15 +173,8 @@ data=DATAZ_/RESOURCE_FILES_DIR/effects/waitnote_disappear.fxml RESOURCE_FILES_DI
 data=DATAZ_/RESOURCE_FILES_DIR/effects/warningnote_appear.fxml RESOURCE_FILES_DIR/effects/warningnote_appear.fxml
 data=DATAZ_/RESOURCE_FILES_DIR/effects/warningnote_disappear.fxml RESOURCE_FILES_DIR/effects/warningnote_disappear.fxml
 
-
-// No actual effect files are included into the rom by default.
-// For testing the effect files can be put onto a memory card into
-// /resource/effectst/ directory.
-// As long as the testing override is in effect, this directory is used for the effects.
-// Only if an effect file is not found on the memory card will the one in rom be used.
-// see the filenames used in the manifest.mf file or change the manifest.mf before ROM imgage is built
-
-//#endif
+#endif // SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+#endif // ALF_USE_OPENWF_COMPOSITION
 
 file=ABI_DIR\BUILD_DIR\backgroundanimhost.exe PROGRAMS_DIR\backgroundanimhost.exe
 file=ABI_DIR\BUILD_DIR\bga_reference_plugin.dll SHARED_LIB_DIR\bga_reference_plugin.dll

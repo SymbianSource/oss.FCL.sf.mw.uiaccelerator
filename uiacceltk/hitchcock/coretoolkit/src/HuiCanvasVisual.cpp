@@ -872,7 +872,8 @@ EXPORT_C void CHuiCanvasVisual::SetTrackCommandSet( TFileName& aFileName, TBool 
     iCanvasVisualData->iCanvasPainter->SetTrackCommandSet( aFileName, aTrack || iTrackVisual );
     }
 #else
-EXPORT_C void CHuiCanvasVisual::SetTrackCommandSet( TFileName&, TBool){
+EXPORT_C void CHuiCanvasVisual::SetTrackCommandSet( TFileName&, TBool)
+    {
     }
 #endif
 

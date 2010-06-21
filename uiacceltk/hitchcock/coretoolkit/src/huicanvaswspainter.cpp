@@ -44,6 +44,7 @@
 #ifdef HUI_DEBUG_TRACK_DRAWING
 #include "alfloggingconfiguration.h"
 #include "alfcommanddebug.h"
+#include "huistatictlsdata.h"
 #endif
 #include <e32cmn.h>
 #include <AknLayoutFont.h>
@@ -126,13 +127,16 @@ void CHuiCanvasWsPainter::ConstructL()
         // Never happens, right.
         }
     
-    iWsCommandBufferReader = new (ELeave) CHuiCanvasCmdBufferReader();    
-#ifdef HUI_DEBUG_TRACK_DRAWING
-    iCommandDebugger = CAlfCommandDebug::NewL();
-    CHuiCanvasWsGc* realGc = iCanvasWsGc;
-    iCanvasWsGc = CHuiCanvasDebugWsGc::NewL( realGc, *iCommandDebugger );
+    iWsCommandBufferReader = new (ELeave) CHuiCanvasCmdBufferReader(); 
     
-#endif
+    #ifdef HUI_DEBUG_TRACK_DRAWING
+    if (!iCanvasDebugWsGc)
+        {
+        iCanvasDebugWsGc = CHuiCanvasDebugWsGc::NewL( iCanvasWsGc, *TTlsData::CommandDebugger() );
+        iCanvasWsGc = iCanvasDebugWsGc;
+        }
+    
+    #endif
     }
 
 
@@ -157,7 +161,7 @@ CHuiCanvasWsPainter::~CHuiCanvasWsPainter()
     iTempCurrentSubRegion.Close();
     iTempIntersectingRegion.Close();
 #ifdef HUI_DEBUG_TRACK_DRAWING
-    delete iCommandDebugger;
+    delete iCanvasDebugWsGc;
 #endif
     iFullUpdateRegion.Close();
     iShapeRegion.Close();
@@ -767,7 +771,7 @@ void CHuiCanvasWsPainter::DoHandleBufferL(TInt aIndex, TRect& aDisplayRect, TInt
             }
         }
 
-    iCommandDebugger->StartFrame();
+    TTlsData::CommandDebugger()->StartFrame();
     if ( commandBuffer->iProcessName )
         {
         // UNCOMMENT THIS IF YOU WANT TO PRINT EVERYTHING
@@ -803,7 +807,7 @@ void CHuiCanvasWsPainter::DoHandleBufferStringL(TInt aIndex, TRect& /*aDisplayRe
         {
         command = readerStream.ReadUint8L();
 #ifdef HUI_DEBUG_TRACK_DRAWING
-        iCommandDebugger->SetDescription( command );
+        TTlsData::CommandDebugger()->SetDescription( command );
 #endif
 
 		// Command cases are ordered approximately in the order so that most common ones are at first
@@ -1292,7 +1296,7 @@ void CHuiCanvasWsPainter::DoHandleBufferStringL(TInt aIndex, TRect& /*aDisplayRe
        	
         } while( offset < bufLength );
 #ifdef HUI_DEBUG_TRACK_DRAWING
-    iCommandDebugger->EndFrame();
+    TTlsData::CommandDebugger()->EndFrame();
 #endif    
     }
     
@@ -2146,7 +2150,7 @@ void CHuiCanvasWsPainter::WsSetUpdateRegionL(TInt aIndex)
     if (aIndex==-1) return; //TP
     // Update region is modified when new buffers are added after this buffer, 
     // so store the region only at first read. 
-    if (iCommandBuffers[aIndex]->iChanged && iCommandBuffers[aIndex]->iUpdateRegion.Count() == 0)
+    if (iCommandBuffers[aIndex]->iChanged && iCommandBuffers[aIndex]->iOriginalUpdateRegion.Count() == 0)
         {
         // Check first that the coordiates are not insane (sometimes thay are)
         TInt count = iTempRegion.Count();                    
@@ -2758,8 +2762,16 @@ void CHuiCanvasWsPainter::SelectGcL()
         }
 
     #ifdef HUI_DEBUG_TRACK_DRAWING
-    CHuiCanvasWsGc* realGc = iCanvasWsGc;
-    iCanvasWsGc = CHuiCanvasDebugWsGc::NewL( realGc, *iCommandDebugger );
+    if (!iCanvasDebugWsGc)
+        {
+        iCanvasDebugWsGc = CHuiCanvasDebugWsGc::NewL( iCanvasWsGc, *TTlsData::CommandDebugger() );
+        }
+    else if(iCanvasWsGc!=iCanvasDebugWsGc) 
+        {
+        iCanvasDebugWsGc->SetInternalGc(iCanvasWsGc);
+        }
+    
+    iCanvasWsGc = iCanvasDebugWsGc;
     #endif
     
     AMT_MAP_CANVAS_WS_PAINTER_SELECT_GC();

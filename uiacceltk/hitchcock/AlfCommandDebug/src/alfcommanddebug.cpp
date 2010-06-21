@@ -28,6 +28,7 @@
 #include "alfcommanddebug.h"
 #include <data_caging_path_literals.hrh>
 #include <alfcommanddescriptions.rsg>    
+#include <alfbridgecommands.h>
 #include <gdi.h>
 #include <uiacceltk/HuiStatic.h>
 
@@ -45,6 +46,66 @@ EXPORT_C CAlfCommandDebug* CAlfCommandDebug::NewL()
     CleanupStack::Pop();
     return self;
     }
+
+// ---------------------------------------------------------------------------
+// destructor
+//
+// Note, you can enable iPrintStatistics at run-time in debugger  
+// ---------------------------------------------------------------------------
+//
+EXPORT_C CAlfCommandDebug::~CAlfCommandDebug()
+    {
+    TInt test1 = 0;
+    TInt testCount1 = iCommandDescriptions->Count();
+    
+    THashMapIter <TUint32,TCommand> ptrHashSetIter(*iCommandDescriptions);
+     for ( ; ; )        
+         {        
+         const TCommand* resNext = ptrHashSetIter.NextValue();        
+         if (!resNext)            
+             {             
+             break;            
+             }  
+         //RDebug::Print(_L("!!HV: ~CAlfCommandDebug. DELETE: command.iDescription=%S (0x%x)"), 
+         //        resNext->iDescription, resNext->iDescription);
+         delete resNext->iDescription;
+         test1++;
+         }
+
+    if (test1 != testCount1)
+        {
+        RDebug::Print(_L("CAlfCommandDebug::~CAlfCommandDebug(). Mismatch in iCommandDescriptions delete: deleted=%d, array count=%d"), test1, testCount1);
+        }
+
+    TInt test2 = 0;
+    TInt testCount2 = iBridgeCommandDescriptions->Count();
+    
+    THashMapIter <TUint32,TCommand> ptrHashSetIter2(*iBridgeCommandDescriptions);
+     for ( ; ; )        
+         {        
+         const TCommand* resNext = ptrHashSetIter2.NextValue();        
+         if (!resNext)            
+             {             
+             break;            
+             }  
+         //RDebug::Print(_L("!!HV: ~CAlfCommandDebug. DELETE2: command.iDescription=%S (0x%x)"), 
+         //        resNext->iDescription, resNext->iDescription);
+         delete resNext->iDescription;
+         test2++;
+         }
+  
+    if (test2 != testCount2)
+        {
+        RDebug::Print(_L("CAlfCommandDebug::~CAlfCommandDebug(). Mismatch in iBridgeCommandDescriptions delete: deleted=%d, array count=%d"), test2, testCount2);
+        }
+    
+    iCommandDescriptions->Close();
+    iBridgeCommandDescriptions->Close();
+    
+    delete iCommandDescriptions;
+    delete iBridgeCommandDescriptions;
+    }
+
 
 // ---------------------------------------------------------------------------
 // ConstructL
@@ -158,7 +219,20 @@ void CAlfCommandDebug::ReadCommandDescriptionsL( RHashMap<TUint32,TCommand>* aDe
             TCommand command;
             command.iDescription = reader.ReadHBufC16L();
 
-            aDescriptionArray->Insert(commandId, command);
+            TCommand* commandPtr = NULL;
+            commandPtr = aDescriptionArray->Find(commandId);
+            if (commandPtr==NULL)
+                {
+                aDescriptionArray->Insert(commandId, command);
+                //RDebug::Print(_L("!!HV: CAlfCommandDebug::ReadCommandDescriptionsL. INSERT: commandId=%d, command.iDescription=%S (0x%x)"), 
+                //        commandId, command.iDescription, command.iDescription);
+                }
+            else
+                {
+                RDebug::Print(_L("!!HV: CAlfCommandDebug::ReadCommandDescriptionsL. ERROR. Duplicate command descriptions in the resource file! Skip the latter description. commandId=%d, command.iDescription=%S"),
+                        commandId, command.iDescription); 
+                delete command.iDescription;
+                }
             }
         CleanupStack::PopAndDestroy(readData);
         }
@@ -440,17 +514,6 @@ EXPORT_C void CAlfCommandDebug::PrintStatistic()
 EXPORT_C void CAlfCommandDebug::SetPrint( TBool aPrint )
     {
     iPrint = aPrint;
-    }
-
-// ---------------------------------------------------------------------------
-// destructor
-//
-// Note, you can enable iPrintStatistics at run-time in debugger  
-// ---------------------------------------------------------------------------
-//
-EXPORT_C CAlfCommandDebug::~CAlfCommandDebug()
-    {
-    delete iCommandDescriptions;
     }
 
 // ---------------------------------------------------------------------------

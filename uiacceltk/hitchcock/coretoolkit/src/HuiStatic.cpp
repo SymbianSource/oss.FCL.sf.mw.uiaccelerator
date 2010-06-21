@@ -33,7 +33,10 @@
 #include <bidivisual.h>
 #include "alfappfwproxyops.h"
 
-
+#ifdef HUI_DEBUG_TRACK_DRAWING
+#include "alfloggingconfiguration.h"
+#include "alfcommanddebug.h"
+#endif
 
 // Global writeable data, used in HW instead of TLS which relatively slow
 #ifndef __WINSCW__
@@ -388,6 +391,11 @@ void CHuiStatic::ConstructL(CHuiEnv* aPrimaryEnv)
     //Register for environment change ( here system time change ) event notification
     iChangeNotifier = CEnvironmentChangeNotifier::NewL(0, TCallBack(CHuiStatic::SettingChangedCallBack, this));
     iChangeNotifier->Start();
+    
+#ifdef HUI_DEBUG_TRACK_DRAWING
+    iData->iCommandDebugger = CAlfCommandDebug::NewL();
+#endif
+    
 #ifndef __WINSCW__
     globalWriteableData = *iData;
     #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
@@ -412,6 +420,11 @@ void CHuiStatic::ConstructL(CHuiEnv* aPrimaryEnv)
 
 CHuiStatic::~CHuiStatic()
     {
+#ifdef HUI_DEBUG_TRACK_DRAWING
+    delete iData->iCommandDebugger;
+    iData->iCommandDebugger = NULL;
+#endif
+
     if(iData)
         {
         if(iData->iFakeProbe)

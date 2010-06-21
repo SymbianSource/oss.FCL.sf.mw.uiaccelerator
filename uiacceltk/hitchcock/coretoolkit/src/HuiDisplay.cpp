@@ -191,6 +191,8 @@ void CHuiDisplay::ConstructL(const TRect& aRect, CHuiRoster* aSharedRoster)
     // full display refresh in many cases -> better performance.
     iGc->EnableTransformedClippingRects(iUseTransformedDirtyRegions);
 
+    iDisplaySizeChangePending = EFalse;
+    
     HUI_DEBUG1(_L("CHuiDisplay::ConstructL - Free memory when exiting ConstructL: %i"), HuiUtil::FreeMemory());
     }
 
@@ -1608,6 +1610,18 @@ void CHuiDisplay::SetAlfContentChanged(TBool aChanged)
 TBool CHuiDisplay::AlfContentChanged()
     {
     return iDisplayContainsChangedAlfContent;
+    }
+
+EXPORT_C void CHuiDisplay::SetSkinSizeChangePending()
+    {
+    iDisplaySizeChangePending = ETrue;
+    }
+
+TBool CHuiDisplay::QueryAndResetSkinSizeChangePendingStatus()
+    {
+    TBool ret = iDisplaySizeChangePending;
+    iDisplaySizeChangePending = EFalse;
+    return ret;
     }
 
 void CHuiDisplay::ClipDirtyRect(TRect& aRect, TRect aClippingRect)
