@@ -1069,7 +1069,7 @@ EXPORTS
 	_ZTI26CAlfAverageMappingFunction @ 1068 NONAME ; #<TI>#
 	_ZTI27CAlfConstantMappingFunction @ 1069 NONAME ; #<TI>#
 	_ZTI9CAlfBrush @ 1070 NONAME ; #<TI>#
-	_ZTIN20CAlfCommandScheduler11CTimedEventE @ 1071 NONAME ; #<TI>#
+	_ZTIN20CAlfCommandScheduler11CTimedEventE @ 1071 NONAME ABSENT ; #<TI>#
 	_ZTV10CAlfLayout @ 1072 NONAME ; #<VT>#
 	_ZTV10CAlfVisual @ 1073 NONAME ; #<VT>#
 	_ZTV11CAlfControl @ 1074 NONAME ; #<VT>#
@@ -1108,7 +1108,7 @@ EXPORTS
 	_ZTV26CAlfAverageMappingFunction @ 1107 NONAME ; #<VT>#
 	_ZTV27CAlfConstantMappingFunction @ 1108 NONAME ; #<VT>#
 	_ZTV9CAlfBrush @ 1109 NONAME ; #<VT>#
-	_ZTVN20CAlfCommandScheduler11CTimedEventE @ 1110 NONAME ; #<VT>#
+	_ZTVN20CAlfCommandScheduler11CTimedEventE @ 1110 NONAME ABSENT ; #<VT>#
 	_ZThn32_N11CAlfControl11OfferEventLERK9TAlfEvent @ 1111 NONAME ; #<thunk>#
 	_ZThn40_NK19CAlfCurvePathLayout25MappingFunctionIdentifierEv @ 1112 NONAME ; #<thunk>#
 	_ZThn40_NK19CAlfCurvePathLayout8MapValueEfi @ 1113 NONAME ; #<thunk>#
