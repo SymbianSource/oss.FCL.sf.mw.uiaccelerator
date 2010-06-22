@@ -27,6 +27,8 @@
 #include "goomwindowgrouplist.h"
 #include "goomtraces.h"
 
+#define ALWAYS_SW_REND 0	//enable only for testing purpose - will force sw rendering no matter what
+
 // ---------------------------------------------------------
 // CMemoryMonitor
 // ---------------------------------------------------------
@@ -56,6 +58,12 @@ public:
             EGOomTriggerRequestMemory,
             EGOomTriggerThresholdCrossed
             };
+    
+    enum TGOomMemMode
+        {
+        EGOomGoodMemMode = 0,
+        EGOomLowMemMode
+        };
 
 public: // event handlers
     void FreeMemThresholdCrossedL(TInt aAction = 0, TInt aThreshold = 0);
@@ -91,9 +99,10 @@ public: // event handlers
     void SessionInCriticalAllocation(TBool aPostponeMemGood, TUint aClientId)
         {
         FUNC_LOG;
+        TInt oldCount = iClientsRequestingMemory.Count();
+        
         if (aPostponeMemGood)
             {
-            iPostponeMemGood++;
             if(iClientsRequestingMemory.Find(aClientId) == KErrNotFound)
                 iClientsRequestingMemory.Append(aClientId);
             
@@ -101,21 +110,20 @@ public: // event handlers
             }
         else
             {
-            iPostponeMemGood--;
+            if(aClientId == 0)
+                {
+                iClientsRequestingMemory.Reset();
+                }
+            
             TInt idx = iClientsRequestingMemory.Find(aClientId);
             if(idx != KErrNotFound)
                 {
                 iClientsRequestingMemory.Remove(idx);
                 TRACES2("SessionInCriticalAllocation : ENDING Critical Allocations for Client %x, ClientsRequestingMemory Count %d", aClientId, iClientsRequestingMemory.Count());
                 }
-            
-             if(iPostponeMemGood<0)
-                {
-                iPostponeMemGood = 0;
-                }
             }
         TRACES1("SessionInCriticalAllocation : ClientsRequestingMemory Count %d", iClientsRequestingMemory.Count());    
-        if (iClientsRequestingMemory.Count() == 0)
+        if (oldCount && iClientsRequestingMemory.Count() == 0)
             {
             DoPostponedMemoryGood();
             }
@@ -126,12 +134,13 @@ public: // event handlers
     
     TBool NeedToPostponeMemGood()
         {
-        //return (iPostponeMemGood != 0);
         return (iClientsRequestingMemory.Count() != 0);
         } 
     
     void WaitAndSynchroniseMemoryState();
     void SynchroniseMemoryState();
+    
+    void SwitchMemMode(TGOomMemMode aMemMode);
     
 private:
     CMemoryMonitor();
@@ -201,13 +210,19 @@ private: //data
     CGoomThresholdCrossed* iMemAllocationsGoingDown;
     
     TInt iForegroundAppUid;
-    TInt iPostponeMemGood;
     
     RArray<TUint> iClientsRequestingMemory;
     
     TGOomTrigger iTrigger;
     
     CGOomSynchTimer* iSynchTimer;
+    
+    TBool iMemMode;
+    TBool iForegroundAppHasChanged;
+    
+    TInt iRendswitched;
+    
+    RArray<TInt> iLowOnMemWgs;
     };
 
 

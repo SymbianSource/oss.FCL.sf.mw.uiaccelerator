@@ -17,14 +17,15 @@
 
 
 #include "goomactionref.h"
+#include "goomrunplugin.h"
 
 TActionRef::TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMode, TInt aRamEstimate, CGOomRunPlugin& aRunPlugin, TUint aWgIndexOfTargetApp)
-    : iType(aType), iPriority(aPriority), iSyncMode(aSyncMode), iRamEstimate(aRamEstimate), iWgIndex(aWgIndexOfTargetApp), iRunPlugin(&aRunPlugin)
+    : iType(aType), iPriority(aPriority), iSyncMode(aSyncMode), iRamEstimate(aRamEstimate), iWgIndex(aWgIndexOfTargetApp), iRunPlugin(&aRunPlugin), iAppPlugin(0)
     {   
     }
 
 TActionRef::TActionRef(TActionType aType, TInt aPriority, TGOomSyncMode aSyncMode, TInt aRamEstimate, TInt aWgId, TUint aWgIndex, TInt aCloseTimeout, TInt aWaitAfterClose)
-: iType(aType), iPriority(aPriority), iSyncMode(aSyncMode), iRamEstimate(aRamEstimate), iWgId(aWgId), iWgIndex(aWgIndex), iRunPlugin(NULL), iCloseTimeout(aCloseTimeout), iWaitAfterClose(aWaitAfterClose)
+: iType(aType), iPriority(aPriority), iSyncMode(aSyncMode), iRamEstimate(aRamEstimate), iWgId(aWgId), iWgIndex(aWgIndex), iRunPlugin(NULL), iCloseTimeout(aCloseTimeout), iWaitAfterClose(aWaitAfterClose), iAppPlugin(0)
     {   
     }
 
@@ -78,3 +79,16 @@ CGOomRunPlugin& TActionRef::RunPlugin()
     {
     return *iRunPlugin;
     }
+
+TBool TActionRef::IsRunning()
+    {
+    if (iRunPlugin)
+        {
+        return iRunPlugin->IsRunning();
+        }
+    else if (iAppPlugin)
+        {
+        return iAppPlugin->IsRunning();
+        }
+    return EFalse;
+    }         

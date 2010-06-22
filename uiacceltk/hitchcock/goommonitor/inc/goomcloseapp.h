@@ -71,6 +71,10 @@ public:
 
     inline TUint WgId() const;
     
+    
+    /** Ask nice */
+    void ConditionalClose();
+    
     /** When the gentle push is not enough (i.e. force is required) **/
     void KillTask();
     
@@ -100,6 +104,8 @@ private:
      * Own
      */
     CGOomAppCloseWatcher* iAppCloseWatcher; 
+    
+    TBool iAlreadyGaveUp;
     };
 
 #include "goomcloseapp.inl"
