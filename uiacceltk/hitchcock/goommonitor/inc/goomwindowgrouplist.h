@@ -91,7 +91,7 @@ public:
             }
         }
 
-    
+    TInt FindParentIdL(TInt aWgId);    
     
 private:    
 
@@ -99,7 +99,6 @@ private:
     
     void RemovePropertiesForClosedWindowsL();
 
-    TInt FindParentIdL(TInt aWgId);
 
 private:
     

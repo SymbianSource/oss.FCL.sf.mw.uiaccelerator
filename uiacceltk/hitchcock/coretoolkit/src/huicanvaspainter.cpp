@@ -254,10 +254,22 @@ TRect CHuiCanvasPainter::CommandBufferCoverage(TInt aOrientation)
         {        
         if (iCommandBuffers[cb]->iOrientation == aOrientation)
             {
-            // should this be original display rect or update region
-            tempRegion.AddRect(iCommandBuffers[cb]->iOriginalDisplayRect);
+            // add update region of command buffer to region
+            TRect rect(iCommandBuffers[cb]->iOriginalUpdateRegion.BoundingRect());
+            rect.Move(-iCommandBuffers[cb]->iOriginalDisplayRect.Round().iTl);
+            
+            tempRegion.AddRect(rect);
+            tempRegion.Tidy();
             }
         }    
+    
+    if (iCanvasVisual)
+        {
+        TRect displayRect(iCanvasVisual->DisplayRect());
+        tempRegion.ClipRect(TRect(displayRect.Size()));
+        tempRegion.Offset(displayRect.iTl);
+        }
+
     TRect result = tempRegion.BoundingRect();
     tempRegion.Close();
     return result;

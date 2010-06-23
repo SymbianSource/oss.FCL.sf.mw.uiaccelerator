@@ -223,7 +223,7 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
 		    else
 		        {
 	            action = inStream.ReadUint32L();
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
 	            TRect effectRect( inStream.ReadInt32L(),
@@ -247,13 +247,13 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
 		        }
             break;
         case MAlfGfxEffectPlugin::EEndFullscreen:
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
             iEngine->EndFullscreen(EFalse); // not timeout, but official endfullscreen
             break;
         case MAlfGfxEffectPlugin::EAbortFullscreen:
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING
     PrintRequestInfo( op, action);
 #endif    
 
@@ -272,7 +272,7 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
                 // we have enough information.
                 {
                 action = inStream.ReadUint32L();
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
                 
@@ -298,7 +298,7 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
         case MAlfGfxEffectPlugin::ETfxServerOpAddFullscreenKMLEx:
             {
             action = inStream.ReadUint32L();
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
 
@@ -873,7 +873,8 @@ TInt CAlfGfxEffects::VerifyResourceLocation(const TDesC& aResourceDir)
 	__ALFFXLOGSTRING("CAlfGfxEffects::VerifyResourceLocation - return KErrNotSupported <<");
 	return KErrNotSupported;
 	}
-#ifdef _DEBUG
+
+#ifdef _ALF_FXLOGGING
 void CAlfGfxEffects::PrintRequestInfo(TInt aOperation, TInt aAction )
     {
     HBufC16* buffer = HBufC16::NewL(256);

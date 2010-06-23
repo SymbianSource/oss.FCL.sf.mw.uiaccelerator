@@ -53,13 +53,13 @@ EXPORT_C TAlfTimedValue::TAlfTimedValue(TReal32 aTargetValue, TInt aTime) __SOFT
     }
     
     
-EXPORT_C void TAlfTimedValue::SetValueNow(const TReal32& aValueNow)
+EXPORT_C void TAlfTimedValue::SetValueNow(const TReal32& aValueNow) __SOFTFP
     {
     iFlags |= EAlfValueNowChanged;    
     iValueNow = aValueNow;
     }
     
-EXPORT_C void TAlfTimedValue::SetTarget(const TReal32& aTarget, TInt aTime)
+EXPORT_C void TAlfTimedValue::SetTarget(const TReal32& aTarget, TInt aTime) __SOFTFP
     {
     iFlags |= EAlfValueTargetChanged;    
     iValueTarget = aTarget;

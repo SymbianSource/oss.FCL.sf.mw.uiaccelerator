@@ -28,6 +28,9 @@
 #include <gdi.h>
 #include "uiacceltk/HuiProbe.h"
 #include "uiacceltk/HuiEnv.h"
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+#include <graphics/wstfxconst.h>
+#endif
 
 #include <M3G/m3g_core.h>
 
@@ -196,6 +199,10 @@ EGLSurface CHuiVg10RenderSurface::CreateSurface(EGLConfig aConfig)
     if(iDisplay->NativeWindow())
         {
         HUI_DEBUG(_L("CHuiVg10RenderSurface::CreateSurface() - Attempting to create a real window surface."));
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+        RDebug::Printf("STFX: ALF_HACK CHuiVg10RenderSurface::CreateSurface()");
+        iDisplay->NativeWindow()->SetPurpose(ETfxPurposeDesktopWindow);
+#endif
         EGLSurface surf = eglCreateWindowSurface(iEglDisplay, aConfig,
                                       iDisplay->NativeWindow(), attriblistPtr);
 

@@ -159,7 +159,7 @@ class TAlfTimedValue
      *
      * @param aValueNow  New currentvalue.
      */
-    IMPORT_C void SetValueNow(const TReal32& aValueNow);
+    IMPORT_C void SetValueNow(const TReal32& aValueNow) __SOFTFP;
 
     /**
      * Gets current value.
@@ -175,7 +175,7 @@ class TAlfTimedValue
      * @param aValue            New target value.
      * @param aTime   Time duration after the target value will be in effect. Transition duration in milliseconds.
      */
-    IMPORT_C void SetTarget(const TReal32& aTarget, TInt aTime); 
+    IMPORT_C void SetTarget(const TReal32& aTarget, TInt aTime) __SOFTFP; 
 
     /**
      * Sets a new target value. The transition time depends on the speed.

@@ -244,13 +244,13 @@ void CHuiCanvasVisual::ExpandRectWithContent(TRect& aRect) const
     HandleBuffer(scannedRect, EScanBuffer, NULL); 
     
     // Note: this could be improved to take care of dirty rects 
-    if (Effect() && Display())
+    if (Effect() && Display() && CHuiEnv::Static()->MemoryLevel() != EHuiMemoryLevelLowest )
         {        
         // If there is effect enabled, we cannot say anything about dirty area so
         // we set whole screen dirty.
         scannedRect = TRect(TPoint(0,0), Display()->VisibleArea().Size());
         }
-    else if (IsBackgroundDrawingEnabled() || IsExternalContentDrawingEnabled())
+    else if (IsExternalContentDrawingEnabled())
         {
         // If the visual has external content or draws background, 
         // set always the whole window area as a content.
@@ -872,7 +872,8 @@ EXPORT_C void CHuiCanvasVisual::SetTrackCommandSet( TFileName& aFileName, TBool 
     iCanvasVisualData->iCanvasPainter->SetTrackCommandSet( aFileName, aTrack || iTrackVisual );
     }
 #else
-EXPORT_C void CHuiCanvasVisual::SetTrackCommandSet( TFileName&, TBool){
+EXPORT_C void CHuiCanvasVisual::SetTrackCommandSet( TFileName&, TBool)
+    {
     }
 #endif
 
@@ -893,7 +894,12 @@ EXPORT_C void CHuiCanvasVisual::AddCommandSetL( const TDesC8& aMoreCommands )
         PrepareCache();
         }
     
-    SetChanged();
+    // don't call setchanged directly here, as it changes all
+    // the command buffers dirty. We don't want to do that
+    // as the drawing area might be significantly smaller in
+    // some cases
+    CHuiLayout::SetChanged();
+    Env().ContinueRefresh(ETrue);
     Env().CanvasTextureCache().EnableTouchCountCheck(EFalse);    
     }
 

@@ -1999,4 +1999,9 @@ EXPORTS
 	_ZN12CHuiFxEngine16AddEffectToGroupEi @ 1998 NONAME
 	_ZN12CHuiFxEngine18FxmlUsesOpaqueHintERK7TDesC16 @ 1999 NONAME
 	_ZN22CHuiCanvasRenderBuffer11InitializeLERK5TSizei @ 2000 NONAME
+	_ZN13CAppIconCache4FindEx5TSize @ 2001 NONAME
+	_ZN13CAppIconCache5ClearEv @ 2002 NONAME
+	_ZN13CAppIconCache6InsertER17TRasterizedBitmap @ 2003 NONAME
+	_ZNK7CHuiEnv12AppIconCacheEv @ 2004 NONAME
+	_ZN11CHuiDisplay24SetSkinSizeChangePendingEv @ 2005 NONAME
 

@@ -363,11 +363,44 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
             TInt32 fgApp = wgName->AppUid().iUid;
             TInt32 appId = iMonitor.GetWindowGroupList()->AppIdfromWgId(ref.WgId(), ETrue);
             
-            CleanupStack::PopAndDestroy();
+            
             if(appId == fgApp)
                 {
                 TRACES1("Foreground App wgid %x, spared by GOOM", appId);
                 
+                iCurrentActionIndex++;
+                CleanupStack::PopAndDestroy();
+                continue;
+                }
+            
+            //check if this is not parent of foreground app
+            TBool spared = EFalse;
+            TRACES1("CGOomActionList::FreeMemory - Going to kill Appid %x ",appId);
+            TInt prevWgId = 0;
+            while(prevWgId != KErrNotFound)
+                {
+                wgName->FindByAppUid(wgName->AppUid(), iWs, prevWgId);
+                
+                if(prevWgId == KErrNotFound)
+                    break;
+                
+                TInt parentId = 0;
+                TRAPD(err, parentId = iMonitor.GetWindowGroupList()->FindParentIdL(prevWgId));
+                TRACES2("CGOomActionList::FreeMemory - Foreground App wgid %d, parent wgid %d",prevWgId, parentId);
+                if( err == KErrNone && parentId != 0)
+                    {
+                    TInt32 parentAppId = iMonitor.GetWindowGroupList()->AppIdfromWgId(parentId, ETrue);       
+                    if(parentAppId == appId)
+                        {
+                        TRACES3("Parent App %x (wgId %d), of Foreground App %x, spared by GOOM", parentAppId, parentId, fgApp);
+                        spared = ETrue;
+                        break;
+                        }
+                    }
+                }
+            CleanupStack::PopAndDestroy();
+            if(spared)
+                {
                 iCurrentActionIndex++;
                 continue;
                 }

@@ -612,6 +612,15 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
         }
     else
         {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+        if (iFramesDrawn == 1)
+            {
+            // This is about the time when first frame from the effect is on screen
+            TTime endTime;
+            endTime.UniversalTime();
+            AMT_ADD_TIME(iHandle, endTime.Int64(), ETrue);
+            }
+#endif
         iRoot->AdvanceTime(aElapsedTime);
         }
     iElapsedTime += aElapsedTime;

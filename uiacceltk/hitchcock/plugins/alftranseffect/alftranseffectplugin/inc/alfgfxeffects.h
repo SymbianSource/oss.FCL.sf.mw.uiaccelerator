@@ -26,6 +26,7 @@
 #include "alftfxplugincommon.hrh"
 #include "../../../../ServerCore/Inc/alfwindowfxplugin.h"
 #include "wsserverdrawercontroller.h"
+#include "alfloggingconfiguration.h"
 
 // CONSTANTS
 const TUid KAlfGfxImplUid = { KAlfGfxImplUidValue };
@@ -117,7 +118,7 @@ private: // Construction and destruction
      	* C++ contructor
      	*/
 		CAlfGfxEffects();
-#ifdef _DEBUG		
+#ifdef _ALF_FXLOGGING		
 		void PrintRequestInfo(TInt aOperation, TInt aAction );
 #endif
 		

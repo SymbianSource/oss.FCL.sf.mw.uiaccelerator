@@ -21,6 +21,7 @@
 #include "HuiRosterImpl.h"  // Class definition
 #include "HuiRosterEntry.h"
 #include "uiacceltk/HuiEnv.h"
+#include "uiacceltk/HuiSkin.h"
 #include "uiacceltk/HuiControlGroup.h"
 #include "uiacceltk/HuiControl.h"
 #include "uiacceltk/HuiDisplay.h"
@@ -801,6 +802,12 @@ void CHuiRosterImpl::DrawNativeAppsContent(CHuiGc &aGc, CHuiDisplay* aDisplay) c
             
             if(!clearDone)
                 {
+                // also check if display size change is pending or not
+                if(display->QueryAndResetSkinSizeChangePendingStatus())
+                    {
+                    display->Env().Skin().NotifyDisplaySizeChangedL();
+                    }
+            
                 // only do clear if we really draw some alf native content
                 display->DoBackgroundClear();
                 clearDone = ETrue;

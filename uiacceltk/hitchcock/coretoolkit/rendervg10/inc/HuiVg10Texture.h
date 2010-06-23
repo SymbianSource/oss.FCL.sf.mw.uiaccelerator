@@ -160,7 +160,7 @@ public:
      * @param   aDestSize   Destination size for the VGImage
      * @return  Handle to the rasterized image or <code>VG_INVALID_HANDLE</code> if something went wrong.
      */ 
-    VGImage CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNVGData, const TSize& aDestSize);
+    VGImage CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNVGData, const TSize& aDestSize, TInt64 aSerialNumber = 0);
     
     /** 
      * Identifies whether this texture contains extended texture data
