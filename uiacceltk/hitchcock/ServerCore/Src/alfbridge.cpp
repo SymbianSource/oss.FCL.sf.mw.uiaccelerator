@@ -2718,7 +2718,7 @@ void CAlfBridge::HandleNewWindowL( TAlfBridgerData& aData )
                     viz = CHuiCanvasVisual::AddNewL(control, layout);
 				    }
 
-				__ALFFXLOGSTRING2("CAlfBridge::HandleNewWindowL visual: 0x%x, id 0x%x", viz, windowNodeId);
+				__ALFFXLOGSTRING3("CAlfBridge::HandleNewWindowL visual: 0x%x, id 0x%x, Owner group Uid: 0x%x", viz, windowNodeId, viz->Owner().ControlGroup()->SecureId());
 				AddVisual( 
 				    windowNodeId, 
 					windowAttributes->iClientHandle, 
@@ -3430,7 +3430,7 @@ void CAlfBridge::HandlePostCanvasBufferL( TAlfBridgerData& aData )
 #ifdef	USE_APPLICATION_ENDFULLSCREEN_TIMEOUT	
 	    if (iFSFxData
 	            && iFSFxData->iEffectType != CFullScreenEffectState::ENotDefinedEffect 
-	            && ((iFSFxData->State() == EWaitEndFullScreen && iFSFxData->iTwoPhaseEffect <= CFullScreenEffectState::EFirstPartRunning)))
+	            && ((iFSFxData->State() == EWaitEndFullScreen && iFSFxData->iTwoPhaseEffect <= CFullScreenEffectState::ESecondPartActive)))
 	        {
 	        CHuiControlGroup *to_group = NULL;
             if (iFSFxData->iEffectType == CFullScreenEffectState::EExitEffect)
@@ -4892,7 +4892,7 @@ void CAlfBridge::FreezeLayoutUntilEffectDestroyedL(CHuiLayout* aLayout, TInt aHa
     if (aLayout)
         {
 		TRAPD(err, StoreRenderBufferStartL(aLayout));
-		__ALFFXLOGSTRING2("CAlfBridge::FreezeLayoutUntilEffectDestroyed - StoreRenderBufferStartL call returned: %d for layout 0x%x", err, aLayout);
+		__ALFFXLOGSTRING3("CAlfBridge::FreezeLayoutUntilEffectDestroyed - Storing SecureId x%x, StoreRenderBufferStartL call returned: %d for layout 0x%x", aLayout->Owner().ControlGroup()->SecureId(), err, aLayout);
 		if (err == KErrNone)
 			{
             // Freeze only, if buffer was reserved succesfully 
@@ -6907,6 +6907,13 @@ TBool CAlfBridge::IsLayoutSwitchReady( TInt aDuration )
         if (control.Role() == EHuiFpsIndicatorContainer)
             {
             // FPS container doesn't contain canvas visuals
+            continue;
+            }
+
+        if (controlgroup.ResourceId() == iAlfWindowGroupNodeId)
+            {
+            // ALF window doesn't have drawing and it's meant to be completely semitransparent,
+            // so skip.
             continue;
             }
 

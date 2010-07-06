@@ -23,6 +23,7 @@
 #include "goomactionconfig.h"
 
 class CGOomRunPlugin;
+class CGOomAction;
 
 /**
  *  Encapsulates a reference to an action. 
@@ -61,6 +62,7 @@ public:
     CGOomRunPlugin& RunPlugin();
     TInt CloseTimeout() const;
     TInt WaitAfterClose() const;
+    TBool IsRunning();
 
 private: //data
     
@@ -73,6 +75,8 @@ private: //data
     CGOomRunPlugin* iRunPlugin; //For Plugins. Not owned
     TInt iCloseTimeout; //For AppClose
     TInt iWaitAfterClose; //For AppClose
+public:
+    CGOomAction* iAppPlugin; // because of stupid desing, not owned
     };
 
 #endif /*GOOMACTIONREF_H_*/

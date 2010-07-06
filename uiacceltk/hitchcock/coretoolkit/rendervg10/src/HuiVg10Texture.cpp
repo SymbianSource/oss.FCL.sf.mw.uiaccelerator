@@ -1387,6 +1387,7 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
             else
                 aNvgEngine->DrawNvg(GetNvgDataWithoutHeader(aNVGData), size, NULL, NULL);
             }
+#ifndef __WINS__
         // assume 32bpp for the icon, don't cache if it's too large
         TInt bitmapBytes = aDestSize.iWidth*aDestSize.iHeight*4;
         if (bitmapBytes < 128*128*4)
@@ -1416,6 +1417,7 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
                 delete rasterizedIcon;
                 }
             }
+#endif
         }
 
     // restore the old surface before restoring original modes
