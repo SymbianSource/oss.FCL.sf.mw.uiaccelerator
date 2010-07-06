@@ -225,6 +225,10 @@ private:
     
     void ConstructL(CGOomConfig& aConfig);
     
+    TBool IsOkToKillApp(TInt aAppId);
+    
+    TBool AppCloseActionAlreadyExists(CGOomWindowGroupList& aWindowGroupList, TInt32 appId);
+    
 private: //data    
     
     RWsSession& iWs;

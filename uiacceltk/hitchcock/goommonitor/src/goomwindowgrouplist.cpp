@@ -231,6 +231,7 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
                     processIds.Close();
                     privMemUsed.Close();
                     TRACES("Only WServ using GFX mem, no need for app actions");
+                    iWgIds.Reset();
                     return;
                     }
                 }

@@ -612,6 +612,7 @@ TInt CMemoryMonitor::GetFreeMemory()
 
 	/* Allocate room for the profiling data */
 	prof_data = (EGLint*)User::Alloc(data_count * sizeof(EGLint));
+	TRACES("eglQueryProfilingData - alloc for data done");
 	if (prof_data == NULL)
 	    {
     	TRACES1("eglQueryProfilingData - could not alloc: %d", data_count * sizeof(EGLint));	
@@ -625,7 +626,9 @@ TInt CMemoryMonitor::GetFreeMemory()
 							 prof_data,
 							 data_count,
 							 &data_count);
-
+	
+	TRACES("eglQueryProfilingData - profiling data acquired");
+	
 	/* Iterate over the returned data */
 	while (i < data_count)
 		{
