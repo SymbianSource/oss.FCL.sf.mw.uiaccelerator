@@ -2004,4 +2004,5 @@ EXPORTS
 	_ZN13CAppIconCache6InsertER17TRasterizedBitmap @ 2003 NONAME
 	_ZNK7CHuiEnv12AppIconCacheEv @ 2004 NONAME
 	_ZN11CHuiDisplay24SetSkinSizeChangePendingEv @ 2005 NONAME
+	_ZNK10CHuiVisual26EffectReadyToDrawNextFrameEv @ 2006 NONAME
 

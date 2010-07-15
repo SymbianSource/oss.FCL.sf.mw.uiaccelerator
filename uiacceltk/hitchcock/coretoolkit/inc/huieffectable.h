@@ -29,13 +29,17 @@ class MHuiEffectable
 public:
     virtual ~MHuiEffectable() { }
     virtual void EffectSetEffect(CHuiFxEffect* aEffect)=0;
-    virtual TReal32 EffectOpacityTarget() const=0;
-    virtual void EffectSetOpacity(TReal32 aOpacity)=0;
+    virtual TReal32 EffectOpacity() const=0;
+    // Sets the effect opacity to be given value if bigger than current. Use aReplace to set any value.
+    // This can be used to evaluate the greatest opacity of all effect layers for this effect, so that
+    // drawing can determine if effect as a whole will hide the effected visual or not
+    virtual void EffectSetOpacityAdditive(TReal32 aOpacity, TBool aReplace)=0;
     virtual void EffectDrawSelf( CHuiGc &aGc, const TRect & aDisplayRect) const=0;
     virtual THuiRealRect EffectDisplayRect() const __SOFTFP=0;
     virtual void SetLoadingEffect(TBool aLoading)=0;
     virtual void EffectSetSource( TBool aIsInput1 )=0;
     virtual TBool EffectGetSource() const=0;
+    virtual TBool EffectReadyToDrawNextFrame() const = 0;
     };
     
 #endif    

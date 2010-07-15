@@ -27,6 +27,8 @@
 #include "goomwindowgrouplist.h"
 #include "goomtraces.h"
 
+#define ALWAYS_SW_REND 0	//enable only for testing purpose - will force sw rendering no matter what
+
 // ---------------------------------------------------------
 // CMemoryMonitor
 // ---------------------------------------------------------
@@ -56,6 +58,12 @@ public:
             EGOomTriggerRequestMemory,
             EGOomTriggerThresholdCrossed
             };
+    
+    enum TGOomMemMode
+        {
+        EGOomGoodMemMode = 0,
+        EGOomLowMemMode
+        };
 
 public: // event handlers
     void FreeMemThresholdCrossedL(TInt aAction = 0, TInt aThreshold = 0);
@@ -102,6 +110,11 @@ public: // event handlers
             }
         else
             {
+            if(aClientId == 0)
+                {
+                iClientsRequestingMemory.Reset();
+                }
+            
             TInt idx = iClientsRequestingMemory.Find(aClientId);
             if(idx != KErrNotFound)
                 {
@@ -126,6 +139,8 @@ public: // event handlers
     
     void WaitAndSynchroniseMemoryState();
     void SynchroniseMemoryState();
+    
+    void SwitchMemMode(TGOomMemMode aMemMode);
     
 private:
     CMemoryMonitor();
@@ -201,6 +216,13 @@ private: //data
     TGOomTrigger iTrigger;
     
     CGOomSynchTimer* iSynchTimer;
+    
+    TBool iMemMode;
+    TBool iForegroundAppHasChanged;
+    
+    TInt iRendswitched;
+    
+    RArray<TInt> iLowOnMemWgs;
     };
 
 

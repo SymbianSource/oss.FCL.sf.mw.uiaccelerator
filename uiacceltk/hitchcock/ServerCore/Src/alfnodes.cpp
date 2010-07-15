@@ -1949,8 +1949,8 @@ void CAlfNodeGroup::WindowGroupChained( TUint32 aChainedGroup )
     if (iModel)
         {
         iModel->Server().Bridge()->AddData( EAlfDSGroupChained, 
-                iId, 
-                aChainedGroup, 
+                iGroupId, 
+                iChainedTo->iGroupId, 
                 (TAny*)iScreenNumber
                 );                
         }
@@ -1962,16 +1962,18 @@ void CAlfNodeGroup::WindowGroupChained( TUint32 aChainedGroup )
 //
 void CAlfNodeGroup::GroupChainBrokenAfter(  )
 	{
+    TUint32 oldChainedTo = 0; 
 	if ( iChainedTo )
 		{
 		iChainedTo->iChainedFrom = NULL;
+		oldChainedTo = iChainedTo->iId;
 		iChainedTo = NULL;
 		}
 	if (iModel)
 		{
 		iModel->Server().Bridge()->AddData( EAlfDSGroupChainBroken, 
+		        oldChainedTo, 
 				iId, 
-				0, 
 				(TAny*)iScreenNumber );                
 		}
 
@@ -1990,7 +1992,13 @@ CAlfNodeGroup::~CAlfNodeGroup()
     	}
     if ( iChainedFrom )
     	{
-    	iChainedFrom->iChainedTo = NULL;
+        if (iModel)
+            {
+            iModel->Server().Bridge()->AddData( EAlfDSGroupChainBroken, 
+                    iChainedFrom->iId, 
+                    iId, 
+                    (TAny*)iScreenNumber );                
+            }
     	}
     
     if (iModel)

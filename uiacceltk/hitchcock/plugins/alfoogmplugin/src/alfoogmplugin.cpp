@@ -90,10 +90,16 @@ void CAlfOogmMonitorPlugin::MemoryGood(TInt  aFlags)
 //
 TAny* CreatePlugin()
     {
-    CAlfOogmMonitorPlugin* plugin = new(ELeave) CAlfOogmMonitorPlugin;
-    CleanupStack::PushL(plugin);
-    plugin->ConstructL();
-    CleanupStack::Pop(plugin);
+    CAlfOogmMonitorPlugin* plugin = new CAlfOogmMonitorPlugin;
+    if ( plugin )
+        {
+        TRAPD( err, plugin->ConstructL() );
+        if ( err != KErrNone )
+            {
+            delete plugin;
+            plugin = NULL;
+            }
+        }
     return plugin;
     }
 

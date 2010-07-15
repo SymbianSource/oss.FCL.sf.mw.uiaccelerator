@@ -102,6 +102,8 @@ CMemoryMonitor::~CMemoryMonitor()
 #ifdef _DEBUG
     delete iLogger;
 #endif
+    
+    iClientsRequestingMemory.Close();
     }
 
 // ---------------------------------------------------------
@@ -231,8 +233,12 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
         iMemAllocationsGrowing->Stop();
         iMemAllocationsGoingDown->Continue();
-        if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood() && !iSynchTimer->IsActive() )
+        if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
+            {
+            if(iSynchTimer->IsActive())
+                iSynchTimer->Cancel();
             StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
+            }
         }
 #endif
     }
@@ -252,7 +258,7 @@ void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
     // Refresh the low and good memory thresholds as they may have changed due to the new foreground application
     RefreshThresholds(aForegroundAppUid);
     
-    if(iCurrentTarget)
+    if(iCurrentTarget || ALWAYS_SW_REND)
         {
         StartFreeSomeRamL(iCurrentTarget, EGOomTriggerFocusChanged);
         }
@@ -275,6 +281,13 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
 
     TRACES2("MemoryMonitor::StartFreeSomeRamL freeMemoryAboveTarget = %d, freeMemory = %d", freeMemoryAboveCurrentTarget, freeMemory);
 
+    if(ALWAYS_SW_REND)
+        {
+		if(iMemMode == EGOomLowMemMode)
+		return;
+		}
+	else
+		{
     if (freeMemoryAboveCurrentTarget)
         {
         /*if(freeMemory >= iGoodThreshold && !NeedToPostponeMemGood())
@@ -282,14 +295,17 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
                 iGOomActionList->MemoryGood();
             }
         */
-        if(!iGOomActionList->UseSwRendering())
+        if(!(iGOomActionList->UseSwRendering() && (iMemMode != EGOomLowMemMode)))
             {
             iServer->CloseAppsFinished(freeMemory, ETrue);
             WaitAndSynchroniseMemoryState();
-            return;
+            if(aTrigger == EGOomTriggerRequestMemory)
+                User::Leave(KErrCompletion);
+            else
+                return;
             }
         }
-
+        }
     // update wg list only when actually about to use it 
     //iGOomWindowGroupList->Refresh();
 
@@ -309,6 +325,35 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
     // Run the memory freeing actions
     iGOomActionList->FreeMemory(aMaxPriority);
     
+    SwitchMemMode(EGOomLowMemMode);
+    }
+
+void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
+    {
+    if(iMemMode == aMemMode)
+        return;
+
+#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS    
+    TWsEvent event;
+ 
+    if(aMemMode == EGOomLowMemMode)
+        {
+        iLowOnMemWgs.Reset();
+        iGOomWindowGroupList->GetListOfWindowGroupsWSurfaces(iLowOnMemWgs);
+        event.SetType(KGoomMemoryLowEvent);
+        }
+    else
+        {
+        event.SetType(KGoomMemoryGoodEvent);
+        }
+    
+    for (TInt i = iLowOnMemWgs.Count()-1; i>=0; i--)
+        {
+        iWs.SendEventToWindowGroup(iLowOnMemWgs[i], event);
+        }
+#endif
+    
+    iMemMode = aMemMode;
     }
 
 void CMemoryMonitor::RunCloseAppActions(TInt aMaxPriority)
@@ -567,6 +612,7 @@ TInt CMemoryMonitor::GetFreeMemory()
 
 	/* Allocate room for the profiling data */
 	prof_data = (EGLint*)User::Alloc(data_count * sizeof(EGLint));
+	TRACES("eglQueryProfilingData - alloc for data done");
 	if (prof_data == NULL)
 	    {
     	TRACES1("eglQueryProfilingData - could not alloc: %d", data_count * sizeof(EGLint));	
@@ -580,7 +626,9 @@ TInt CMemoryMonitor::GetFreeMemory()
 							 prof_data,
 							 data_count,
 							 &data_count);
-
+	
+	TRACES("eglQueryProfilingData - profiling data acquired");
+	
 	/* Iterate over the returned data */
 	while (i < data_count)
 		{

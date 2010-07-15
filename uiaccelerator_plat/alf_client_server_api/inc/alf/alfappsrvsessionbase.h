@@ -289,6 +289,8 @@ protected: // internal utilities
     // creates subsession
     CAlfSrvSubSessionBase* CreateSubSessionLC(const RMessage2& aMessage);
 
+    TUint SecureId();
+
 protected: // from baseclasses
 
     IMPORT_C void ServiceError(const RMessage2& aMessage,TInt aError);

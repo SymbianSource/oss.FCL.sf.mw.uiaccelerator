@@ -27,7 +27,7 @@
 #include "alftfxserverdef.h"
 #include "alftransitionserver.h"
 #include "alflogger.h"
-
+#include "alfmoduletestconf.h" 
 // ======== MEMBER FUNCTIONS ========
 
 
@@ -1198,7 +1198,11 @@ TInt CAlfTransitionServerClient::FindEffectFile( const TDesC& aResourceDir, cons
 #ifdef __WINS__
     _LIT( KOptionalDrive, "C:" );
 #else
-    _LIT( KOptionalDrive, "F:" );
+    #ifdef USE_ALTERNATIVE_EFFECTS_FROM_MMC
+         _LIT( KOptionalDrive, "F:" );
+    #else
+         _LIT( KOptionalDrive, "Z:" );
+    #endif
 #endif
     
     TInt err = KErrNone;
@@ -1215,7 +1219,6 @@ TInt CAlfTransitionServerClient::FindEffectFile( const TDesC& aResourceDir, cons
         iFile.Close();
         iParse.Set( KOptionalDrive, &aResourceDir, NULL );  
         }
-    
     // Now iParse contains the alternative path if the file is found in the alternative
     // location, else it contains the original path.
     __ALFFXLOGSTRING1("CAlfTransitionServerClient::FindEffectFile - return: %d <<", err);

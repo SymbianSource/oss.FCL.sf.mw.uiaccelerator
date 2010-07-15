@@ -76,6 +76,9 @@ public: // effect cache
     virtual void EnableMarginApplyChildren(TBool aEnable);
     TBool IsMarginEnabled() const;
     
+    // Internal
+    virtual void SetVisualContentState(TBool aChanged, TBool aOpaque);
+    
     // Internal flag to tell wheter transparency is enabled
     virtual TBool IsSemitransparent() const;
     

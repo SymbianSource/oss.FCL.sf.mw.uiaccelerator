@@ -1603,4 +1603,5 @@ EXPORTS
 	?AppIconCache@CHuiEnv@@QBEAAVCAppIconCache@@XZ @ 1602 NONAME ; class CAppIconCache & CHuiEnv::AppIconCache(void) const
 	?Find@CAppIconCache@@QAEPAVCFbsBitmap@@_JVTSize@@@Z @ 1603 NONAME ; class CFbsBitmap * CAppIconCache::Find(long long)
 	?SetSkinSizeChangePending@CHuiDisplay@@QAEXXZ @ 1604 NONAME ; void CHuiDisplay::SetSkinSizeChangePending(void)	
+	?EffectReadyToDrawNextFrame@CHuiVisual@@UBEHXZ @ 1605 NONAME ; int CHuiVisual::EffectReadyToDrawNextFrame(void) const
 

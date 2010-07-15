@@ -42,6 +42,18 @@ CGOomWindowGroupList::TGOomWindowGroupProperties::TGOomWindowGroupProperties() :
     FUNC_LOG;
     }
 
+void CGOomWindowGroupList::GetListOfWindowGroupsWSurfaces(RArray<TInt>& aLowOnMemWgs)
+    {
+    if (!iAlfClient.Handle())
+       {
+       if(iAlfClient.Connect() != KErrNone)
+           return;
+       }
+    
+    iAlfClient.GetListOfWindowGroupsWSurfaces(&aLowOnMemWgs);
+    }
+   
+
 // Update the list of window groups
 void CGOomWindowGroupList::Refresh(TBool aOptionalOnly)
     {
@@ -72,14 +84,14 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
         {
         User::LeaveIfError(iAlfClient.Connect());
         }
-    iLowOnMemWgs.Reset();
+    //iLowOnMemWgs.Reset();
     RArray<TInt> inactiveSurfaces;
 
     // ignore possible errors, we have information from profiling extension anyway
     if (!aOptionalOnly)
         {
         iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&inactiveSurfaces);    
-        iAlfClient.GetListOfWindowGroupsWSurfaces(&iLowOnMemWgs);
+        //iAlfClient.GetListOfWindowGroupsWSurfaces(&iLowOnMemWgs);
         }
     else
         { // first iteration: try to cope with window group ID's only
@@ -219,6 +231,7 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
                     processIds.Close();
                     privMemUsed.Close();
                     TRACES("Only WServ using GFX mem, no need for app actions");
+                    iWgIds.Reset();
                     return;
                     }
                 }
@@ -233,7 +246,7 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
     
     // Remove all child window groups, promote parents to foremost child position
     CollapseWindowGroupTree(inactiveSurfaces);
-    
+/*    
 #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
     TWsEvent event;
     event.SetType(KGoomMemoryLowEvent); // naive
@@ -244,7 +257,7 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
         }
         
 #endif    
-    
+*/    
     // Note the current foreground window ID (if there is one)
     TBool oldForegroundWindowExists = EFalse;
 

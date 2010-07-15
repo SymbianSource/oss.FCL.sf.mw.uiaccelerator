@@ -136,7 +136,7 @@ void CHuiFxEffectParser::RunL()
         iEffect = NULL;
         if (iVisual)
             {
-            iVisual->EffectSetOpacity(1.0f);
+            iVisual->EffectSetOpacityAdditive(1.0f, ETrue);
 #ifndef HUIFX_EFFECTCACHE_ENABLED
             iVisual->SetEffect( tempEffect );
 #endif
@@ -155,7 +155,7 @@ void CHuiFxEffectParser::RunL()
         iEffect = NULL;
         if (iVisual)
             {
-            iVisual->EffectSetOpacity(1.0f);
+            iVisual->EffectSetOpacityAdditive(1.0f, ETrue);
             iVisual->EffectSetEffect( NULL );
             }
         }

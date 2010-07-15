@@ -44,7 +44,7 @@ void CGOomCloseApp::FreeMemory(TInt, TBool)
     {
     FUNC_LOG;
 
-    if ( iAlreadyGaveUp )
+    if ( iAlreadyGaveUp )	//will this ever be true ??? iAlredyGaveup is set true in closeAppEvent, which is called only if app gets notified by goom, which happens only after this
         {
         if (iAppCloseTimer)
         	{
@@ -65,9 +65,17 @@ void CGOomCloseApp::FreeMemory(TInt, TBool)
     
     // Set the TApaTask to the app
     iCurrentTask.SetWgId(iWgId);
-
-    // start the chain
-    ConditionalClose();
+    
+    // Start a timer and the thread watcher 
+    /*
+	iAppCloseTimer->SetState(CGOomAppCloseTimer::EGOomAppClosing);
+    iAppCloseTimer->After(iCloseTimeout * 1000);
+    iAppCloseWatcher->Start(iCurrentTask);
+    // Tell the app to close
+    TRACES2("CGOomCloseApp::FreeMemory: Closing app with window group id %d Timeout = %d",iWgId, iCloseTimeout);
+    iCurrentTask.EndTask();
+	*/
+	ConditionalClose();
     }
 
 CGOomCloseApp::~CGOomCloseApp()
@@ -145,6 +153,7 @@ void CGOomCloseApp::ConditionalClose()
     // Start a timer and the thread watcher 
     iAppCloseTimer->SetState(CGOomAppCloseTimer::EGOomAppClosing);
     iAppCloseTimer->After(iCloseTimeout * 1000);
+    iAppCloseWatcher->Start(iCurrentTask);
     // Tell the app to close
 	// We are not asking system applications to exit anyway, so we'll send legacy event only
 	// even we have powermgmt capability 
@@ -176,7 +185,8 @@ void CGOomCloseApp::KillTask()
         }
         
     if(IsConsumingMemory(iWgId))    
-        {    
+        {
+        TRACES1("REST IN PEACE - App wgid %d", iWgId);
         iCurrentTask.KillTask();
         iAppCloserRunning = EFalse; // not sure if intended (?)
         iAppCloseTimer->SetState(CGOomAppCloseTimer::EGOomAppKilled);
@@ -184,9 +194,10 @@ void CGOomCloseApp::KillTask()
         }
     else
         { // application has released its graphics resources -> we are no more interested about it
-        CloseAppEvent();
+        //CloseAppEvent();
+        iAppCloserRunning = EFalse; 
+        MemoryFreed(KErrNone);
         }    
-    //MemoryFreed(KErrNone);
     }
 
 void CGOomCloseApp::KillTaskWaitDone()

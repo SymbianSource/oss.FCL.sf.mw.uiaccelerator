@@ -74,8 +74,7 @@ EXPORT_C void CHuiFxVisualLayer::ConstructL(MHuiEffectable* aVisual)
     // We use the visual's own target opacity if we haven't set something explicitly    
     if (iVisual)
         {
-        //iOpacity = iVisual->iOpacity.Target();
-        iOpacity = iVisual->EffectOpacityTarget();
+        iOpacity = iVisual->EffectOpacity();
         }
     else
         {
@@ -196,8 +195,7 @@ EXPORT_C void CHuiFxVisualLayer::SetVisual( MHuiEffectable *aVisual )
     
     if (Math::IsInfinite(iOpacity))
         {
-        //iOpacity = iVisual->iOpacity.Target();
-        iOpacity = iVisual->EffectOpacityTarget();
+        iOpacity = iVisual->EffectOpacity();
         }    
     }
 
@@ -208,6 +206,11 @@ EXPORT_C CHuiFxVisualLayer::~CHuiFxVisualLayer()
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxVisualLayer::~CHuiFxVisualLayer - 0x%x "), this);
 #endif
+    if(iRenderBuffer && iEngine)
+        {
+        iEngine->ReleaseRenderbuffer(iRenderBuffer);
+        }
+    
     delete iExtBitmapFile;
     delete iParameterManager;
     iParameterManager = NULL;
@@ -226,10 +229,14 @@ EXPORT_C void CHuiFxVisualLayer::AdvanceTime(TReal32 aElapsedTime)
     {
     iParameterManager->AdvanceTime(aElapsedTime);
     }
-
+ 
 EXPORT_C TBool CHuiFxVisualLayer::PrepareDrawL(CHuiFxEngine& aEngine)
     {
     iParameterManager->Update(aEngine, VisualRect());
+    if(iVisual)
+        {
+        iVisual->EffectSetOpacityAdditive( iOpacity, EFalse );
+        }
     return ETrue;
     }
 
@@ -238,55 +245,112 @@ EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxVisualLayer::Draw - 0x%x "), this);
 #endif
-    aTarget.BindAsRenderTarget();
-    aGc.Push(EHuiGcMatrixModel);
-    
+    TRect backbufferRect = SourceRect();
+    TSize backbufferSize = backbufferRect.Size();
     THuiFxEngineType engineType = aEngine.EngineType();
+    TBool forceRefresh = EFalse;
+    
+    if (iRenderBuffer && iRenderBuffer->Size() != backbufferSize)
+        {
+        iEngine->ReleaseRenderbuffer(iRenderBuffer);
+        iRenderBuffer = NULL;
+        }
+    
+    if(!iRenderBuffer)
+        {
+        iRenderBuffer = aEngine.AcquireRenderbuffer(backbufferSize, EFalse);
+        if (!iRenderBuffer)
+            {
+            return;
+            }
+        iEngine = &aEngine;
+        forceRefresh = ETrue;
+        }
+    
+    // don't update render buffer if visual is not changed or screenshot is used
+    if(forceRefresh || (iVisualContentChanged && iSrcType!=EVisualSrcInput1))
+        {
+        if(!iVisualContentOpaque)
+            {
+            iRenderBuffer->PrepareForReuse(backbufferRect.Size());
+            }
+        iRenderBuffer->BindAsRenderTarget();
+        
+        // Translate the graphics context so that the content appears in the correct place
+        aGc.Push(EHuiGcMatrixModel);
+        if(engineType == EHuiFxEngineVg10)
+            {
+            aGc.Scale(EHuiGcMatrixModel, 1.0f, -1.0f, 1.0f);
+            aGc.Translate(EHuiGcMatrixModel, 0.0f, -backbufferRect.Size().iHeight, 0.0f);
+            }
+        
+        aGc.Translate(EHuiGcMatrixModel, -backbufferRect.iTl.iX, -backbufferRect.iTl.iY, 0.0f);
+        aGc.SetBlendMode( CHuiGc::EBlendNormal );
+    
+        // Set new clipping region which does not clip anything. 
+        // We want always draw visual fully to the aTarget. 
+        aGc.PushClip();
+        TRect bufferArea = TRect(TPoint(0,0), backbufferSize); 
+        aGc.SetClip(bufferArea); // this does not transform bufferArea which is fine for us    
+        
+        // Draw visual content to aTarget
+        iVisual->EffectSetSource(iSrcType==EVisualSrcInput1);
+        iVisual->EffectDrawSelf( aGc, TargetRect() );
+        iVisual->EffectSetSource(EFalse);
+        
+        // Restore original clipping
+        aGc.PopClip();
+        
+        aGc.Pop(EHuiGcMatrixModel);
+        iRenderBuffer->UnbindAsRenderTarget();
+        }
+    
+    aTarget.BindAsRenderTarget();
+
+    // make effect transformations effective
+    aGc.Push(EHuiGcMatrixModel);
     TRenderBufferType bufferType = aTarget.BufferType();
     if(engineType == EHuiFxEngineGles20)
         {
         if(bufferType == EBufferTypeOffscreen)
-            {
-            aGc.Enable(CHuiGc::EFeatureBlending, ETrue);
-            aGc.SetBlendMode(CHuiGc::EBlendReplace);
-            }
+             {
+             aGc.Enable(CHuiGc::EFeatureBlending, ETrue);
+             aGc.SetBlendMode(CHuiGc::EBlendReplace);
+             }
         TRect viewPort(TPoint(0,0), aTarget.Size());
         aGc.SetProjection(CHuiGc::EProjectionOrthographic, viewPort);
         }
+     
+     aGc.Translate(EHuiGcMatrixModel, VisualRect().iTl.iX, VisualRect().iTl.iY, 0.0f);
+     ApplyTransformations(aGc);
+     aGc.Translate(EHuiGcMatrixModel, -VisualRect().iTl.iX, -VisualRect().iTl.iY, 0.0f);
+     
+     aGc.SetBlendMode( CHuiGc::EBlendNormal );
+  
+    // do composition to aTarget
+    TRect compositionTargetRect(TargetRect());        
+    compositionTargetRect.Move(-aTarget.Position());
+
+    aGc.Disable(CHuiGc::EFeatureClipping); 
     
-    aGc.Translate(EHuiGcMatrixModel, VisualRect().iTl.iX, VisualRect().iTl.iY, 0.0f);
-    ApplyTransformations(aGc);
-    aGc.Translate(EHuiGcMatrixModel, -VisualRect().iTl.iX, -VisualRect().iTl.iY, 0.0f);
+    // following must always have aOpaque = Efalse because it is quite common that effected window
+    // has areas which do not have any drawing. Even if iOpacity is 1.f these areas are drawn
+    // incorrectly in this case -> we always blend 
+    aEngine.Composite(aGc, *iRenderBuffer, compositionTargetRect.iTl, EFalse, iOpacity*255);
     
-    aGc.SetBlendMode( CHuiGc::EBlendNormal );
-    //iVisual->iOpacity.Set( iOpacity );
-    iVisual->EffectSetOpacity( iOpacity );   
-    
-    // Set new clipping region which does not clip anything. 
-    // We want always draw visual fully to the aTarget. 
-    aGc.PushClip();
-    TRect bufferArea = TRect(TPoint(0,0), aTarget.Size()); 
-    aGc.SetClip(bufferArea); // this does not transform bufferArea which is fine for us    
-    
-    // Draw visual content to aTarget
-    //iVisual->DrawSelf(aGc, TargetRect());
-    iVisual->EffectSetSource(iSrcType==EVisualSrcInput1);
-    iVisual->EffectDrawSelf( aGc, TargetRect() );
-    iVisual->EffectSetSource(EFalse);
-    
-    // Restore original clipping
-    aGc.PopClip();
+    aGc.Enable(CHuiGc::EFeatureClipping);
     
     if(engineType == EHuiFxEngineGles20)
-        {
-        if(bufferType == EBufferTypeOffscreen)
-            {
-            aGc.SetBlendMode(CHuiGc::EBlendNormal);
-            }
-        aGc.SetProjection(CHuiGc::EProjectionOrthographic);
-        }
-    
+         {
+         if(bufferType == EBufferTypeOffscreen)
+             {
+             aGc.SetBlendMode(CHuiGc::EBlendNormal);
+             }
+         aGc.SetProjection(CHuiGc::EProjectionOrthographic);
+         }
+     
     aGc.Pop(EHuiGcMatrixModel);
+
     aTarget.UnbindAsRenderTarget();
     }
 
@@ -468,4 +532,13 @@ TBool CHuiFxVisualLayer::IsSemitransparent() const
         {
         return EFalse;        
         }
+    }
+
+void CHuiFxVisualLayer::SetVisualContentState(TBool aChanged, TBool aOpaque)
+    {
+    if( iVisualContentOpaque != aOpaque || aChanged)
+        {
+        iVisualContentChanged = aChanged;
+        }
+    iVisualContentOpaque = aOpaque;
     }

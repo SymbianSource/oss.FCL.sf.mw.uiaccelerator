@@ -406,10 +406,6 @@ EXPORT_C void CAlfAppSrvSessionBase::SetClientWindowGroupId(TInt aId)
     {
     __ASSERT_DEBUG(iData, USER_INVARIANT());
     iData->iClientWindowGroupId = aId;
-    if (AlfAppUi()->BridgerClient())
-        {
-        AlfAppUi()->BridgerClient()->SendBlind(EAlfVolunteerForGoomTarget, TIpcArgs(iData->iSecureId, iData->iClientWindowGroupId));
-        }
     }
 
 // ---------------------------------------------------------------------------
@@ -1140,6 +1136,15 @@ void CAlfAppSrvSessionBase::ActivateContainerLayoutL(TBool aActivate)
         CleanupStack::PopAndDestroy();
         }
     }
+    
+TUint CAlfAppSrvSessionBase::SecureId()
+    {
+    if (iData)
+        {
+        return iData->iSecureId;
+        }
+    return 0;
+    }            
    
 // End of file    
 

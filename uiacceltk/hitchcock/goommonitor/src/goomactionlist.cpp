@@ -219,7 +219,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     iAppIndex = 0;
     
     aWindowGroupList.RefreshL(iTryOptional);
-    
+/*    
     for (TInt i = 0; aWindowGroupList.LowOnMemWgs(i) != KErrNotFound ; i++ )
         {
         if ( iLowOnMemWgs.Find(aWindowGroupList.LowOnMemWgs(i)) == KErrNotFound)
@@ -227,8 +227,10 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
             iLowOnMemWgs.Append(aWindowGroupList.LowOnMemWgs(i));    
             }
         }
-        
+*/        
     iRunningKillAppActions = ETrue;
+    
+    TInt oldcount = iActionRefs.Count();
     
     if (aWindowGroupList.Count())
             {
@@ -252,6 +254,12 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                 // This sets the window group name
                 TInt32 appId = aWindowGroupList.AppId(wgIndex, ETrue);
                 
+                if(AppCloseActionAlreadyExists(aWindowGroupList, appId))
+                    {
+                    wgIndex--;
+                    continue;
+                    }
+                    
                 CApaWindowGroupName* wgName = aWindowGroupList.WgName();
                 __ASSERT_DEBUG(wgName, GOomMonitorPanic(KInvalidWgName));
 
@@ -314,9 +322,23 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                 }
             }
             
-        TRACES1("BuildActionListL: Action list built with %d items",iActionRefs.Count());
+        TRACES1("BuildActionListL: Action list built with %d  new items",iActionRefs.Count()- oldcount);
     }    
 
+
+TBool CGOomActionList::AppCloseActionAlreadyExists(CGOomWindowGroupList& aWindowGroupList, TInt32 appId)
+    {
+    for(TInt i = 0 ; i < iActionRefs.Count() ; i++)
+        {
+        TActionRef ref = iActionRefs[i];
+        if(ref.Type() == TActionRef::EAppClose )
+            {
+            if(aWindowGroupList.AppIdfromWgId(ref.WgId(), ETrue) == appId)
+                return ETrue;
+            }
+        }
+        return EFalse;
+    }
 
 // Execute the OOM actions according to their priority
 // Run batches of OOM actions according to their sync mode
@@ -364,48 +386,9 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
             
             ref.iAppPlugin = action;
             
-            //Double checking again if this app is now in foreground, if yes then we dont kill
-            CApaWindowGroupName* wgName = CApaWindowGroupName::NewLC(iWs, iWs.GetFocusWindowGroup());
-            
-            TInt32 fgApp = wgName->AppUid().iUid;
             TInt32 appId = iMonitor.GetWindowGroupList()->AppIdfromWgId(ref.WgId(), ETrue);
-                  
-            if(appId == fgApp)
-                {
-                TRACES1("Foreground App wgid %x, spared by GOOM", appId);
-                
-                iCurrentActionIndex++;
-                CleanupStack::PopAndDestroy();
-                continue;
-                }
             
-            //check if this is not parent of foreground app
-            TBool spared = EFalse;
-            TRACES1("CGOomActionList::FreeMemory - Going to kill Appid %x ",appId);
-            TInt prevWgId = 0;
-            while(prevWgId != KErrNotFound)
-                {
-                wgName->FindByAppUid(wgName->AppUid(), iWs, prevWgId);
-                
-                if(prevWgId == KErrNotFound)
-                    break;
-                
-                TInt parentId = 0;
-                TRAPD(err, parentId = iMonitor.GetWindowGroupList()->FindParentIdL(prevWgId));
-                TRACES2("CGOomActionList::FreeMemory - Foreground App wgid %d, parent wgid %d",prevWgId, parentId);
-                if( err == KErrNone && parentId != 0)
-                    {
-                    TInt32 parentAppId = iMonitor.GetWindowGroupList()->AppIdfromWgId(parentId, ETrue);       
-                    if(parentAppId == appId)
-                        {
-                        TRACES3("Parent App %x (wgId %d), of Foreground App %x, spared by GOOM", parentAppId, parentId, fgApp);
-                        spared = ETrue;
-                        break;
-                        }
-                    }
-                }
-            CleanupStack::PopAndDestroy();
-            if(spared)
+            if(!IsOkToKillApp(appId))
                 {
                 iCurrentActionIndex++;
                 if (iCurrentActionIndex >= iActionRefs.Count())
@@ -427,6 +410,7 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
 
         iFreeingMemory = ETrue;
         TRACES2("CGOomActionList::FreeMemory: Running action %d which has priority %d", iCurrentActionIndex,ref.Priority());
+        iCurrentActionIndex++;
         action->FreeMemory(iCurrentTarget - memoryEstimate, iUseSwRendering);
         iCurrentPluginRun = 0;
         memoryFreeingActionRun = ETrue;
@@ -449,18 +433,16 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
         if ((ref.SyncMode() == ECheckRam)
                 || (numberOfRunningActions >= maxBatchSize)
                 || estimatedEnoughMemoryFreed
-                || globalConfig.ForceCheckAtPriority(iActionRefs[iCurrentActionIndex].Priority()))
+                || globalConfig.ForceCheckAtPriority(iActionRefs[iCurrentActionIndex-1].Priority()))
             // If this actions requires a RAM check then wait for it to complete
             // Also force a check if we've reached the maximum number of concurrent operations
             // Also check if we estimate that we have already freed enough memory (assuming that the sync mode is "estimate"
             {
             // Return from the loop - we will be called back (in CGOomActionList::StateChanged()) when the running actions complete
-            iCurrentActionIndex++;
             TRACES("CGOomActionList::FreeMemory: Exiting run action loop");
             return;
             }
         // ... otherwise continue running actions, don't wait for any existing ones to complete
-        iCurrentActionIndex++;
         
         if (iCurrentActionIndex >= iActionRefs.Count())
             {
@@ -486,10 +468,60 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
             iTryOptional = EFalse;
             iOptionalTried = EFalse;
             TRACES("CGOomActionList::FreeMemory: No usable memory freeing action has been found");
+            iFreeingMemory = EFalse;
             iServer.CloseAppsFinished(freeMemory, EFalse);
             iMonitor.WaitAndSynchroniseMemoryState();
             }
         }
+    }
+
+TBool CGOomActionList::IsOkToKillApp(TInt aAppId)
+    {
+    
+    //Double checking again if this app is now in foreground, if yes then we dont kill
+    TUid fgAppuid = TUid::Uid(iMonitor.ForegroundAppUid());
+    TInt32 fgApp = fgAppuid.iUid;
+    TRACES1("Foreground Appuid %x", fgApp);
+        
+    if (aAppId == fgApp)
+        {
+        TRACES1("Foreground App wgid %x, spared by GOOM", aAppId);
+        return EFalse;
+        }
+
+    //check if this is not parent of foreground app
+    TBool spared = EFalse;
+    TRACES2("CGOomActionList::FreeMemory - Going to kill Appid %x, Foreground app %x ", aAppId, fgApp);
+    TInt prevWgId = 0;
+    
+    CApaWindowGroupName::FindByAppUid(fgAppuid, iWs, prevWgId);
+    TInt i = 0;
+    while ((prevWgId == KErrNotFound) && (i++ < 3))   //try 3 times before quiting. It takes time to get the wgid info when app is starting
+            {
+            TRACES1("Cannot find any more parent, trying again %d",i);
+            User::After(200000);
+            prevWgId = 0;
+            CApaWindowGroupName::FindByAppUid(fgAppuid, iWs, prevWgId);
+            }
+   
+    while (prevWgId != KErrNotFound)
+        {
+        TInt parentId = 0;
+        TRAPD(err, parentId = iMonitor.GetWindowGroupList()->FindParentIdL(prevWgId));
+        TRACES3("CGOomActionList::FreeMemory - Foreground App AppId %x, wgid %d, parent wgid %d", fgApp, prevWgId, parentId);
+        if (err == KErrNone && parentId > 0)
+            {
+            TInt32 parentAppId = iMonitor.GetWindowGroupList()->AppIdfromWgId(parentId, ETrue);
+            if (parentAppId == aAppId)
+                {
+                TRACES3("Parent App %x (wgId %d), of Foreground App %x, spared by GOOM", parentAppId, parentId, fgApp);
+                spared = ETrue;
+                break;
+                }
+            }
+        CApaWindowGroupName::FindByAppUid(fgAppuid, iWs, prevWgId);
+        }
+    return !spared;
     }
 
 // Should be called when the memory situation is good
@@ -497,7 +529,8 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
 void CGOomActionList::MemoryGood()
     {
     FUNC_LOG;
-
+    if(!ALWAYS_SW_REND)
+        {
     TInt actionRefIndex = iActionRefs.Count();
 
     // Go through each of the action references, if it's a plugin action then call MemoryGood on it
@@ -510,7 +543,10 @@ void CGOomActionList::MemoryGood()
             iActionRefs[actionRefIndex].RunPlugin().MemoryGood();
             }
         }
-    // notify window groups which were triggered to low mem that 
+    // notify window groups which were triggered to low mem that
+    iMonitor.SwitchMemMode(CMemoryMonitor::EGOomGoodMemMode);
+        }
+/*    
     TWsEvent event;
     event.SetType(KGoomMemoryGoodEvent); // naive
 
@@ -520,7 +556,8 @@ void CGOomActionList::MemoryGood()
         iWs.SendEventToWindowGroup(iLowOnMemWgs[i], event);
 #endif // #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
         iLowOnMemWgs.Remove(i);
-		}    
+		}
+*/		    
     }
 
 TBool CGOomActionList::FreeMemoryAboveTarget(TInt& aFreeMemory)
@@ -672,18 +709,16 @@ void CGOomActionList::StateChanged()
             {            
             TRACES2("CGOomActionList::StateChanged: Finished Action %d out of %d",iCurrentActionIndex, iActionRefs.Count());
 
-            if (iCurrentActionIndex < iActionRefs.Count()-1)
+            if (iCurrentActionIndex < iActionRefs.Count())
                 {
-                // launch more actions, potential recursion !!
-                iCurrentActionIndex++;
+                // There are still more actions to try, so we continue
+                TRACES1("CGOomActionList::StateChanged: All current actions complete, running more actions. freeMemory=%d", freeMemory);
                 return FreeMemory(iMaxPriority);
                 } 
                                    
             if(iRunningKillAppActions)
 	            {
                 iRunningKillAppActions = EFalse;
-                // There are no more actions to try, so we give up
-                TRACES1("CGOomActionList::StateChanged: All current actions complete, below good threshold with no more actions available. freeMemory=%d", freeMemory);
 
                 if (!iTryOptional && !iOptionalTried && freeMemory < 25*1024*1024 ) // magic, should read this from config
                     { 
@@ -693,6 +728,8 @@ void CGOomActionList::StateChanged()
                     }
                 else
                     {
+                    // There are no more actions to try, so we give up
+                    TRACES1("CGOomActionList::StateChanged: All current actions complete, below good threshold with no more actions available. freeMemory=%d", freeMemory);
                     iTryOptional = EFalse;       
                     iServer.CloseAppsFinished(freeMemory, EFalse);
                     iMonitor.WaitAndSynchroniseMemoryState();

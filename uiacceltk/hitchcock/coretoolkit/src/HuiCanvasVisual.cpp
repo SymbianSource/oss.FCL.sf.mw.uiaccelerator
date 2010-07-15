@@ -350,8 +350,7 @@ TBool CHuiCanvasVisual::CanSkipDrawing() const
     if (Effect())
         {
         TBool hasStoredContent = (IsDelayedEffectSource() || Freezed()) && (StoredRenderBuffer() ||  iCanvasVisualData->iStoredRenderBuffer);
-    
-        TBool semiTranparentEffectActive = Effect()->IsSemitransparent();
+        TBool semiTranparentEffectActive = iEffectOpacity < 1.f;
         if ((iOpacity.Now() <= EPSILON && !semiTranparentEffectActive))
             {
             return ETrue;
@@ -396,7 +395,7 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
     	}
     
     // Optimization
-    if (CanSkipDrawing())
+    if (!EffectActive() && CanSkipDrawing())
         {
         return;
         }
@@ -453,11 +452,6 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
     
     if (EffectActive())
         {
-        // Note that EHuiVisualFlagOpaqueHint improves performance a lot in cached effect drawing 
-        TBool transparent = EFalse; 
-        transparent |= (!(Flags() & EHuiVisualFlagOpaqueHint)); // Does not have opaque hint -> always transparent
-        transparent |= iOpacity.Now() < 1.0f; // Opacity less than 1.0f -> always transparent
-                
         TBool refreshCache = EFalse;        
         TBool layer =  EFalse;
         if (EffectIsAppliedToChildren())
@@ -479,8 +473,23 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
             {
             refreshCache |= Display()->RosterImpl().NativeAppsContentChanged();
             }
-        didDrawEffect = Effect()->CachedDraw(aGc, area, refreshCache, !transparent, iCanvasVisualData->iPaintedRegion,layer );
-        
+        Effectable()->EffectSetOpacityAdditive(0.0f, ETrue);
+        // PrepareDraw will update iEffectOpacity to correct opacity for this effect frame        
+        if(Effect()->PrepareDrawL(aGc, area))
+            {
+			// let's still check if effect is making visual fully transparent
+            if(CanSkipDrawing())
+                {
+                return;
+                }
+            // Note that EHuiVisualFlagOpaqueHint improves performance a lot in cached effect drawing 
+            TBool transparent = EFalse; 
+            transparent |= (!(Flags() & EHuiVisualFlagOpaqueHint)); // Does not have opaque hint -> always transparent
+            transparent |= iOpacity.Now() < 1.0f; // Opacity less than 1.0f -> always transparent
+            transparent |= iEffectOpacity < 1.0f; // effect opacity is less than 1.0f
+
+            didDrawEffect = Effect()->CachedDraw(aGc, area, refreshCache, !transparent, iCanvasVisualData->iPaintedRegion, layer );
+            }
         }
     
     if ( !didDrawEffect )
@@ -1338,7 +1347,11 @@ void CHuiCanvasVisual::DrawStoredVisualRenderBuffer(TInt aCanvasDrawMode) const
     CHuiCanvasGc& gc = CanvasGc();
     CHuiCanvasVisual* visual = NULL; 
     TBool transparent = EffectiveOpacity() < 1.0f;
-    gc.SetDrawMode((THuiCanvasDrawMode)aCanvasDrawMode);
+	if(EffectActive())
+		{
+	    transparent |= iEffectOpacity < 1.0f;
+    	}
+	gc.SetDrawMode((THuiCanvasDrawMode)aCanvasDrawMode);
     if (transparent)
         {
         gc.EnableEffectiveOpacity(ETrue);  
@@ -1384,6 +1397,10 @@ void CHuiCanvasVisual::DrawStoredFullScreenRenderBuffer(TInt aCanvasDrawMode, CH
     THuiRealPoint dest_point = DisplayRect().iTl;
     CHuiCanvasRenderBuffer *stored = StoredRenderBuffer();
     TBool transparent = EffectiveOpacity() < 1.0f;
+	if(EffectActive())
+		{
+	    transparent |= iEffectOpacity < 1.0f;
+    	}
     CHuiCanvasVisual* visual = NULL; 
 	gc.SetDrawMode((THuiCanvasDrawMode)aCanvasDrawMode);
     if (transparent)
@@ -1598,4 +1615,35 @@ TBool CHuiCanvasVisual::KeepNoCache() const
     inactive |= Flags() & EHuiVisualFlagUnderOpaqueHint;
     
     return rosterFrozen || inactive;
+    }
+
+TBool CHuiCanvasVisual::EffectReadyToDrawNextFrame() const 
+    {
+    // if the visual is drawn ans a external content it is probably already inactive
+    if (Flags() & EHuiVisualFlagDrawOnlyAsExternalContent)
+        {
+        if (Display() && Display()->RosterImpl().IsDrawingExternalContent())
+            {
+            return ETrue;
+            }
+        }
+
+    // other checks to
+    TBool rdyToDraw = EFalse;
+    if(Display()->RosterImpl().AlfEventWindow() == this)
+        {
+        rdyToDraw |= ETrue;
+        }
+    
+    rdyToDraw |= (IsDelayedEffectSource() || Freezed()) &&
+                    (StoredRenderBuffer() ||  iCanvasVisualData->iStoredRenderBuffer);
+    rdyToDraw |= (Effect()->EffectFlags() & KHuiFxEnableBackgroundInAllLayers);
+    rdyToDraw |= EffectIsAppliedToChildren();
+    rdyToDraw |= IsExternalContentDrawingEnabled() || IsExternalContentDrawingEnabled(ETrue);
+    rdyToDraw |= IsBackgroundDrawingEnabled();
+
+    rdyToDraw |= HasCommandBuffers(ETrue);
+
+    // visual must be active (seen) and have content
+    return (!(Flags() & EHuiVisualFlagInactive) && rdyToDraw);
     }

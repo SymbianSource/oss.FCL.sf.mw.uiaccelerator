@@ -454,6 +454,7 @@ private:
     
     TBool CanSkipDrawing() const;
     TBool KeepNoCache() const;
+    TBool EffectReadyToDrawNextFrame() const; 
 
 private: 
 

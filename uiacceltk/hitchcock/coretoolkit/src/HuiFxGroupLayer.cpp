@@ -474,3 +474,11 @@ void CHuiFxGroupLayer::SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels
         iLayers[i]->SetAlwaysReadSurfacePixels(aAlwaysReadSurfacePixels);
         }
     }
+
+void CHuiFxGroupLayer::SetVisualContentState(TBool aChanged, TBool aOpaque)
+    {
+    for( TInt i=0 ; i < iLayers.Count() ; i++ )
+        {
+        iLayers[i]->SetVisualContentState(aChanged, aOpaque);
+        }    
+    }

@@ -55,6 +55,8 @@ public:
     virtual void EnableMarginApplyChildren(TBool aEnable);
     virtual void SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels);
 
+    virtual void SetVisualContentState(TBool aChanged, TBool aOpaque);
+
 protected:
     IMPORT_C CHuiFxGroupLayer();
     IMPORT_C void ConstructL(TBool aIsRoot);

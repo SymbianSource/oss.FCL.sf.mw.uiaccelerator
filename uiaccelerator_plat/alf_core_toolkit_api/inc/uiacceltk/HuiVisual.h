@@ -1406,6 +1406,8 @@ public: // Internal utilities
     IMPORT_C void SetFreezeState(TBool aEnabled);
     IMPORT_C TBool Freezed() const;
 
+    IMPORT_C virtual TBool EffectReadyToDrawNextFrame() const;
+    
     /**
      *  Assign an effect for the visual. The ownership of the
      *  effect is transferred to the visual.
@@ -1625,6 +1627,8 @@ public:
      * A value of 0 is fully transparent, a value of 1 is fully opaque.
      */
     THuiTimedValue iOpacity;
+    
+    TReal32 iEffectOpacity;
 
 private:
 

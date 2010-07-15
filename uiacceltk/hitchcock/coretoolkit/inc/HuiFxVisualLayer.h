@@ -44,6 +44,8 @@ public:
     void SetExtBitmapFileL( TDesC& aFilename );
     TBool IsSemitransparent() const;
     
+    void SetVisualContentState(TBool aChanged, TBool aOpaque);
+    
 public: // effect cache
     IMPORT_C CHuiFxVisualLayer *CloneL() const;
     IMPORT_C void SetExtRect( TRect *aExtRect );
@@ -97,6 +99,11 @@ private:
     HBufC* iExtBitmapFile;
     TReal32 iOpacity;
     TBool iOpaqueHint;
+    
+    CHuiFxEngine*  iEngine;     // not own 
+    CHuiFxRenderbuffer* iRenderBuffer; // owned
+    TBool iVisualContentChanged;
+    TBool iVisualContentOpaque;
     };
 
 #endif /*HUIFXVISUALLAYER_*/

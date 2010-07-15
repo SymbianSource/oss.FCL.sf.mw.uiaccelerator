@@ -174,6 +174,11 @@ void CHuiFxLayer::EnableMarginApplyChildren(TBool /*aEnable*/)
     }
 
 
+void CHuiFxLayer::SetVisualContentState(TBool /*aChanged*/, TBool /*aOpaque*/)
+    {
+    /* empty in baseclass */
+    }
+
 TBool CHuiFxLayer::IsMarginEnabled() const
     {
     return iMarginEnabled;

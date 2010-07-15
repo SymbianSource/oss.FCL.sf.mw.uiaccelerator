@@ -32,6 +32,10 @@
 #include "alfclientserver.h"
 #include "alfsrvtexturemanager.h"
 #include "alfsrvscreenbuffermanager.h"
+#include "alfstreamerconsts.h"
+#include "alfdecoderserverclient.h"
+
+
 
 #include <coemain.h>
 
@@ -2737,6 +2741,14 @@ void CAlfAppSrvSession::RemoveTextureInfo( TInt aTextureId )
         {
         iTextureInfo.Remove( pos );
         }
+
+    if (!iTextureInfo.Count())
+        {
+        if (AlfAppUi()->BridgerClient())
+            {
+            AlfAppUi()->BridgerClient()->SendBlind(EAlfExcludeFromGoomTargets, TIpcArgs(SecureId(),ClientWindowGroup()));
+            }
+        }
     }
 
 TInt CAlfAppSrvSession::GetTextureSize( 
@@ -2764,6 +2776,15 @@ void CAlfAppSrvSession::SetTextureSize(
     const TBool highPriority = ( aPriority < 0 );
     aPriority = Max( 0, aPriority );
     aPriority = Min( 1, aPriority );
+
+    if (!iTextureInfo.Count())
+        {
+        if (AlfAppUi()->BridgerClient())
+            {
+            AlfAppUi()->BridgerClient()->SendBlind(EAlfVolunteerForGoomTarget, TIpcArgs(SecureId(), ClientWindowGroup()));
+            }
+        }
+
 
     TInt pos = FindTextureInfoById( aTextureId );
     if ( pos != KErrNotFound )

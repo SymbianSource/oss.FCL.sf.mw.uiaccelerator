@@ -225,6 +225,10 @@ private:
     
     void ConstructL(CGOomConfig& aConfig);
     
+    TBool IsOkToKillApp(TInt aAppId);
+    
+    TBool AppCloseActionAlreadyExists(CGOomWindowGroupList& aWindowGroupList, TInt32 appId);
+    
 private: //data    
     
     RWsSession& iWs;
@@ -263,7 +267,7 @@ private: //data
     TBool iRunningKillAppActions;
     
     TUint iCurrentPluginRun;
-    RArray<TInt> iLowOnMemWgs;
+//    RArray<TInt> iLowOnMemWgs;
     TBool iUseSwRendering;
     TBool iTryOptional; // we did everything we could but still missing some bits, try again with different app targets
     TBool iOptionalTried; // no need to overperform though

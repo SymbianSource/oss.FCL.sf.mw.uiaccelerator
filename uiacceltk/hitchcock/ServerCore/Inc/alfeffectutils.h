@@ -257,7 +257,7 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         TRect iRect;
         TBool iLongAppStartTimeout;
         TBool iTimeout;
-        
+        TBool iIsRedirected;
          
         void SetState(TEffectState aState);
        

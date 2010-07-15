@@ -78,7 +78,7 @@ public:
     
     // Find all the windowgroups in the list that matches application id for this window group
     void GetAllWgIdsMatchingAppId(TInt aWgId, RArray<TInt> & WgIdList) const;
-
+/*
     TInt LowOnMemWgs(TInt aIndex) 
         {
         if (aIndex >= iLowOnMemWgs.Count() || aIndex < 0)
@@ -90,8 +90,10 @@ public:
             return iLowOnMemWgs[aIndex];
             }
         }
-
+*/
     TInt FindParentIdL(TInt aWgId);    
+    
+    void GetListOfWindowGroupsWSurfaces(RArray<TInt>& aLowOnMemWgs);
     
 private:    
 
