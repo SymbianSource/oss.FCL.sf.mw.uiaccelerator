@@ -588,6 +588,11 @@ TInt CHuiCanvasDebugWsGc::EnableRenderbuffer(TBool aEnable)
     return iCanvasWsGc->EnableRenderbuffer(aEnable);    
     }
 
+void CHuiCanvasDebugWsGc::ClearCapturingBufferArea(const TRect& aRect)
+    {
+    iCanvasWsGc->ClearCapturingBufferArea(aRect);
+    }
+
 THuiCanvasWsGcType CHuiCanvasDebugWsGc::Type() const
     {
     return iCanvasWsGc->Type();
@@ -616,6 +621,11 @@ void CHuiCanvasDebugWsGc::ConstructL(
      
     }
 
+void CHuiCanvasDebugWsGc::SetInternalGc(CHuiCanvasWsGc* aHuiCanvasGc)
+    {
+    iCanvasWsGc = aHuiCanvasGc;
+    }
+
 void CHuiCanvasDebugWsGc::SetPositionDelta(TPoint& aPoint)
     {
     iCanvasWsGc->SetPositionDelta(aPoint);
@@ -623,7 +633,6 @@ void CHuiCanvasDebugWsGc::SetPositionDelta(TPoint& aPoint)
 
 CHuiCanvasDebugWsGc::~CHuiCanvasDebugWsGc()
     {
-    delete iCanvasWsGc;
     }
 
 void CHuiCanvasDebugWsGc::EnableUpdateRegion(const TRegion& aUpdateRegion, TBool aClear)

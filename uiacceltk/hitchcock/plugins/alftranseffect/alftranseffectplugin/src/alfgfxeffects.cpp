@@ -48,6 +48,9 @@
 
 #include "wsserverdrawercontroller.h"
 
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h" 
+
 // Constants
 //const TInt KAlfDefaultFocusGainedEffectDuration = 500;
 //const TInt KAlfDefaultFocusLostEffectDuration = 500;
@@ -118,6 +121,13 @@ void CAlfGfxEffects::ConstructL(const CAlfWindowManager& aMgr, TInt aAlfBufferFo
 	                                     KThemesTransitionEffects);
     
     iSyncronizedGroupDefitionEndChecker = CEndCheck::NewL(*this);
+    
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // Initiliaze global data in TLS and Open global module testing chunk and mutex
+    User::LeaveIfError(Dll::SetTls(new(ELeave) CAlfModuleTestDataControl()));
+    User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects());
+#endif
+
     __ALFFXLOGSTRING("CAlfGfxEffects::ConstructL <<");
     }
 
@@ -191,12 +201,29 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
 		        // We should not get end full screen if the effect has not been even started
 		        // (could return KErrAbort in aOutBuf)
 		        err = KErrAbort;
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+		        action = inStream.ReadUint32L();
+                TRect effectRect( inStream.ReadInt32L(),
+                    inStream.ReadInt32L(), inStream.ReadInt32L(), inStream.ReadInt32L() );
+                TInt type = inStream.ReadInt32L();
+                uid1 = TUid::Uid( inStream.ReadInt32L() );
+                uid2 = TUid::Uid( inStream.ReadInt32L() );
+                TInt data = inStream.ReadInt32L();
+                
+                if ( type == AknTransEffect::EParameterType )
+                    {
+                    sid1 = TSecureId( inStream.ReadInt32L() ); // secureid is the only thing interesting to us
+                    }
+                TTime time;
+                time.UniversalTime();
+                AMT_ADD_TIME(sid1.iId, time.Int64(), EFalse);
+#endif
 		        break;
 		        }
 		    else
 		        {
 	            action = inStream.ReadUint32L();
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
 	            TRect effectRect( inStream.ReadInt32L(),
@@ -220,13 +247,13 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
 		        }
             break;
         case MAlfGfxEffectPlugin::EEndFullscreen:
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
-            iEngine->EndFullscreen();
+            iEngine->EndFullscreen(EFalse); // not timeout, but official endfullscreen
             break;
         case MAlfGfxEffectPlugin::EAbortFullscreen:
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING
     PrintRequestInfo( op, action);
 #endif    
 
@@ -245,7 +272,7 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
                 // we have enough information.
                 {
                 action = inStream.ReadUint32L();
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
                 
@@ -271,7 +298,7 @@ void CAlfGfxEffects::HandleMessageL( const TDesC8& aInBuf, TPtr8& aOutBuf )
         case MAlfGfxEffectPlugin::ETfxServerOpAddFullscreenKMLEx:
             {
             action = inStream.ReadUint32L();
-#ifdef _DEBUG    
+#ifdef _ALF_FXLOGGING    
     PrintRequestInfo( op, action);
 #endif    
 
@@ -846,7 +873,8 @@ TInt CAlfGfxEffects::VerifyResourceLocation(const TDesC& aResourceDir)
 	__ALFFXLOGSTRING("CAlfGfxEffects::VerifyResourceLocation - return KErrNotSupported <<");
 	return KErrNotSupported;
 	}
-#ifdef _DEBUG
+
+#ifdef _ALF_FXLOGGING
 void CAlfGfxEffects::PrintRequestInfo(TInt aOperation, TInt aAction )
     {
     HBufC16* buffer = HBufC16::NewL(256);

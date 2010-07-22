@@ -42,10 +42,10 @@ public:
     static CGOomWindowGroupList* NewL(RWsSession& aWs);
     
     // Update the list of window groups
-    void RefreshL();
+    void RefreshL(TBool aOptionalOnly = EFalse);
     
     // Update the list of window groups, non-leaving version
-    void Refresh();
+    void Refresh(TBool aOptionalOnly = EFalse);
     
     // Return the number of application instances in this list
     inline TUint Count() const;
@@ -78,7 +78,7 @@ public:
     
     // Find all the windowgroups in the list that matches application id for this window group
     void GetAllWgIdsMatchingAppId(TInt aWgId, RArray<TInt> & WgIdList) const;
-
+/*
     TInt LowOnMemWgs(TInt aIndex) 
         {
         if (aIndex >= iLowOnMemWgs.Count() || aIndex < 0)
@@ -90,8 +90,10 @@ public:
             return iLowOnMemWgs[aIndex];
             }
         }
-
+*/
+    TInt FindParentIdL(TInt aWgId);    
     
+    void GetListOfWindowGroupsWSurfaces(RArray<TInt>& aLowOnMemWgs);
     
 private:    
 
@@ -99,7 +101,6 @@ private:
     
     void RemovePropertiesForClosedWindowsL();
 
-    TInt FindParentIdL(TInt aWgId);
 
 private:
     
@@ -133,6 +134,7 @@ private:
     CApaWindowGroupName* iWgName;
     HBufC* iWgNameBuf;              // owned by iWgName
     RArray<TInt> iLowOnMemWgs;
+    RArray<TInt> iOptionalUids;
     RAlfBridgerClient iAlfClient;
     };
 

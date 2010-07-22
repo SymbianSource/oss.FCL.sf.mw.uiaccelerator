@@ -42,7 +42,8 @@ CAlfDocument::CAlfDocument( CAlfApplication& aApplication )
 //
 CEikAppUi* CAlfDocument::CreateAppUiL()
     {
-    return new (ELeave) CAlfAppUi;
+    User::Leave(KErrNotSupported);    
+    return 0;
     }
 
 

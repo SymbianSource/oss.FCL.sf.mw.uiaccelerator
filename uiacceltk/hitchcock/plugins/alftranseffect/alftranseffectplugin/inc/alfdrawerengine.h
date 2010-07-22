@@ -42,13 +42,12 @@ public:
 	virtual TUint& Action() = 0;
 	virtual TInt& Flags() = 0;
 	virtual void IncreaseControlHandle() = 0;
-	virtual void IncreaseFullScreenHandle() = 0;
 	virtual TInt CurrentControlHandle() = 0;
 	virtual TInt CurrentFullScreenHandle() = 0;
 	virtual void StartEndChecker() = 0;
 	virtual void CancelEndChecker() = 0;
 	virtual void SendBeginFullscreen() = 0;
-	virtual TInt SendEndFullscreen() = 0;
+	virtual TInt SendEndFullscreen(TBool aTimeout = EFalse) = 0;
 	virtual TInt SendAbortFullscreen() = 0;
 	virtual TInt SendAbortControlTransition() = 0;
     virtual	TInt SendBeginControlTransition() = 0;

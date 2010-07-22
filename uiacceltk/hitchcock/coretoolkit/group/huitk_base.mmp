@@ -76,6 +76,8 @@ SOURCE          HuiInteractionInterval.cpp
 SOURCE          HuiImageLoaderUtil.cpp
 SOURCE          huifixmath.cpp
 
+SOURCE		appiconcache.cpp
+
 // Toolkit Core
 SOURCE          HuiTimedValue.cpp
 SOURCE          HuiTimedPoint.cpp

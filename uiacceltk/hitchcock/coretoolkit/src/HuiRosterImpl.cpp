@@ -21,6 +21,7 @@
 #include "HuiRosterImpl.h"  // Class definition
 #include "HuiRosterEntry.h"
 #include "uiacceltk/HuiEnv.h"
+#include "uiacceltk/HuiSkin.h"
 #include "uiacceltk/HuiControlGroup.h"
 #include "uiacceltk/HuiControl.h"
 #include "uiacceltk/HuiDisplay.h"
@@ -504,7 +505,7 @@ void CHuiRosterImpl::Draw(CHuiGc& aGc, CHuiDisplay* aDisplay) const
             iEffect->ForceCachedRenderTargetUsage(ETrue);
             }        
         RRegion dummy;
-        didDrawEffect = iEffect->CachedDraw(aGc, displayRect, refreshCache, opaque, dummy, iEffectOpacity*255);        
+        didDrawEffect = iEffect->CachedDraw(aGc, displayRect, refreshCache, opaque, dummy, EFalse, iEffectOpacity*255);        
         dummy.Close();
         }
     
@@ -542,7 +543,8 @@ void CHuiRosterImpl::DrawSelf(CHuiGc& aGc, CHuiDisplay* aDisplay) const
         DrawSelfFrozen(aGc, display);
         return;
         }
-
+    
+    
     TInt visualCount = 0;
     TInt entryCount = iEntries.Count();
     // Draw the visuals tree in the display.
@@ -550,7 +552,14 @@ void CHuiRosterImpl::DrawSelf(CHuiGc& aGc, CHuiDisplay* aDisplay) const
         {
         CHuiRosterEntry& entry = *iEntries[j]; 
         CHuiControlGroup& group = entry.ControlGroup();
-
+        CHuiControl& control = group.Control(0);
+        
+        // skip all  alf client session drawing
+        if(control.Role() == EHuiSessionContainer )
+            {
+            continue;
+            }
+        
         // Init model matrix always for every group
         //aGc.LoadIdentity(EHuiGcMatrixModel);        
         aGc.Push(EHuiGcMatrixModel);
@@ -707,6 +716,127 @@ void CHuiRosterImpl::DrawSelfFrozen(CHuiGc& aGc, CHuiDisplay* aDisplay) const
         iCanvasGc->PopTransformationMatrix();
         }
     }
+
+void CHuiRosterImpl::SetAlfEventWindow(CHuiVisual* aVisual)
+    {
+    iAlfEventWindowVisual = aVisual;
+    }
+
+const CHuiVisual* CHuiRosterImpl::AlfEventWindow()
+    {
+    return iAlfEventWindowVisual;
+    }
+
+TBool CHuiRosterImpl::NativeAppsContentChanged()
+    {
+    // if we have multiple frames where alf content was changed, skip every other frame
+	// this should be only used if whole alf content has effect (is faded)
+    TBool alfContentChanged = iDisplay->AlfContentChanged();
+    if(!iPreviousAlfContentDrawn && alfContentChanged)
+        {
+        iPreviousAlfContentDrawn = ETrue;
+        }
+    else
+        {
+        iPreviousAlfContentDrawn = EFalse;
+        }
+    return iPreviousAlfContentDrawn;
+    }
+
+
+void CHuiRosterImpl::DrawNativeAppsContent(CHuiGc &aGc, CHuiDisplay* aDisplay) const
+    {
+    TInt i = 0;
+    TInt j = 0;
+
+    CHuiDisplay* display = aDisplay ? aDisplay : iDisplay;
+    
+    ASSERT(display!=NULL);
+
+    TBool clearDone = EFalse;
+    
+    TInt visualCount = 0;
+    TInt entryCount = iEntries.Count();
+    // Draw the visuals tree in the display.
+    for(j = 0; j < entryCount; ++j)
+        {
+        CHuiRosterEntry& entry = *iEntries[j]; 
+        CHuiControlGroup& group = entry.ControlGroup();
+        CHuiControl& control = group.Control(0);
+        // skip all but alf client session drawing
+        if(control.Role() != EHuiSessionContainer )
+            {
+            continue;
+            }
+        
+        // skip inactive
+        CHuiLayout* hostContainer = control.ContainerLayout( NULL );
+        if(hostContainer->Flags() & EHuiVisualFlagInactive )
+            {
+            continue;
+            }
+        
+        // Init model matrix always for every group
+        //aGc.LoadIdentity(EHuiGcMatrixModel);        
+        aGc.Push(EHuiGcMatrixModel);
+        
+        // Set up display-specifc transformations i.e. camera transformations       
+        display->Transformation().Execute(EHuiGcMatrixModel, aGc);
+        
+        // Set up a group-specific transformation.
+        if(group.IsTransformed())
+            {
+            group.Transformation().Execute(EHuiGcMatrixModel, aGc);
+            }
+        
+        // Draw visuals
+        visualCount = entry.iRootVisuals.Count();
+        for(i = 0; i < visualCount; ++i)
+            {
+            CHuiVisual* visual = entry.iRootVisuals[i];
+            //Ignore inactive visuals
+            if ( visual->Flags()& EHuiVisualFlagInactive || visual->LoadingEffect() )
+                {
+                continue; 
+                }
+            
+            if(!clearDone)
+                {
+                // also check if display size change is pending or not
+                if(display->QueryAndResetSkinSizeChangePendingStatus())
+                    {
+                    display->Env().Skin().NotifyDisplaySizeChangedL();
+                    }
+            
+                // only do clear if we really draw some alf native content
+                display->DoBackgroundClear();
+                clearDone = ETrue;
+                }
+            
+            visual->Draw(aGc);
+            
+            }       
+
+        if( display->DrawVisualOutline() != CHuiDisplay::EDrawVisualOutlineNone )
+            {           
+            for(i = 0; i < visualCount; ++i)
+                {   
+                // Draw Visual Outline depending on central repository setting
+                // and visual flag value
+                const TBool drawOutline =
+                    ( entry.iRootVisuals[i]->Flags() & EHuiVisualFlagEnableDebugMode ) ||  
+                    ( display->DrawVisualOutline() == CHuiDisplay::EDrawVisualOutlineAllVisuals );
+                
+                DrawBoundaries( aGc, entry.iRootVisuals[i], drawOutline );        
+                }
+            }
+        
+        aGc.Pop(EHuiGcMatrixModel);        
+        }
+    }
+
+
+
 
 void CHuiRosterImpl::DrawBoundaries( CHuiGc& aGc, CHuiVisual* aVisual, TBool aDrawOutline ) const
 	{
@@ -992,8 +1122,8 @@ void CHuiRosterImpl::ScanDirty()
         if(iDisplay)
             {
             iDisplay->AddDirtyRegion(iRect);
+            iDisplay->SetAlfContentChanged(ETrue);
             }
-        
         SetChanged(EFalse);
         return;
         }
@@ -1016,7 +1146,28 @@ void CHuiRosterImpl::ScanDirty()
            		{
            		continue; 
            		}
+            
+             CHuiControlGroup& group = entry.ControlGroup();
+             CHuiControl& control = group.Control(0);
+             
+             if(control.Role() == EHuiSessionContainer )
+                 {
+                 if (iDisplay)
+                     {
+                     iDisplay->ScanningAlfContent(ETrue);
+                     }
+                 
+                 }
+             
             entry.iRootVisuals[i]->ReportChanged();
+            
+            if(control.Role() == EHuiSessionContainer )
+                {
+                if(iDisplay)
+                    {
+                    iDisplay->ScanningAlfContent(EFalse);
+                    }
+                }
             }
         }
     }

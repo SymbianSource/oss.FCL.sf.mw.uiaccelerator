@@ -102,7 +102,7 @@ public:
     IMPORT_C static CHuiFxEffect* NewL(CHuiFxEngine& aEngine);
     IMPORT_C void AddLayerL(const CHuiFxLayer* aLayer); // takes ownership
     IMPORT_C void AdvanceTime(TReal32 aElapsedTime);
-    IMPORT_C TBool Draw(CHuiGc& aGc, const TRect& aDisplayRect);
+    IMPORT_C TBool Draw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aHasSurface);
     IMPORT_C CHuiFxEngine& Engine() const;
     IMPORT_C TBool VisualArea(TRect& aRect) const;
     IMPORT_C TBool Changed();
@@ -168,7 +168,7 @@ public: // effect cache methods
      *                   
      *  @return ETrue if drawing was done, otherwise EFalse   
      */
-    TBool CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque, const TRegion& aClipRegion, TInt aAlpha = 255);
+    TBool CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque, const TRegion& aClipRegion, TBool aHasSurface, TInt aAlpha = 255);
     TBool CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque);
 
     void FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray);

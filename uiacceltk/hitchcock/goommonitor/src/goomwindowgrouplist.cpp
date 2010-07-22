@@ -42,19 +42,31 @@ CGOomWindowGroupList::TGOomWindowGroupProperties::TGOomWindowGroupProperties() :
     FUNC_LOG;
     }
 
+void CGOomWindowGroupList::GetListOfWindowGroupsWSurfaces(RArray<TInt>& aLowOnMemWgs)
+    {
+    if (!iAlfClient.Handle())
+       {
+       if(iAlfClient.Connect() != KErrNone)
+           return;
+       }
+    
+    iAlfClient.GetListOfWindowGroupsWSurfaces(&aLowOnMemWgs);
+    }
+   
+
 // Update the list of window groups
-void CGOomWindowGroupList::Refresh()
+void CGOomWindowGroupList::Refresh(TBool aOptionalOnly)
     {
     FUNC_LOG;
     
 #ifdef _DEBUG
-    TRAPD(err, RefreshL());
+    TRAPD(err, RefreshL(aOptionalOnly));
     if (err)
         {
         TRACES1("CGOomWindowGroupList::Refresh(): RefreshL leave %d", err);
         }
 #else
-    TRAP_IGNORE(RefreshL());
+    TRAP_IGNORE(RefreshL(aOptionalOnly));
     // Ignore any error
     // Errors are very unlikely, the only possibility is OOM errors (which should be very unlikely due to pre-created, re-reserved lists)
     // The outcome of any error is that the most foreground operations will be missing from the list
@@ -64,7 +76,7 @@ void CGOomWindowGroupList::Refresh()
 
 // Update the list of window groups
 // Should be called whenever the 
-void CGOomWindowGroupList::RefreshL()
+void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
     {
     FUNC_LOG;
   
@@ -72,12 +84,31 @@ void CGOomWindowGroupList::RefreshL()
         {
         User::LeaveIfError(iAlfClient.Connect());
         }
-    iLowOnMemWgs.Reset();
+    //iLowOnMemWgs.Reset();
     RArray<TInt> inactiveSurfaces;
 
-    User::LeaveIfError(iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&inactiveSurfaces));    
-    User::LeaveIfError(iAlfClient.GetListOfWindowGroupsWSurfaces(&iLowOnMemWgs));
+    // ignore possible errors, we have information from profiling extension anyway
+    if (!aOptionalOnly)
+        {
+        iAlfClient.GetListOfInactiveWindowGroupsWSurfaces(&inactiveSurfaces);    
+        //iAlfClient.GetListOfWindowGroupsWSurfaces(&iLowOnMemWgs);
+        }
+    else
+        { // first iteration: try to cope with window group ID's only
+          // Most likely that needs to be revisited because apps fail to name their window 
+          // groups properly on external screens...  
+        iAlfClient.GetOptionalGraphicsMemUsers(&inactiveSurfaces);    
+        iOptionalUids.Reset();
+        TInt count = inactiveSurfaces.Count(); 
+        for (TInt i = 0; i<count-1; i++)
+            {
+            iOptionalUids.Append(inactiveSurfaces[i+1]);
+            inactiveSurfaces.Remove(i+1);
+            count--;
+            }   
+        }
         
+    TRACES1("Optional list composed: %d", aOptionalOnly);     
     TRACES1("Inactive surfaces count %d", inactiveSurfaces.Count());     
     TRACES1("Windowgroups w/ surfaces count %d", iLowOnMemWgs.Count());     
 
@@ -85,16 +116,18 @@ void CGOomWindowGroupList::RefreshL()
     RArray<TUint> privMemUsed;
     RArray<TUint64> sparedProcessIds;
     
-   //if (inactiveSurfaces.Count() == 1) // ALF only 
-   //     {
-        NOK_resource_profiling eglQueryProfilingData = (NOK_resource_profiling)eglGetProcAddress("eglQueryProfilingDataNOK");
+   if (!aOptionalOnly)
+      {
+      NOK_resource_profiling eglQueryProfilingData = (NOK_resource_profiling)eglGetProcAddress("eglQueryProfilingDataNOK");
     
-        if (!eglQueryProfilingData)
-            {
-            TRACES("RefreshL EGL_NOK_resource_profiling not available");
-			return;
-            }
+      if (!eglQueryProfilingData && inactiveSurfaces.Count() == 0)
+        {
+        TRACES("RefreshL EGL_NOK_resource_profiling not available");
+        return;
+        }
     
+     if (eglQueryProfilingData)
+        {
         EGLint data_count;
         EGLint* prof_data;
         TInt i(0);
@@ -202,8 +235,8 @@ void CGOomWindowGroupList::RefreshL()
                     }
                 }
             }
-     //   }
-                
+        }
+      }            
     // Refresh window group list
     // get all window groups, with info about parents
     TInt numGroups = iWs.NumWindowGroups();
@@ -212,7 +245,7 @@ void CGOomWindowGroupList::RefreshL()
     
     // Remove all child window groups, promote parents to foremost child position
     CollapseWindowGroupTree(inactiveSurfaces);
-    
+/*    
 #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
     TWsEvent event;
     event.SetType(KGoomMemoryLowEvent); // naive
@@ -223,7 +256,7 @@ void CGOomWindowGroupList::RefreshL()
         }
         
 #endif    
-    
+*/    
     // Note the current foreground window ID (if there is one)
     TBool oldForegroundWindowExists = EFalse;
 

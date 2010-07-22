@@ -297,8 +297,10 @@ EXPORT_C void CAlfAppServer::HandleClientExit(TInt aClientId)
         return;       
         }
     
+    TBool lastActiveDying = EFalse;
     if ( dying->ClientWindowGroup() == iLastActiveClientWg )
         {
+        lastActiveDying = ETrue;
         iLastActiveClientWg = KErrNotFound;
         parentWg = dying->ParentWindowGroupId();
         }
@@ -349,8 +351,10 @@ EXPORT_C void CAlfAppServer::HandleClientExit(TInt aClientId)
             }
         delete wgs;
         }
-    
-    TRAP_IGNORE(FocusedWindowGroupChangedL(newFocusSession, parentWg))
+    if( lastActiveDying || newFocusSession )
+        {
+        TRAP_IGNORE(FocusedWindowGroupChangedL(newFocusSession, parentWg));
+        }
     }
 
 
@@ -1052,6 +1056,18 @@ CObjectCon* CAlfAppServer::NewContainerL()
         }
         
     return iObjectConIx->CreateL();
+    }
+
+// ---------------------------------------------------------------------------
+// Releases container back to server.
+// ---------------------------------------------------------------------------
+// 
+void CAlfAppServer::ReleaseContainer(CObjectCon& aContainer)
+    {
+    if ( iObjectConIx )
+        {
+        iObjectConIx->Remove(&aContainer);
+        }
     }
 
 // ======== RnD FUNCTIONS ========

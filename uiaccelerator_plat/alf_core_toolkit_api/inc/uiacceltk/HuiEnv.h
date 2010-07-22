@@ -52,6 +52,7 @@ class CHuiThemeManager;
 class CHuiCanvasTextureCache;
 class CHuiFxEngine;
 class MHuiSynchronizationObserver;
+class CAppIconCache;
 
 class CHighResTimer;
 const TInt KHuiEnvReleasedActionId = 0x200100F8;
@@ -759,6 +760,7 @@ public:
     CHuiDisplay* CurrentDisplay() const;
 
     CHuiCanvasTextureCache& CanvasTextureCache() const;
+    IMPORT_C CAppIconCache& AppIconCache() const;
 
     /**
 	 * Performs drawing synchronization.
@@ -977,6 +979,7 @@ private:
     RThread  iIdleCPUValueThread;
     
     CHuiCanvasTextureCache* iCanvasTextureCache;    
+    CAppIconCache* iAppIconCache;
     
     RPointerArray<MHuiLowMemoryObserver> iLowMemoryObservers;
     RPointerArray<MHuiMemoryLevelObserver> iMemoryLevelObservers;

@@ -44,7 +44,7 @@ void CHuiFxVg10ColorMatrixFilterBase::CopyFromL(const CHuiFxVg10ColorMatrixFilte
     CHuiFxVg10FilterBase::CopyFromL(aOldFilter);
     memcpy(iColorMatrix, aOldFilter->iColorMatrix, sizeof(iColorMatrix));
     }
-void CHuiFxVg10ColorMatrixFilterBase::DrawEffect(CHuiFxEngine& /*aEngine*/, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight )
+void CHuiFxVg10ColorMatrixFilterBase::DrawEffect(CHuiFxEngine& /*aEngine*/, VGImage aTargetImage, VGImage aSourceImage, TInt aWidth, TInt aHeight,TBool aHasSurface )
     {
     // take opacity into account
     const VGfloat opacity = clamp(iOpacity, 0.0f, 1.0f);
@@ -55,6 +55,8 @@ void CHuiFxVg10ColorMatrixFilterBase::DrawEffect(CHuiFxEngine& /*aEngine*/, VGIm
             {
             UpdateColorMatrix();
             }
+
+        iColorMatrix[19] = aHasSurface ? 0.5f : 0.0f;
         vgColorMatrix(aTargetImage, aSourceImage, iColorMatrix);
         }
     else

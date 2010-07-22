@@ -67,6 +67,12 @@
 #define ALF_USE_EMULATOR_LAYOUT_SWITCH_BUTTON
 #endif
 
+// Implements just Error() to avoid panic
+NONSHARABLE_CLASS(CSimpleScheduler) : public CActiveScheduler
+    {
+    void Error( TInt ) const{} // From CActiveScheduler
+    };
+
 NONSHARABLE_CLASS(TAlfEffectObserver): public MHuiEffectObserver
     {
     public:    
@@ -603,7 +609,7 @@ GLDEF_C TInt AlfEventThreadStartFunction(TAny* aBridge)
     if (err == KErrNone)
         {
         // Set up scheduler and cleanup stack for this thread
-        CActiveScheduler* scheduler = new CActiveScheduler;
+        CActiveScheduler* scheduler = new CSimpleScheduler();
         if (!scheduler)
             {
             return KErrNoMemory;
@@ -690,10 +696,6 @@ public:
 //
 EXPORT_C CAlfAppUi::CAlfAppUi()
     {
-    if (CCoeEnv::Static())    
-        {
-        SetFullScreenApp(EFalse); // to avoid getting queued/suspended in case of S60 system events
-        }
     }
 
 // ---------------------------------------------------------------------------
@@ -808,25 +810,12 @@ EXPORT_C void CAlfAppUi::ConstructL()
     User::LeaveIfError(AMT_CONTROL()->OpenGlobalObjects());
     #endif
       
-    TInt flags = EStandardApp|ENoScreenFurniture|ENonStandardResourceFile|EAknEnableSkin;
-    CCoeEnv* coe = CCoeEnv::Static();
     iData =  new (ELeave) CAlfAppUiData();
 
     iData->iSettingsHandler = CAlfSrvSettingsHandler::NewL( *this );
     CreateHuiEnvL();
     
-    if (coe)
-        {
-        // initialize app basic services
-        CAknAppUi::BaseConstructL(flags);
-
-        // create direct pointer to server so no need to access coestatics whenever server needed
-        iData->iServer = static_cast<CAlfAppServer*>(static_cast<CEikonEnv*>(coe)->AppServer());
-        }
-    else
-        { 
-        iData->iServer = CAlfAppServer::NewAppServerL();
-        }
+    iData->iServer = CAlfAppServer::NewAppServerL();
 
     iData->iServer->SetAppUi(this);     
     
@@ -838,34 +827,25 @@ EXPORT_C void CAlfAppUi::ConstructL()
     mainWg.SetOrdinalPosition(-1,ECoeWinPriorityNeverAtFront);
 
 
-    if (!coe) // multiple screen support missing, for main display only atm
-        {
-        TUid appUid = TUid::Uid(KAlfAppServerInterfaceUid3);
-        // complete server construction
-        TName serverName;
-        _LIT(KServerNameFormat, "%08x_%08x_AppServer");
-        serverName.Format( 
+    TUid appUid = TUid::Uid(KAlfAppServerInterfaceUid3);
+    // complete server construction
+    TName serverName;
+    _LIT(KServerNameFormat, "%08x_%08x_AppServer");
+    serverName.Format( 
                 KServerNameFormat, 
                 appUid, 
                 appUid.iUid );
         
-        iData->iServer->ConstructL(serverName);
+    iData->iServer->ConstructL(serverName);
         
-        // parametrize our window group
-        CApaWindowGroupName* wgName = CApaWindowGroupName::NewLC(CHuiStatic::WsSession());
-        wgName->SetHidden(ETrue); // hides us from FSW and protects us from OOM FW etc.
-        wgName->SetSystem(ETrue); // Allow only application with PowerManagement cap to shut us down    
-        wgName->SetCaptionL(_L("ALF"));
-        wgName->SetAppUid(appUid);
-        wgName->SetWindowGroupName(mainWg);
-        CleanupStack::PopAndDestroy();
-        }
-    // misc settings for surroundings     
-    if (coe)
-        { // we ndon't need these in NGA
-        mainWg.EnableFocusChangeEvents();
-        }
-        
+    // parametrize our window group
+    CApaWindowGroupName* wgName = CApaWindowGroupName::NewLC(CHuiStatic::WsSession());
+    wgName->SetHidden(ETrue); // hides us from FSW and protects us from OOM FW etc.
+    wgName->SetSystem(ETrue); // Allow only application with PowerManagement cap to shut us down    
+    wgName->SetCaptionL(_L("ALF"));
+    wgName->SetAppUid(appUid);
+    wgName->SetWindowGroupName(mainWg);
+    CleanupStack::PopAndDestroy();        
     CHuiStatic::WsSession().ComputeMode(RWsSession::EPriorityControlDisabled);
 
     RThread thread; 
@@ -873,27 +853,16 @@ EXPORT_C void CAlfAppUi::ConstructL()
 
     // delegates..
     iData->iResourceManager = CAlfSrvResourceManager::NewL( *iData->iHuiEnv );
-
-    if (coe)
-        {
-        iData->iSharedWindow = new (ELeave) CAlfSharedDisplayCoeControl();
-        iData->iSharedWindow->ConstructL();
-        iData->iSharedWindow->DrawableWindow()->EnableVisibilityChangeEvents();
-        }
-    else
-        { 
-        //mainWg.EnableScreenChangeEvents();
         
-        CHuiStatic::WsSession().EnableWindowSizeCacheL();
-        iData->iPlainWindow = new (ELeave) RWindow(CHuiStatic::WsSession());
-        iData->iPlainWindow->Construct(*CHuiStatic::RootWin(),0x000FAB10); // FYI: multiple display support neglegted atm
-        iData->iPlainWindow->SetExtentErr(TPoint(0,0),CHuiStatic::ScreenDevice()->SizeInPixels()); // FYI: multiple display support neglegted atm            
-        iData->iPlainWindow->Size(); // to populate size cache
-        iData->iPlainWindow->Activate();
-        iData->iPlainWindow->SetVisible(ETrue);
-        iData->iPlainWindow->SetTransparencyAlphaChannel();
-        iData->iPlainWindow->SetBackgroundColor(~0);          
-        }
+    CHuiStatic::WsSession().EnableWindowSizeCacheL();
+    iData->iPlainWindow = new (ELeave) RWindow(CHuiStatic::WsSession());
+    iData->iPlainWindow->Construct(*CHuiStatic::RootWin(),0x000FAB10); // FYI: multiple display support neglegted atm
+    iData->iPlainWindow->SetExtentErr(TPoint(0,0),CHuiStatic::ScreenDevice()->SizeInPixels()); // FYI: multiple display support neglegted atm            
+    iData->iPlainWindow->Size(); // to populate size cache
+    iData->iPlainWindow->Activate();
+    iData->iPlainWindow->SetVisible(ETrue);
+    iData->iPlainWindow->SetTransparencyAlphaChannel();
+    iData->iPlainWindow->SetBackgroundColor(~0);          
 
     iData->iBridge = CAlfStreamerBridge::NewL(0);
     iData->iBridge->iAlfWindowData.iAlfWindowGrpId = mainWg.Identifier();
@@ -908,19 +877,12 @@ EXPORT_C void CAlfAppUi::ConstructL()
 	iData->iAlfEffectObserver = new (ELeave) TAlfEffectObserver(&iData->iBridge->iActiveEffectCount, *iData->iBridgeObj);
 	iData->iHuiEnv->EffectsEngine()->SetObserver(iData->iAlfEffectObserver);
 			
-    if( !iData->iPlainWindow)
-        {
-        // Create default CAlfScreen already now to be able to show controlgroups early enough... 
-  	    iData->iBridgeObj->AddNewScreenL(iData->iSharedWindow);
-        }
-    else 
-        {
-  	    iData->iBridgeObj->AddNewScreenFromWindowL(iData->iPlainWindow);
-        iData->iEventAo = new (ELeave) CAlfEventBridge(*this, *iData->iBridgeObj->Display(0));
+    iData->iBridgeObj->AddNewScreenFromWindowL(iData->iPlainWindow);
+    iData->iEventAo = new (ELeave) CAlfEventBridge(*this, *iData->iBridgeObj->Display(0));
         
-        RThread eventThread;
+    RThread eventThread;
 
-        User::LeaveIfError(eventThread.Create(
+    User::LeaveIfError(eventThread.Create(
             KAlfEventThreadName,
             AlfEventThreadStartFunction,
             16384, // magic
@@ -928,9 +890,8 @@ EXPORT_C void CAlfAppUi::ConstructL()
             (TAny*)iData->iEventAo, 
             EOwnerThread));
 
-        eventThread.Resume();
-        eventThread.Close();
-        }
+    eventThread.Resume();
+    eventThread.Close();
 
     AppendDisplayOnSharedWindowL(*(iData->iBridgeObj->Display(0)));
     
@@ -941,9 +902,11 @@ EXPORT_C void CAlfAppUi::ConstructL()
     iData->iServer->TextureManager().HandleEnvCreateL( *iData->iHuiEnv );
     
     // Construct transition effect instance if it does not yet exist
+    // OBSOLETE
 	iData->iServer->CreateTransitionEffectsL();
 	
 	// Load Tfx server client API plugin, if exists
+    // OBSOLETE
 	iData->iServer->CreateTfxServerPlugin();
     
 #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
@@ -956,21 +919,11 @@ EXPORT_C void CAlfAppUi::ConstructL()
 // ---------------------------------------------------------------------------
 // From class CAknAppUi.
 // Handles system event.
+// OBSOLETE
 // ---------------------------------------------------------------------------
 //
-EXPORT_C void CAlfAppUi::HandleSystemEventL(const TWsEvent& aEvent)
+EXPORT_C void CAlfAppUi::HandleSystemEventL(const TWsEvent&)
     {
-    switch (*(TApaSystemEvent*)(aEvent.EventData()))
-		{
-	case EApaSystemEventBroughtToForeground:
-        { // we need to suppress this event as it causes undesired effects on applications underneath
-        break;
-        }
-    default:
-        CAknAppUi::HandleSystemEventL(aEvent);
-        }
-
-    return;
     }
 
 void CAlfAppUi::StartPointerEventHandling()
@@ -991,31 +944,29 @@ void CAlfAppUi::EndPointerEventHandling()
 
 void CAlfAppUi::UpdateActiveSession(CAlfAppSrvSessionBase* aSession)
     {
-    EndPointerEventHandling();
-    iData->iActiveSession = aSession;
-    
-    iData->iResourceManager->SetActiveSession( iData->iActiveSession );
-
-    if (CCoeEnv::Static())
-        {   
-        if( aSession )
-            {
-            CHuiStatic::RootWin()->EnableGroupListChangeEvents();
-            }
-        else
-            {
-            CHuiStatic::RootWin()->DisableGroupListChangeEvents();
-            }
-        }
-    if(!aSession)
+    if( iData->iActiveSession  != aSession )
         {
-        if (iData->iMainDisplay) // TBD: multiple display support once again...
+        EndPointerEventHandling();
+        iData->iActiveSession = aSession;
+        
+        iData->iResourceManager->SetActiveSession( iData->iActiveSession );
+    
+        if(!aSession)
             {
-            TRAP_IGNORE(iData->iMainDisplay->SetClearBackgroundL(CHuiDisplay::EClearNone));
+            if (iData->iMainDisplay) // TBD: multiple display support once again...
+                {
+                TRAP_IGNORE(iData->iMainDisplay->SetClearBackgroundL(CHuiDisplay::EClearNone));
+                }
             }
+        iData->iBridgeObj->HandleVisualVisibility( 0 );
         }
     }
     
+CAlfAppSrvSessionBase* CAlfAppUi::ActiveSession()
+    {
+    return iData->iActiveSession;
+    }
+
 // ---------------------------------------------------------------------------
 // From class CAknAppUi.
 // Handles window server event.
@@ -1023,41 +974,14 @@ void CAlfAppUi::UpdateActiveSession(CAlfAppSrvSessionBase* aSession)
 //
 EXPORT_C void CAlfAppUi::HandleWsEventL(const TWsEvent& aEvent, CCoeControl* aDestination)
     {
-    TBool handlingPtrEvent(EFalse);
-    
     if (aEvent.Type() >= EEventPointer && aEvent.Type() <= 	EEventDragDrop )
         {
         StartPointerEventHandling();
-        handlingPtrEvent = ETrue; // just to play it safe
-        }
-
-    // A Fix for AlfServer not shutting down on power off (ANIA-7EWFV6)
-    if ( aEvent.Type() == EEventPowerMgmt ) 
-        {
-        TApaSystemEvent systemEvent( *(TApaSystemEvent*)(aEvent.EventData()) );
-        if ( systemEvent == EApaSystemEventShutdown || systemEvent == EApaSystemEventSecureShutdown )
-            {
-            // Don't let this event go further to base class' HandleWsEventL,
-            // since it'll start the appShutter, which will be ignored first,
-            // and when it would be really needed (after AllClientsClosed), it's already destroyed. 
-            return;
-            }
         }
     
-    if (!iData->iEventAo) // CCoeEnv exists
+    if( aEvent.Type() == EEventScreenDeviceChanged  )
         {
-        CAknAppUi::HandleWsEventL(aEvent, aDestination);
-        if (handlingPtrEvent)
-            {
-            EndPointerEventHandling();
-            }
-        }
-    else
-        {
-        if( aEvent.Type() == EEventScreenDeviceChanged  )
-            {
-            HandleResourceChangeL( KEikDynamicLayoutVariantSwitch );
-            }
+        HandleResourceChangeL( KEikDynamicLayoutVariantSwitch );
         }
     
     switch ( aEvent.Type() )
@@ -1180,8 +1104,7 @@ CHuiDisplay* CAlfAppUi::FindTvDisplayOnSharedWindow()
 //
 EXPORT_C TBool CAlfAppUi::FrameworkCallsRendezvous() const
     {
-    // just basecall for now    
-    return CAknAppUi::FrameworkCallsRendezvous();      
+    return EFalse;
     }
 
 // ---------------------------------------------------------------------------
@@ -1219,7 +1142,7 @@ EXPORT_C void CAlfAppUi::HandleResourceChangeL( TInt aType )
     
     if ( aType == KEikDynamicLayoutVariantSwitch || aType == KAknsMessageSkinChange && iData->iHuiEnv)
         {
-        iData->iHuiEnv->Skin().NotifyDisplaySizeChangedL();
+        iData->iHuiEnv->Display(0).SetSkinSizeChangePending();
         }
         
     // Send notification events to clients here if needed    
@@ -1248,12 +1171,8 @@ EXPORT_C void CAlfAppUi::HandleResourceChangeL( TInt aType )
 // Called when a command is received.
 // ---------------------------------------------------------------------------
 //
-EXPORT_C void CAlfAppUi::HandleCommandL(TInt aCommand)
+EXPORT_C void CAlfAppUi::HandleCommandL(TInt)
     {
-    if (aCommand == EEikCmdExit && iData->iAllClientsClosed)
-        {
-        Exit();
-        }
     }
 
 // ---------------------------------------------------------------------------
@@ -1269,27 +1188,8 @@ CAlfSrvSettingsHandler& CAlfAppUi::SettingsHandler()
 // Updates non-fading setting to window.
 // ---------------------------------------------------------------------------
 //
-void CAlfAppUi::SetContainerNonFading( TBool aNonFading )
+void CAlfAppUi::SetContainerNonFading(TBool)
     {
-    const TBool nonFading = iData->iSharedWindowNonFading;
-    if ( ( nonFading && !aNonFading ) ||
-         ( !nonFading && aNonFading ) )
-        {
-        // Update window server setting.
-        iData->iSharedWindowNonFading = aNonFading;
-        iData->iSharedWindow->DrawableWindow()->SetNonFading( aNonFading );
-        
-        // If non-fading is turned off, update fading to correct value.
-        // It's assumed that alfred applications are not shown in a pop up.
-        // If it were possible, we would need to know if alfred pop up is
-        // topmost.
-        if ( !aNonFading )
-            {
-            iData->iSharedWindow->DrawableWindow()->SetFaded( 
-                IsFaded(),
-                RWindowTreeNode::EFadeIncludeChildren );
-            }
-        }
     }
 
 // ---------------------------------------------------------------------------
@@ -1355,7 +1255,7 @@ void CAlfAppUi::MAlfSrvUintSettingChangedL( TAlfSrvSetting aSetting, TUint aNewV
 
 TTypeUid::Ptr CAlfAppUi::MopSupplyObject(TTypeUid aId)
     {
-    return CAknAppUi::MopSupplyObject(aId);
+    return TTypeUid::Null();
     }
 
 // ---------------------------------------------------------------------------
@@ -1384,8 +1284,7 @@ TInt CAlfAppUi::LastAlfControlGroupIndex( TInt aScreenNumber )
 void CAlfAppUi::ShowControlGroupL(CHuiRoster& aRoster, CHuiControlGroup& aGroup, TInt aWhere, TInt aScreenNumber )
     {
     iData->iBridgeObj->ShowControlGroupL(aRoster, aGroup, aWhere, aScreenNumber);    
-    iData->iBridgeObj->HandleVisualVisibility( aScreenNumber );    
-
+    iData->iBridgeObj->HandleVisualVisibility( aScreenNumber );
     }
 
 // ---------------------------------------------------------------------------
@@ -1431,18 +1330,6 @@ void CAlfAppUi::SetAlfWindowGroupId(TInt aWgId)
 //
 void CAlfAppUi::NotifyLowMemory(TInt aAmountOfFreeMemRequested)
     {
-/*
-	// Toggle between normal & low memory levels
-    if (!aAmountOfFreeMemRequested)
-        {
-        iData->iBridgeObj->SetMemoryLevel(EHuiMemoryLevelNormal);
-        }
-    else
-        {
-        iData->iBridgeObj->SetMemoryLevel(EHuiMemoryLevelLow);        
-        }
-*/
-
 	// Enable "ultra-low" memory mode
     if (!aAmountOfFreeMemRequested)
         {
@@ -1511,11 +1398,6 @@ void CAlfAppUi::DoBlankScreen(const RMessage2& aMessage)
         {
         User::Leave(KErrPermissionDenied);    
         }
-    
-//	if (iData->iBridgeObj->LayoutSwitchEffectCoordinator())
-//		{
-//		iData->iBridgeObj->LayoutSwitchEffectCoordinator()->EnableSafeCounter(EFalse); // let capserver rule  
-//		}
   
     TBool pause = aMessage.Int0();
     
@@ -1523,6 +1405,15 @@ void CAlfAppUi::DoBlankScreen(const RMessage2& aMessage)
     
     __ALFLOGSTRING("CAlfAppUi::DoBlankScreen <<");
     // let the session complete message  
+    }
+
+RAlfBridgerClient* CAlfAppUi::BridgerClient()
+    {
+    if (iData)
+        {
+        return iData->iBridgeObj->BridgerClient();  
+        }    
+    return 0;
     }
 
 // end of file

@@ -1391,12 +1391,12 @@ EXPORTS
 	?RegisterParameterL@CHuiFxVisualLayer@@IAEXABVTDesC16@@PAM@Z @ 1390 NONAME ; void CHuiFxVisualLayer::RegisterParameterL(class TDesC16 const &, float *)
 	?NewL@CHuiFxEffect@@SAPAV1@AAVCHuiFxEngine@@@Z @ 1391 NONAME ; class CHuiFxEffect * CHuiFxEffect::NewL(class CHuiFxEngine &)
 	?ConstructL@CHuiFxVisualLayer@@IAEXPAVMHuiEffectable@@@Z @ 1392 NONAME ; void CHuiFxVisualLayer::ConstructL(class MHuiEffectable *)
-	?Draw@CHuiFxEffect@@QAEHAAVCHuiGc@@ABVTRect@@@Z @ 1393 NONAME ; int CHuiFxEffect::Draw(class CHuiGc &, class TRect const &)
+	?Draw@CHuiFxEffect@@QAEHAAVCHuiGc@@ABVTRect@@H@Z @ 1393 NONAME ; int CHuiFxEffect::Draw(class CHuiGc &, class TRect const &)
 	?TargetRect@CHuiFxLayer@@QBEABVTRect@@XZ @ 1394 NONAME ; class TRect const & CHuiFxLayer::TargetRect(void) const
 	?AdvanceTime@CHuiFxVisualLayer@@UAEXM@Z @ 1395 NONAME ; void CHuiFxVisualLayer::AdvanceTime(float)
 	?Filter@CHuiFxFilterLayer@@QBEAAVCHuiFxFilter@@XZ @ 1396 NONAME ; class CHuiFxFilter & CHuiFxFilterLayer::Filter(void) const
 	?IsFreeForm@CHuiFxFilter@@QBEHXZ @ 1397 NONAME ; int CHuiFxFilter::IsFreeForm(void) const
-	?Draw@CHuiFxFilterLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2@Z @ 1398 NONAME ; void CHuiFxFilterLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
+	?Draw@CHuiFxFilterLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1398 NONAME ; void CHuiFxFilterLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
 	?SetSourceRect@CHuiFxLayer@@QAEXABVTRect@@@Z @ 1399 NONAME ; void CHuiFxLayer::SetSourceRect(class TRect const &)
 	??1CHuiFxRenderbuffer@@UAE@XZ @ 1400 NONAME ; CHuiFxRenderbuffer::~CHuiFxRenderbuffer(void)
 	?SetBlendingMode@CHuiFxLayer@@QAEXW4THuiFxBlendingMode@@@Z @ 1401 NONAME ; void CHuiFxLayer::SetBlendingMode(enum THuiFxBlendingMode)
@@ -1416,7 +1416,7 @@ EXPORTS
 	?Changed@CHuiFxFilterLayer@@UBEHXZ @ 1415 NONAME ; int CHuiFxFilterLayer::Changed(void) const
 	?AddLayerL@CHuiFxEffect@@QAEXPBVCHuiFxLayer@@@Z @ 1416 NONAME ; void CHuiFxEffect::AddLayerL(class CHuiFxLayer const *)
 	?EffectsEngine@CHuiEnv@@QBEPAVCHuiFxEngine@@XZ @ 1417 NONAME ; class CHuiFxEngine * CHuiEnv::EffectsEngine(void) const
-	?Draw@CHuiFxGroupLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2@Z @ 1418 NONAME ; void CHuiFxGroupLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
+	?Draw@CHuiFxGroupLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1418 NONAME ; void CHuiFxGroupLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
 	??0CHuiFxRenderbuffer@@IAE@XZ @ 1419 NONAME ; CHuiFxRenderbuffer::CHuiFxRenderbuffer(void)
 	?AddEffectL@CHuiFxEngine@@IAEXPAVCHuiFxEffect@@@Z @ 1420 NONAME ; void CHuiFxEngine::AddEffectL(class CHuiFxEffect *)
 	?Engine@CHuiFxEffect@@QBEAAVCHuiFxEngine@@XZ @ 1421 NONAME ; class CHuiFxEngine & CHuiFxEffect::Engine(void) const
@@ -1460,7 +1460,7 @@ EXPORTS
 	?SetEffect@CHuiVisual@@QAEXPAVCHuiFxEffect@@@Z @ 1459 NONAME ; void CHuiVisual::SetEffect(class CHuiFxEffect *)
 	?SetMargin@CHuiFxFilter@@QAEXABVTSize@@@Z @ 1460 NONAME ; void CHuiFxFilter::SetMargin(class TSize const &)
 	?PrepareDrawL@CHuiFxFilterLayer@@UAEHAAVCHuiFxEngine@@@Z @ 1461 NONAME ; int CHuiFxFilterLayer::PrepareDrawL(class CHuiFxEngine &)
-	?Draw@CHuiFxVisualLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2@Z @ 1462 NONAME ; void CHuiFxVisualLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
+	?Draw@CHuiFxVisualLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1462 NONAME ; void CHuiFxVisualLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
 	?SkinInstance@CHuiStatic@@SAPAVMAknsSkinInstance@@XZ @ 1463 NONAME ; class MAknsSkinInstance * CHuiStatic::SkinInstance(void)
 	?SetTrackCommandSet@CHuiCanvasVisual@@QAEXAAV?$TBuf@$0BAA@@@H@Z @ 1464 NONAME ; void CHuiCanvasVisual::SetTrackCommandSet(class TBuf<256> &, int)
 	?PopTransformationMatrix@CHuiCanvasGc@@UAEXXZ @ 1465 NONAME ; void CHuiCanvasGc::PopTransformationMatrix(void)
@@ -1598,4 +1598,9 @@ EXPORTS
 	?AddEffectToGroup@CHuiFxEngine@@QAEHH@Z @ 1597 NONAME ; int CHuiFxEngine::AddEffectToGroup(int)
 	?FxmlUsesOpaqueHint@CHuiFxEngine@@QAEHABVTDesC16@@@Z @ 1598 NONAME ; int CHuiFxEngine::FxmlUsesOpaqueHint(class TDesC16 const &)
 	?InitializeL@CHuiCanvasRenderBuffer@@UAEXABVTSize@@H@Z @ 1599 NONAME ; void CHuiCanvasRenderBuffer::InitializeL(class TSize const &, int)
+	?Clear@CAppIconCache@@QAEXXZ @ 1600 NONAME ; void CAppIconCache::Clear(void)
+	?Insert@CAppIconCache@@QAEHAAUTRasterizedBitmap@@@Z @ 1601 NONAME ; int CAppIconCache::Insert(struct TRasterizedBitmap &)
+	?AppIconCache@CHuiEnv@@QBEAAVCAppIconCache@@XZ @ 1602 NONAME ; class CAppIconCache & CHuiEnv::AppIconCache(void) const
+	?Find@CAppIconCache@@QAEPAVCFbsBitmap@@_JVTSize@@@Z @ 1603 NONAME ; class CFbsBitmap * CAppIconCache::Find(long long)
+	?SetSkinSizeChangePending@CHuiDisplay@@QAEXXZ @ 1604 NONAME ; void CHuiDisplay::SetSkinSizeChangePending(void)	
 

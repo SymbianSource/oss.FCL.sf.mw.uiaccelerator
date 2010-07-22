@@ -156,6 +156,7 @@ void CHuiCanvasWsBitGc::EndActionL(const TRegion& aUpdateRegion, TBool aUpdateDi
             }
         
         iCapturingBitGc->SetClippingRegion(aUpdateRegion);
+        iCapturingBitGc->SetClippingRect(CHuiEnv::Static()->Display(0).CurrentDirtyRect());
         
         TSize visualSize = iVisual->DisplayRect().Size().Round();        
         if (iCapturingBitBitmap->SizeInPixels() != visualSize)
@@ -168,6 +169,7 @@ void CHuiCanvasWsBitGc::EndActionL(const TRegion& aUpdateRegion, TBool aUpdateDi
             iCapturingBitGc->BitBlt(TPoint(0,0), iBitBitmap);
             }
         
+        iCapturingBitGc->CancelClippingRect();
         iCapturingBitGc->CancelClippingRegion();
         }
 
@@ -208,15 +210,5 @@ TBool CHuiCanvasWsBitGc::IsRenderBufferEnabled() const
 
 void CHuiCanvasWsBitGc::ClearCapturingBufferArea(const TRect& aRect)
     {
-    if ( iCapturingBitGc )
-        {
-        TRgb clearColor = KRgbBlack;
-	    clearColor.SetAlpha(0x0);
-        
-	    iCapturingBitGc->SetDrawMode(CGraphicsContext::EDrawModeWriteAlpha);
-        iCapturingBitGc->SetPenColor(clearColor);
-        iCapturingBitGc->SetBrushColor(clearColor);
-        iCapturingBitGc->SetBrushStyle(CGraphicsContext::ESolidBrush);
-  	    iCapturingBitGc->Clear(aRect);
-        }
+    
     }

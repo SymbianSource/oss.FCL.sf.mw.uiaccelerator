@@ -19,6 +19,15 @@
 #include <akntranseffect.h>
 #include "alfbridge.h"
 
+enum TEffectState
+    {
+    EBeginFullScreenReceived, // first request of effect received
+    EWaitingWindowGroup,
+    EWaitEndFullScreen,
+    EEndFullScreenReceivedWaitingWindowGroup,
+    EEndFullscreenReceived,
+    EFinalEffectActive
+    };
 // Timer to send finish full screen effect
 // ---------------------------------------------------------
 // CAlfFinishTimer
@@ -45,6 +54,7 @@ NONSHARABLE_CLASS( CAlfRosterFreezeEndTimer ):public CTimer
         CAlfBridge& iBridge;
  	public:
 	   	TInt iSafeCounter;
+	   	TInt iSafeCounterDelta;
         TCallBack iCallBack;        
     };
 
@@ -124,6 +134,9 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         TState NextBlankState(TEvent aEvent);
         TState NextThemeState(TEvent aEvent);
 
+        void HandleFreezeEvent(TEvent aEvent);
+        void HandleThemeEvent(TEvent aEvent);
+
         void FreezeFinished();
 
     public:            
@@ -152,6 +165,7 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         void FreezeRoster(TBool aFrozen);
         
         static TInt DoFreezeFinished(TAny* aAny);
+        static TInt DoNextLayoutSwitchContext(TAny* aAny);
         
     private: // Data
         
@@ -228,6 +242,8 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
     public:
         ~CFullScreenEffectState();
         
+        void ConstructL(const CFullScreenEffectState& aEffectState);
+        
         void ConstructL(TInt aAction, RMemReadStream& aStream);
         
         // Information from BeginFullScreen
@@ -239,17 +255,36 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         TInt iToSecureId;
         TInt iFromSecureId;
         TRect iRect;
+        TBool iLongAppStartTimeout;
+        TBool iTimeout;
         
-        // ETrue if waiting for window group to appear
-        TBool iWaitingWindowGroup;
+         
+        void SetState(TEffectState aState);
+       
+        TEffectState State();
+       
+      
+private:
+        TEffectState iState;
+        
+public:
         // ETrue if end fullscreen has been performed
         TBool iEndFullScreen;
         // ETrue if setup effect container has been done
         TBool iSetupDone;
-
+        // effect has fade out and fade in. The fade in part is active, when this is ETrue.
+        enum TEffectPhase
+            {
+            EOnlyOnePart = 0,
+            EFirstPartActive,
+            EFirstPartRunning,
+            ESecondPartActive,
+            ESecondPartRunning
+            };
+        
+        TEffectPhase iTwoPhaseEffect;
         // used for resolving the iCleanupStackItem that holds the frozen app layout underneath the starting application
         TInt iAppStartScreenshotItemHandle;
-        
         
         enum TEffectType
         {
@@ -260,16 +295,6 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         
         TEffectType iEffectType;
         
-        // Display dimension, iPaintedRegion is clipped to this when determining, if there is enough drawing to the group
-        TSize iDisplaySize;
-        
-        // gathers the painted region for the effected application. When enough region has been painted, the effect is forced.
-        RRegion iPaintedRegion;
-        
-        CAlfBridge* iBridge; // for callback. not own.
-        
         // If the visual is shown by some other visual by a screenshot, this is set ETrue.
         TBool iCanDestroyOrHideImmediately;
-        
-        CPeriodic* iDrawingCompleteTimer;
         };

@@ -1733,7 +1733,7 @@ EXPORTS
 	_ZN12CHuiFxEffect10ConstructLEv @ 1732 NONAME
 	_ZN12CHuiFxEffect11AdvanceTimeEf @ 1733 NONAME
 	_ZN12CHuiFxEffect20SetEffectEndObserverEP21MAlfGfxEffectObserveri @ 1734 NONAME
-	_ZN12CHuiFxEffect4DrawER6CHuiGcRK5TRect @ 1735 NONAME
+	_ZN12CHuiFxEffect4DrawER6CHuiGcRK5TRecti @ 1735 NONAME
 	_ZN12CHuiFxEffect4NewLER12CHuiFxEngine @ 1736 NONAME
 	_ZN12CHuiFxEffect7ChangedEv @ 1737 NONAME
 	_ZN12CHuiFxEffect9AddLayerLEPK11CHuiFxLayer @ 1738 NONAME
@@ -1773,7 +1773,7 @@ EXPORTS
 	_ZN16CHuiFxGroupLayer10VisualAreaER5TRect @ 1772 NONAME
 	_ZN16CHuiFxGroupLayer11AdvanceTimeEf @ 1773 NONAME
 	_ZN16CHuiFxGroupLayer12PrepareDrawLER12CHuiFxEngine @ 1774 NONAME
-	_ZN16CHuiFxGroupLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_ @ 1775 NONAME
+	_ZN16CHuiFxGroupLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_i @ 1775 NONAME
 	_ZN16CHuiFxGroupLayer4NewLEi @ 1776 NONAME
 	_ZN16CHuiFxGroupLayer9AddLayerLEPK11CHuiFxLayer @ 1777 NONAME
 	_ZN16CHuiFxGroupLayerC1Ev @ 1778 NONAME
@@ -1784,14 +1784,14 @@ EXPORTS
 	_ZN17CHuiFxFilterLayer10ConstructLEP12CHuiFxFilter @ 1783 NONAME
 	_ZN17CHuiFxFilterLayer11AdvanceTimeEf @ 1784 NONAME
 	_ZN17CHuiFxFilterLayer12PrepareDrawLER12CHuiFxEngine @ 1785 NONAME
-	_ZN17CHuiFxFilterLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_ @ 1786 NONAME
+	_ZN17CHuiFxFilterLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_i @ 1786 NONAME
 	_ZN17CHuiFxVisualLayer10ConstructLEP14MHuiEffectable @ 1787 NONAME
 	_ZN17CHuiFxVisualLayer10VisualAreaER5TRect @ 1788 NONAME
 	_ZN17CHuiFxVisualLayer11AdvanceTimeEf @ 1789 NONAME
 	_ZN17CHuiFxVisualLayer12PrepareDrawLER12CHuiFxEngine @ 1790 NONAME
 	_ZN17CHuiFxVisualLayer18RegisterParameterLERK7TDesC16P4TRgb @ 1791 NONAME
 	_ZN17CHuiFxVisualLayer18RegisterParameterLERK7TDesC16Pf @ 1792 NONAME
-	_ZN17CHuiFxVisualLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_ @ 1793 NONAME
+	_ZN17CHuiFxVisualLayer4DrawER12CHuiFxEngineR6CHuiGcR18CHuiFxRenderbufferS5_i @ 1793 NONAME
 	_ZN17CHuiFxVisualLayer4NewLEP14MHuiEffectable @ 1794 NONAME
 	_ZN17CHuiFxVisualLayer9ParameterERK7TDesC16 @ 1795 NONAME
 	_ZN17CHuiFxVisualLayerD0Ev @ 1796 NONAME
@@ -1999,4 +1999,9 @@ EXPORTS
 	_ZN12CHuiFxEngine16AddEffectToGroupEi @ 1998 NONAME
 	_ZN12CHuiFxEngine18FxmlUsesOpaqueHintERK7TDesC16 @ 1999 NONAME
 	_ZN22CHuiCanvasRenderBuffer11InitializeLERK5TSizei @ 2000 NONAME
+	_ZN13CAppIconCache4FindEx5TSize @ 2001 NONAME
+	_ZN13CAppIconCache5ClearEv @ 2002 NONAME
+	_ZN13CAppIconCache6InsertER17TRasterizedBitmap @ 2003 NONAME
+	_ZNK7CHuiEnv12AppIconCacheEv @ 2004 NONAME
+	_ZN11CHuiDisplay24SetSkinSizeChangePendingEv @ 2005 NONAME
 

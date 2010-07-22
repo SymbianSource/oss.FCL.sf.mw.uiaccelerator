@@ -29,6 +29,7 @@
 #include "uiacceltk/HuiTextureProcessor.h"
 #include "uiacceltk/HuiUtil.h"
 #include "uiacceltk/HuiPanic.h"
+#include "appiconcache.h"
 
 #include "huiextension.h"
 
@@ -1155,7 +1156,7 @@ void CHuiVg10Texture::SegmentUploadNvgL(const CFbsBitmap& aBitmap, const CFbsBit
         
         // Create the real image from NVG databuf
         iNVGData = dataBuf;
-        image = CreateRenderedImage(&nvgEngine, dataBuf, Size());
+        image = CreateRenderedImage(&nvgEngine, dataBuf, Size(),aBitmap.SerialNumber());
         
         // New functionality for checking the mask
         if (header.GetBitmapId() != maskHeader.GetBitmapId() && maskDataBuf &&
@@ -1210,7 +1211,9 @@ TInt CHuiVg10Texture::CompareNvgData(HBufC8* aNVGData1, HBufC8* aNVGData2)
     return returnValue;
     }
 
-VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNVGData, const TSize& aDestSize)
+
+
+VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNVGData, const TSize& aDestSize, TInt64 aSerialNumber)
     {
     HUI_VG_INVARIANT();
     
@@ -1339,23 +1342,41 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
     // drawn icons would show correctly, and no issues with transparency would arise)
     VGint blendMode = vgGeti(VG_BLEND_MODE);
     vgSeti(VG_BLEND_MODE, VG_BLEND_SRC_OVER);
-    if (iIconCommands)
+    TAknIconHeader iconheader = GetNvgIconHeader(aNVGData);
+    TBool direct = EFalse;
+    if (iconheader.IsMarginCorrection() && aSerialNumber)
         {
-        //HUI_DEBUG(_L("CHuiVg10Texture::CreateRenderedImage() - Drawing iIconCommands"));
-        iIconCommands->Draw(aDestSize, aNvgEngine);
+        CFbsBitmap* entry = CHuiStatic::Env().AppIconCache().Find(aSerialNumber, aDestSize);
+        if (entry)
+            {
+            TSize entrySize = entry->SizeInPixels();
+            entry->BeginDataAccess();
+            TUint8* dataPtr = (TUint8*)entry->DataAddress();
+            vgImageSubData(image, dataPtr, CFbsBitmap::ScanLineLength(entrySize.iWidth, EColor16MAP), VG_sARGB_8888_PRE, 0, 0, entrySize.iWidth, entrySize.iHeight);
+            entry->EndDataAccess();
+            direct = ETrue;
+            }
         }
-    else
+        
+    if (!direct)
         {
-        // If ObjectCached version failed, try to use the old way
-        //HUI_DEBUG(_L("CHuiVg10Texture::CreateRenderedImage() - Drawing with DrawNvg"));
-        aNvgEngine->DrawNvg(GetNvgDataWithoutHeader(aNVGData), aDestSize, NULL, NULL);
+        if (iIconCommands)
+            {
+            //HUI_DEBUG(_L("CHuiVg10Texture::CreateRenderedImage() - Drawing iIconCommands"));
+            iIconCommands->Draw(aDestSize, aNvgEngine);
+            }
+        else
+            {
+            // If ObjectCached version failed, try to use the old way
+            //HUI_DEBUG(_L("CHuiVg10Texture::CreateRenderedImage() - Drawing with DrawNvg"));
+            aNvgEngine->DrawNvg(GetNvgDataWithoutHeader(aNVGData), aDestSize, NULL, NULL);
+            }
         }
     
     // NVG-TLV icon margin special case check:
     // Check, if the icon has to be margin corrected
-    TAknIconHeader iconheader = GetNvgIconHeader(aNVGData);
     TSize size = aDestSize; // For using the correct size also later on
-    if (iconheader.IsMarginCorrection())
+    if (iconheader.IsMarginCorrection() && !direct)
         {
         size = ApplyMargin(image, aDestSize, display, newSurface, context);
         if( size != aDestSize)
@@ -1366,6 +1387,37 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
             else
                 aNvgEngine->DrawNvg(GetNvgDataWithoutHeader(aNVGData), size, NULL, NULL);
             }
+#ifndef __WINS__
+        // assume 32bpp for the icon, don't cache if it's too large
+        TInt bitmapBytes = aDestSize.iWidth*aDestSize.iHeight*4;
+        if (bitmapBytes < 128*128*4)
+            {
+            // can't leave here (we would screw up the transformation matrix
+            // for the primary surface)
+            CFbsBitmap* rasterizedIcon = new CFbsBitmap;
+            TInt rastererr(KErrNone);
+            if (rasterizedIcon)
+                {
+                rastererr = rasterizedIcon->Create(aDestSize, EColor16MAP);
+                }
+            if (!rastererr)
+                {                    
+                rasterizedIcon->BeginDataAccess();
+                TUint8* dataPtr = (TUint8*)rasterizedIcon->DataAddress();
+                vgGetImageSubData(image, dataPtr, CFbsBitmap::ScanLineLength(aDestSize.iWidth, EColor16MAP), VG_sARGB_8888_PRE, 0, 0, aDestSize.iWidth, aDestSize.iHeight);
+                rasterizedIcon->EndDataAccess();
+                // store for future use....
+                TRasterizedBitmap rbmp(aSerialNumber, rasterizedIcon);            
+                rastererr = CHuiStatic::Env().AppIconCache().Insert(rbmp);        
+                }
+            // either the bitmap creation failed, or cache insert failed
+            // delete the bitmap so that we don't leak memory
+            if (rastererr)
+                {
+                delete rasterizedIcon;
+                }
+            }
+#endif
         }
 
     // restore the old surface before restoring original modes

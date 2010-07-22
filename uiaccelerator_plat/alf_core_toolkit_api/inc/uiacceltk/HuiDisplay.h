@@ -818,6 +818,19 @@ public:
      */
     IMPORT_C void CopyScreenToBitmapL(CFbsBitmap* aBitmap);
     
+    
+    /**
+     * Does background clearing for native alf application
+     */
+    void DoBackgroundClear();
+    
+    void ScanningAlfContent(TBool aScanning);
+    void SetAlfContentChanged(TBool aChanged);
+    TBool AlfContentChanged();
+    IMPORT_C void SetSkinSizeChangePending();
+    TBool QueryAndResetSkinSizeChangePendingStatus();
+    TRect CurrentDirtyRect();
+    
 private:
 
     /**
@@ -1021,6 +1034,19 @@ private:
     CFbsBitGc* iForegroundBitmapGc;
     /** ETrue if foreground texture should be blend, EFalse otherwise */
     TBool iForegroundTextureTransparency;
+    
+    /** dirty region index that is being drawn currently */ 
+    TInt iCurrentDirtyIndx;
+    
+    /** Current dirty region for this refresh instance */
+    RDirtyRegions iTempDirtyRegions;
+    TRect iCurrentDirtyRect;
+
+    
+	/** For handling alf content update */
+    TBool iScanningAlfContent;
+    TBool iDisplayContainsChangedAlfContent;
+    TBool iDisplaySizeChangePending;
     };
 
 #endif  // __HUIDISPLAY_H__

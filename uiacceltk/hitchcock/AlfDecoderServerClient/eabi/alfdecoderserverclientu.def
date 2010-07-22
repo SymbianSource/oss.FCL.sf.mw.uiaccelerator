@@ -73,4 +73,5 @@ EXPORTS
 	_ZN18CAlfEffectObserver18SubscribeCallbackLEPNS_18MAlfEffectObserverEii @ 72 NONAME
 	_ZN17RAlfBridgerClient30GetListOfWindowGroupsWSurfacesEP6RArrayIiE @ 73 NONAME
 	_ZN18CAlfEffectObserver20SetDistractionWindowERK15RWindowTreeNodei @ 74 NONAME
+	_ZN17RAlfBridgerClient27GetOptionalGraphicsMemUsersEP6RArrayIiE @ 75 NONAME
 

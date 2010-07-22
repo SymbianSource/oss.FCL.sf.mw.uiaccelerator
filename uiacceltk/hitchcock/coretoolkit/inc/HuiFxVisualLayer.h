@@ -32,7 +32,7 @@ public:
     IMPORT_C static CHuiFxVisualLayer* NewL(MHuiEffectable* aVisual); // param mandatory
     IMPORT_C ~CHuiFxVisualLayer();
     IMPORT_C TBool PrepareDrawL(CHuiFxEngine& aEngine);
-    IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource);
+    IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface);
     IMPORT_C TBool VisualArea( TRect& aRect );
     IMPORT_C void AdvanceTime(TReal32 aElapsedTime);
     IMPORT_C TBool Changed() const;

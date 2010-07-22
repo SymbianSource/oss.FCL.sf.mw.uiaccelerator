@@ -172,7 +172,7 @@ EXPORT_C TBool CHuiFxGroupLayer::PrepareDrawL(CHuiFxEngine& aEngine)
     }
 
 EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, 
-                                     CHuiFxRenderbuffer& aSource)
+                                     CHuiFxRenderbuffer& aSource, TBool aHasSurface)
     {
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxGroupLayer::Draw - 0x%x "), this);
@@ -230,7 +230,7 @@ EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxR
     
     for (TInt i = 0; i < iLayers.Count(); i++)
         {
-        iLayers[i]->Draw(aEngine, aGc, *backBuffer, *sourceBuffer);
+        iLayers[i]->Draw(aEngine, aGc, *backBuffer, *sourceBuffer, aHasSurface);
         }
 
     // The root group does not support composition

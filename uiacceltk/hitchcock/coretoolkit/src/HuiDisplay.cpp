@@ -50,6 +50,10 @@
 #include "HuiFxEngine.h"
 #include "huiextension.h"
 
+#include <e32math.h>
+
+//#define DEBUG_SW_MODE_DIRTY_AREAS
+
 const TUid KHuiInternalFbsBitmapBufferGcUid = {0x2000e5a3}; 
 
 //#define HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
@@ -187,6 +191,8 @@ void CHuiDisplay::ConstructL(const TRect& aRect, CHuiRoster* aSharedRoster)
     // full display refresh in many cases -> better performance.
     iGc->EnableTransformedClippingRects(iUseTransformedDirtyRegions);
 
+    iDisplaySizeChangePending = EFalse;
+    
     HUI_DEBUG1(_L("CHuiDisplay::ConstructL - Free memory when exiting ConstructL: %i"), HuiUtil::FreeMemory());
     }
 
@@ -218,6 +224,8 @@ EXPORT_C CHuiDisplay::~CHuiDisplay()
     iVisibleAreaObservers.Reset();
     iRosterObservers.Reset();
 
+    iTempDirtyRegions.Close();
+    
     iDirtyRegions.Close();
     iDirtyRegions2.Close();
     if ( iCurrentDirtyRegions )
@@ -580,6 +588,11 @@ void CHuiDisplay::CombineAndAddDirtyRegion(const TRect& aPrevDirtyRegion, TRect&
     	}
     // We must only transform the (new) dirtyregion, not combine or anything else here
     aDirtyRegion = transformedNewDirtyRect;
+    
+    if(iScanningAlfContent)
+        {
+		SetAlfContentChanged(ETrue);
+        }
     }
 
 
@@ -631,6 +644,7 @@ TBool CHuiDisplay::Refresh()
     startTime.UniversalTime();
 #endif
     
+    SetAlfContentChanged(EFalse);
     
     // Prevent display refresh, if the display is on background.
     if(!iOnForeground || IsScreenBufferLocked())
@@ -648,6 +662,9 @@ TBool CHuiDisplay::Refresh()
     					  == MHuiRenderSurface::EFlagUseDirtyRects;
  	
     iWholeDisplayAreaIsDirty = EFalse;    
+    
+    // Restore state to defaults. Alf client may have done some NVG drawing outside refresh loop and main drawing context may be wrong
+    iGc->RestoreState();
     
     if(iUpdateRenderState)
         {
@@ -734,16 +751,18 @@ TBool CHuiDisplay::Refresh()
     // this frame and the previous frame (this is needed when buffer swapping
     // is used; with buffer copying a single list of dirty regions would
     // suffice).
-    RDirtyRegions dirty;
+
+
+    iTempDirtyRegions.Reset();
     for(i = 0; i < iCurrentDirtyRegions->Count(); ++i)
         {
-        dirty.Append((*iCurrentDirtyRegions)[i]);
+        iTempDirtyRegions.Append((*iCurrentDirtyRegions)[i]);
         }
     if (iPreviousDirtyRegions)
     	{
     	for(i = 0; i < iPreviousDirtyRegions->Count(); ++i)
         	{
-        	AddDirtyRegion((*iPreviousDirtyRegions)[i], dirty, EFalse);
+        	AddDirtyRegion((*iPreviousDirtyRegions)[i], iTempDirtyRegions, EFalse);
         	}
     	}
 
@@ -794,25 +813,25 @@ TBool CHuiDisplay::Refresh()
 	// Set dirty rect in render surface to minimize screen update
 	// Only implemented for BitGdi renderer for now
     TRect mergedDirtyRect;
-    if (dirty.Count() > 0)
+    if (iTempDirtyRegions.Count() > 0)
     	{
-    	mergedDirtyRect = dirty[0];
+    	mergedDirtyRect = iTempDirtyRegions[0];
     	}
     	
 	if (useDirtyRects)
 	    {
 		// When Bitgdi renderer used set dirty rect in render surface
 		// to minimize screen update in CHuiBitgdiRenderSurface::SwapBuffers
-	    if (dirty.Count() == 1)
+	    if (iTempDirtyRegions.Count() == 1)
 		    {
             ClipDirtyRect(mergedDirtyRect, VisibleAreaClippingRect());
             iRenderSurface->SetDirtyRect(mergedDirtyRect);
 		    }
-		else if (dirty.Count() > 1) 
+		else if (iTempDirtyRegions.Count() > 1) 
 		    {
-			for(i = 1; i < dirty.Count(); ++i)
+			for(i = 1; i < iTempDirtyRegions.Count(); ++i)
 				{
-				TRect r(dirty[i]);
+				TRect r(iTempDirtyRegions[i]);
 				// check top left corner to expand or not
 				if (r.iTl.iX < mergedDirtyRect.iTl.iX)
 				    {
@@ -852,8 +871,8 @@ TBool CHuiDisplay::Refresh()
 	// Merge into max one dirty area when HW accelrated drawing is used
 	if (useDirtyRects && IsRendererHWAccelerated())
 	    {
-	    dirty.Reset();
-	    dirty.Append(mergedDirtyRect);
+        iTempDirtyRegions.Reset();
+        iTempDirtyRegions.Append(mergedDirtyRect);
 	    }
 	
 #ifdef HUI_DEBUG_PRINT_PERFORMANCE_INTERVAL
@@ -865,12 +884,13 @@ TBool CHuiDisplay::Refresh()
 #endif	
 	
     // Usually there is only one dirty region (if any).
-    for(i = 0; i < dirty.Count(); ++i)
+    iCurrentDirtyIndx = 0;
+    for(; iCurrentDirtyIndx < iTempDirtyRegions.Count(); ++iCurrentDirtyIndx)
         {
         // Set up the clipping rectangle.
-        TRect dirtyRect = dirty[i];
+        TRect dirtyRect = iTempDirtyRegions[iCurrentDirtyIndx];
         ClipDirtyRect(dirtyRect, VisibleAreaClippingRect());
-        
+        iCurrentDirtyRect = dirtyRect;
         iGc->PushClip();
         iGc->Clip(dirtyRect);        
         
@@ -886,34 +906,7 @@ TBool CHuiDisplay::Refresh()
             iBackgroundColor = oldBgColor;
             }
                 
-        // Clear background for the dirty area
-        if (iBackgroundItems.Count() != 0)
-            {
-            ClearWithBackgroundItems(dirtyRect);    
-            }
-        else
-            {
-            switch (iClearBackground)
-                {
-                case EClearWithColor:
-                    {
-                    ClearWithColor(dirtyRect);                            
-                    break;    
-                    }
-                case EClearWithSkinBackground:
-                    {
-                    ClearWithSkinBackground(dirtyRect);                                                    
-                    break;    
-                    }
-                case EClearNone:
-                default:
-                    {
-                    // Don't do anything
-                    break;    
-                    }                                                
-                }                                    
-            }                                        
-        
+         
         if ( iForegroundBitmapGc && iForegroundTextureTransparency )
             {
             // There is ALF content in the background, we have to
@@ -927,7 +920,7 @@ TBool CHuiDisplay::Refresh()
             iForegroundBitmapGc->SetPenColor(clearColor);
             iForegroundBitmapGc->SetBrushColor(clearColor);
             iForegroundBitmapGc->SetBrushStyle(CGraphicsContext::ESolidBrush);
-  	        iForegroundBitmapGc->Clear();
+  	        iForegroundBitmapGc->Clear(dirtyRect);
   	        iForegroundBitmapGc->Reset();
             }
         		
@@ -965,7 +958,7 @@ TBool CHuiDisplay::Refresh()
         iGc->PopClip();
         }
 
-    dirty.Reset();
+    iTempDirtyRegions.Reset();
 
     // There must be no disparity in the number of pushed clipping rectangles.
     // (equivalent to __ASSERT_ALWAYS)
@@ -988,34 +981,7 @@ TBool CHuiDisplay::Refresh()
 		
 	// Clear current dirty regions	
 	iCurrentDirtyRegions->Reset();
-	
-	// Trick to swap gles buffers if we are drawing idle screens before refresh loop is going to
-	// sleep. 
-	if(	IsRendererHWAccelerated() && !iGotDirtyReports && !iScreenBufferObserver) 
-    		{
-	    	//RenderSurface().SwapBuffers(); [ohi]
-	    	}
-	    	
-	// Tell the screen buffer observer that the buffer is complete 
-	if(iScreenBufferObserver)
-		{
-		SetScreenBufferLock(ETrue); // the observer should do unlock!
-		
-		TRect rect(VisibleArea()); // This is not the real display rect in ALF display case(!)
-		TRect dirtyRect(mergedDirtyRect);
-		
-		// Update screen buffer GC bitmap
-		if (DisplayType() != CHuiDisplay::EDisplayOffScreenBuffer)
-			{
-			TRAP_IGNORE(CHuiStatic::Renderer().UpdateOffScreenBitmapL(*this));			
-			}
-						
-		if (iScreenBufferObserver->ScreenBufferComplete(iScreenBufferUid, rect, dirtyRect))
-			{
-			SetScreenBufferLock(EFalse);
-			}
-		}
-
+		    	
     iWholeDisplayAreaIsDirty = EFalse;    
 	
     HUI_PROBE_PROGRAMFLOW_EXIT(MHuiProbe::EProgramFlowPointRefresh)
@@ -1631,6 +1597,33 @@ TBool CHuiDisplay::IsVisibleAreaClippingEnabled() const
 #endif
     }
 
+void CHuiDisplay::ScanningAlfContent(TBool aScanning )
+    {
+    iScanningAlfContent = aScanning;
+    }
+
+void CHuiDisplay::SetAlfContentChanged(TBool aChanged)
+    {
+    iDisplayContainsChangedAlfContent = aChanged;
+    }
+
+TBool CHuiDisplay::AlfContentChanged()
+    {
+    return iDisplayContainsChangedAlfContent;
+    }
+
+EXPORT_C void CHuiDisplay::SetSkinSizeChangePending()
+    {
+    iDisplaySizeChangePending = ETrue;
+    }
+
+TBool CHuiDisplay::QueryAndResetSkinSizeChangePendingStatus()
+    {
+    TBool ret = iDisplaySizeChangePending;
+    iDisplaySizeChangePending = EFalse;
+    return ret;
+    }
+
 void CHuiDisplay::ClipDirtyRect(TRect& aRect, TRect aClippingRect)
     {
     if (aRect.Intersects(aClippingRect))
@@ -1669,6 +1662,15 @@ void CHuiDisplay::UpdateForegroundTexture(const TRect& aRect)
     {
     if (iForegroundTexture && iForegroundBitmap && !aRect.IsEmpty())
         {
+#if defined(DEBUG_SW_MODE_DIRTY_AREAS)
+        TRgb penColor = TRgb(Math::Random());
+        penColor.SetAlpha(128);
+        iForegroundBitmapGc->SetPenStyle(CGraphicsContext::ESolidPen);
+        iForegroundBitmapGc->SetBrushStyle(CGraphicsContext::ESolidBrush);
+        iForegroundBitmapGc->SetPenColor(penColor);
+        iForegroundBitmapGc->SetBrushColor(penColor);
+        iForegroundBitmapGc->DrawRect(aRect);
+#endif
         TRAP_IGNORE(DoUpdateForegroundTextureL(aRect));
         }
     }
@@ -1786,4 +1788,41 @@ EXPORT_C void CHuiDisplay::CopyScreenToBitmapL(CFbsBitmap* aBitmap)
         }
         
     User::LeaveIfError( err );
+    }
+
+void CHuiDisplay::DoBackgroundClear()
+    {
+    // Clear background for the dirty area
+    TRect dirtyRect = iTempDirtyRegions[iCurrentDirtyIndx];
+    if (iBackgroundItems.Count() != 0)
+        {
+        ClearWithBackgroundItems(dirtyRect);    
+        }
+    else
+        {
+        switch (iClearBackground)
+            {
+            case EClearWithColor:
+                {
+                ClearWithColor(dirtyRect);                            
+                break;    
+                }
+            case EClearWithSkinBackground:
+                {
+                ClearWithSkinBackground(dirtyRect);                                                    
+                break;    
+                }
+            case EClearNone:
+            default:
+                {
+                // Don't do anything
+                break;    
+                }                                                
+            }                                    
+        }
+    }
+
+TRect CHuiDisplay::CurrentDirtyRect()
+    {
+    return iCurrentDirtyRect;
     }

@@ -15,9 +15,9 @@
 *
 */
 
-// local
-//#define ALF_USE_OPENWF_COMPOSITION
-
+#ifdef SYMBIAN_GRAPHICS_BUILD_OPENWF_WSERV
+#define ALF_USE_OPENWF_COMPOSITION
+#endif
 
 #include "../uiaccelerator_plat/group/bld.inf"
 

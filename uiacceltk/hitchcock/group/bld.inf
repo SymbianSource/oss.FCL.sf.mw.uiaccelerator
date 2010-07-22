@@ -40,6 +40,7 @@ PRJ_EXPORTS
 // After effect system is complete and aknskins has taken over the correct 101f84b9.sel file
 // and manifest.mf file, we should no longer export these files.
 #ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
+#ifndef ALF_USE_OPENWF_COMPOSITION
 ../coretoolkit/data/101f84b9.sel /epoc32/data/z/resource/skins/101f84b9/101f84b9.sel
 ../coretoolkit/data/101f84b9.sel /epoc32/release/winscw/udeb/z/resource/skins/101f84b9/101f84b9.sel
 ../coretoolkit/data/101f84b9.sel /epoc32/release/winscw/urel/z/resource/skins/101f84b9/101f84b9.sel
@@ -59,7 +60,7 @@ PRJ_EXPORTS
 // For easier testing you can also copy the effect files onto a memory card into
 // /resource/effects/ directory.
 // These files can be changed any time and reregistered by changing the skin
-
+#endif // #ifndef ALF_USE_OPENWF_COMPOSITION
 #endif // #ifndef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
 
 // backround animation shaders

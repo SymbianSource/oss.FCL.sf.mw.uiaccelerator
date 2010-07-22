@@ -87,5 +87,5 @@ void CHuiFxVg10BrightnessContrastFilter::UpdateColorMatrix(void)
     iColorMatrix[16] = oOff;
     iColorMatrix[17] = oOff;
     iColorMatrix[18] = oOff;
-    iColorMatrix[19] = 0.0f;
+    iColorMatrix[19] = 0.0f; 
     }

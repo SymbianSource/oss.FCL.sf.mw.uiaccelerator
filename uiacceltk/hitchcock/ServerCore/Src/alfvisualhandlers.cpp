@@ -46,6 +46,9 @@
 #include "alfsrvsubsessionbase.h"
 #include "alfsrvtransformationsubsession.h"
 
+#define AMT_CONTROL() static_cast<CAlfModuleTestDataControl*>(Dll::Tls())
+#include "alfmoduletest.h" 
+
 #ifdef RD_ALF_IN_PLATFORM
 #include <aknlayout2hierarchy.h>
 #endif
@@ -768,8 +771,16 @@ EXPORT_C void CAlfVisualHandler::HandleCmdL(TInt aCommandId, const TDesC8& aInpu
             CHuiFxEngine* engine = iVisual->Env().EffectsEngine();
             if (engine)
                 {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+                TTime time;
+                time.UniversalTime();
+                AMT_ADD_TIME(params->iHandle, time.Int64(), ETrue);
+#endif  
                 CHuiFxEffect* effect = NULL;
-                engine->LoadEffectL( params->iFileName, effect, iVisual->Effectable(), NULL , NULL, params->iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn );
+                // Note: alf effects do not support taking screenshot 
+				// Note: alf effects do not support freezing.
+				engine->LoadEffectL( params->iFileName, effect, iVisual->Effectable(), NULL , NULL, params->iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn );
+	            iVisual->SetFreezeState(EFalse); 
                 // The effect will be automatically set to the visual if parsing succeeds
                 }
             break;
@@ -781,11 +792,19 @@ EXPORT_C void CAlfVisualHandler::HandleCmdL(TInt aCommandId, const TDesC8& aInpu
             CHuiFxEngine* engine = iVisual->Env().EffectsEngine();
             if (engine)
                 {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+                TTime time;
+                time.UniversalTime();
+                AMT_ADD_TIME(params->iHandle, time.Int64(), ETrue);
+#endif  
                 CHuiFxEffect* effect = NULL;
                 // this will add the group, if it does not exist already
                 // Begin and End group events are supposed to come through GfxTransEffect API.
                 engine->BeginGroupEffect(groupHandle);
+                // Note: alf effects do not support taking screenshot 
+				// Note: alf effects do not support freezing.
                 engine->LoadGroupEffectL( params->iFileName, effect, iVisual->Effectable(),groupHandle, NULL, NULL, params->iHandle, KHuiFxDelayRunUntilFirstFrameHasBeenDrawn );
+	            iVisual->SetFreezeState(EFalse);
                 // The effect will be automatically set to the visual if parsing succeeds
                 }
             break;
@@ -793,6 +812,7 @@ EXPORT_C void CAlfVisualHandler::HandleCmdL(TInt aCommandId, const TDesC8& aInpu
         case EAlfVisualRemoveEffect:
             {
             iVisual->SetEffect(NULL);
+            iVisual->SetFreezeState(EFalse); // Note: alf effects do not support freezing.
             break;
             }
 

@@ -35,6 +35,12 @@ LOCAL_D const TInt KMaxClocks = 10;
 
 class TFakeProbe;
 class CAppFwProxy;
+#ifdef HUI_DEBUG_TRACK_DRAWING
+class CAlfCommandDebug;   
+ #ifndef __WINSCW__
+extern TTlsData globalWriteableData;
+ #endif
+#endif
 /**
  * Thread local storage space. Writable static data is not supported in
  * Symbian, so static data is stored in this struct.
@@ -121,6 +127,10 @@ NONSHARABLE_STRUCT(TTlsData)
 #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
     // For testing purposes, test data needs to be included into TLS object.
     CAlfModuleTestDataControl* iAlfModuleTestDataControl;
+#endif
+
+#ifdef HUI_DEBUG_TRACK_DRAWING
+    CAlfCommandDebug* iCommandDebugger;   
 #endif
 
     CWsScreenDevice* WsScreenDevice(TInt aScreenNumber)
@@ -232,6 +242,20 @@ NONSHARABLE_STRUCT(TTlsData)
         iAlfModuleTestDataControl = NULL;
 #endif        
         }
+
+#ifdef HUI_DEBUG_TRACK_DRAWING
+    static CAlfCommandDebug* CommandDebugger() 
+        {
+        #ifndef __WINSCW__
+        TTlsData* data = &globalWriteableData;
+        #else
+        TTlsData* data = static_cast<TTlsData*>(Dll::Tls());
+        #endif
+
+        return data->iCommandDebugger;
+        }   
+#endif
+    
     };
 
 

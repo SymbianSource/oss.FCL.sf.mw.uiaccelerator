@@ -35,12 +35,7 @@ void CMemoryMonitorSession::CreateL()
 CMemoryMonitorSession::~CMemoryMonitorSession()
     {
     FUNC_LOG;
-	/* TODO - need to add the right condition
-    if (iUseAbsoluteTargets)
-        { // se3ssion terminated while on critical allocation, release lock
-        Server().Monitor().SessionInCriticalAllocation(0);
-        }
-	*/
+    Server().Monitor().SessionInCriticalAllocation(0,0);
     CloseAppsFinished(0, EFalse);
     }
 
@@ -91,7 +86,12 @@ void CMemoryMonitorSession::ServiceL(const RMessage2& aMessage)
                 Server().Monitor().SessionInCriticalAllocation(1, clientId);
                 
                 TRAPD(err, Monitor().RequestFreeMemoryL(aMessage.Int0()));
-                if (err)
+                if(err == KErrCompletion) 
+                    {
+                    TRACES("There is already enough memory - nothing to do");
+                    Server().Monitor().SessionInCriticalAllocation(0, clientId);
+                    }
+                else if (err != KErrNone )
                     {
                     // completes the message if that was left to pending
                     TRACES1("Error in RequestFreeMemory %d", err);

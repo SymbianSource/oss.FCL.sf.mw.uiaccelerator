@@ -1317,6 +1317,7 @@ void CAlfNode::UpdateOrdinalPosition()
                     (TAny*)offset );
             }
         }
+    AMT_MAP_NODE_SET_ORDINAL_POSITION();
     }
 
 // ---------------------------------------------------------------------------

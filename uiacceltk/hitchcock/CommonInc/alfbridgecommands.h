@@ -85,7 +85,7 @@ enum TAlfDecoderServerBindings
     EAlfDSIncludeToVisibilityCalculation,
     EAlfDSSetDistractionWindow,
 
-    KUnInitialized
+    KUnInitialized // This must be kept as last command!
     };
 
 #endif /* ALFBRIDGECOMMANDS_H_ */

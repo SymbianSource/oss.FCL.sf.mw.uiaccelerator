@@ -139,7 +139,7 @@ CAlfHierarchyModel::~CAlfHierarchyModel()
 #ifdef ALF_DEBUG_TRACK_DRAWING 
     delete iCommandDebugger;
 #endif
-    
+    iUpdateRegion.Close();    
 #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
     delete AMT_CONTROL();
     Dll::FreeTls();
@@ -803,14 +803,7 @@ void CAlfHierarchyModel::DoNodeCreatedL()
         }
 #endif
 
-    AMT_INC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeCount ); 
-    AMT_INC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeGroup),  iWindowGroupNodeCount ); 
-    AMT_INC_COUNTER_IF(node, iTotalNodeCount );
-    
-    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient,
-                          iIntMap, node->iId, EAlfModuleTestTypeHierarchyModelCreateWindow );
-    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeGroup,
-                          iIntMap, node->iId, EAlfModuleTestTypeHierarchyModelCreateWindowGroup );
+    AMT_MAP_NODE_CREATED();
     }
 
 // ---------------------------------------------------------------------------
@@ -841,14 +834,7 @@ void CAlfHierarchyModel::DoNodeReleasedL()
         USER_INVARIANT();
         }
 
-    AMT_DEC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeCount ); 
-    AMT_DEC_COUNTER_IF(node && (nodeType==MWsWindowTreeNode::EWinTreeNodeGroup),  iWindowGroupNodeCount ); 
-    AMT_DEC_COUNTER_IF(node, iTotalNodeCount );
-    
-    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient,
-                          iIntMap, nodeId, EAlfModuleTestTypeHierarchyModelReleaseWindow );
-    AMT_MAP_INC_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeGroup,
-                          iIntMap, nodeId, EAlfModuleTestTypeHierarchyModelReleaseWindowGroup );
+    AMT_MAP_NODE_RELEASED();
     }
 
 // ---------------------------------------------------------------------------
@@ -868,12 +854,8 @@ void CAlfHierarchyModel::DoNodeActivatedL()
         {
         USER_INVARIANT();
         }
-    
-    AMT_INC_COUNTER_IF( node && (nodeType==MWsWindowTreeNode::EWinTreeNodeClient), iWindowNodeActivatedCount );
-    
-    AMT_MAP_SET_VALUE_IF( node && nodeType == MWsWindowTreeNode::EWinTreeNodeClient,
-                          iBoolMap, nodeId, ETrue,
-                          EAlfModuleTestTypeHierarchyModelActiveWindow );    
+
+    AMT_MAP_NODE_ACTIVATED();
     }
 
 // ---------------------------------------------------------------------------
@@ -904,14 +886,7 @@ void CAlfHierarchyModel::DoNodeExtentChangedL()
         }
 #endif
 
-    AMT_INC_COUNTER_IF(node, iNodeExtentChangedCount );
-    AMT_SET_VALUE_IF(node, iLatestNodeExtentRect, rect );
-    AMT_MAP_SET_VALUE_IF( node && node->iWindow,
-                          iSizeMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
-                          rect.Size(), EAlfModuleTestTypeHierarchyModelChangeWindowSize );
-    AMT_MAP_SET_VALUE_IF( node && node->iWindow,
-                          iPositionMap, node->iWindow->WsInfo().iClientSideId.iWindowIdentifer, 
-                          rect.iTl, EAlfModuleTestTypeHierarchyModelChangeWindowPosition );
+    AMT_MAP_NODE_EXTENT_CHANGED();
     }
 
 // ---------------------------------------------------------------------------
@@ -972,12 +947,7 @@ void CAlfHierarchyModel::DoNodeFlagChangedL()
         USER_INVARIANT();
         }
 
-    AMT_INC_COUNTER_IF(node, iTotalNodeFlagChangedCount );
-    AMT_MAP_SET_VALUE_IF( node && node->iWindow && MWsWindowTreeObserver::EVisible == flag,
-                          iBoolMap, 
-                          node->iWindow->WsInfo().iClientSideId.iWindowIdentifer,
-                          newValue,
-                          EAlfModuleTestTypeHierarchyModelChangeWindowVisibility ); 
+    AMT_MAP_NODE_FLAG_CHANGED();
     }
 
 // ---------------------------------------------------------------------------
@@ -1034,6 +1004,8 @@ void CAlfHierarchyModel::DoNodeTransparentRegionChangedL()
     iStream->ReadInt8L();
     ReadRegionL( iStream, newOpaqueRegion );
     // TODO: Implement actions
+    newTransparentRegion.Close();
+    newOpaqueRegion.Close();
     }
 
 // ---------------------------------------------------------------------------

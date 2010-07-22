@@ -36,6 +36,10 @@ class CHuiCanvasWsSwGc;
 class CHuiCanvasWsHwGc;
 class CAlfCommandDebug;
 class CHuiCanvasWsBitGc;
+#ifdef HUI_DEBUG_TRACK_DRAWING
+class CHuiCanvasDebugWsGc;
+#endif
+    
 
 /**
  * This class is used internally by the toolkit and thus should
@@ -186,6 +190,7 @@ private:
     void DoHandleBufferL(TInt aIndex, TRect& aDisplayRect, TInt aAction, const CHuiCanvasVisual& aUser, CHuiGc* aGc, TPoint& aPos); 
     void DoHandleBufferStringL(TInt aIndex, TRect& aDisplayRect, TInt aAction, const CHuiCanvasVisual& aUser, CHuiGc* aGc, TPoint& aPos, TPtr8 aCommandBuffer, CHuiCanvasCommandBuffer *aBuffer);
 
+    void DoPeekBufferAndUpdateShapeRegionL();
     void DoPeekBufferL(TInt aIndex);     
     void DoDigestPaddingL();
 
@@ -284,6 +289,9 @@ private:
     
     virtual void ClearCapturingBufferArea(const TRect& aRect);
     
+    void ApplyShapeRegion();
+    void TranslateShapeRegion(const TPoint& aNewOrigin);
+    
 private:
     
     /** Region which this painter updates with current command buffers */
@@ -314,6 +322,8 @@ private:
     TBool iAutomaticRenderBufferUsage;
     
     /** Flags to tell whether the window shape region has been changed  */
+    TBool iShapeRegionAvailable;
+    TPoint iShapeRegionOrigin;
     TBool iShapeRegionClearingPending;
     TBool iShapeRegionClippingPending;
     
@@ -385,11 +395,11 @@ private:
     mutable RRegionBuf<KHuiCanvasWsPainterRegionGranularity> iTempIntersectingRegion;
 
 #ifdef HUI_DEBUG_TRACK_DRAWING
-    CAlfCommandDebug* iCommandDebugger;
+    CHuiCanvasDebugWsGc* iCanvasDebugWsGc; 
 #endif
     
     // Boolean flag indicating if render buffer ought to be used.
     TBool iEnableRenderBuffer;
-  };
+    };
     
 #endif  // __HUICANVASWSPAINTER_H__

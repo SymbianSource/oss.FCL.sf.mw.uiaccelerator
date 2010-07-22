@@ -987,9 +987,11 @@ void CHuiCanvasWsHwGc::WsDrawText1L(TPtr& aTextValue, THuiCanvasTextParameters& 
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));
                 }
             
             // Draw            
@@ -998,6 +1000,7 @@ void CHuiCanvasWsHwGc::WsDrawText1L(TPtr& aTextValue, THuiCanvasTextParameters& 
             if (cachedImage->iUseColorModulation)
                 {
                 iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetOpacity(oldOpacity);
                 }
             }        
         }
@@ -1027,9 +1030,11 @@ void CHuiCanvasWsHwGc::WsDrawText2L(TPtr& aTextValue, TPoint& aPoint,THuiCanvasT
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));    
                 }
             
             // Draw            
@@ -1038,6 +1043,7 @@ void CHuiCanvasWsHwGc::WsDrawText2L(TPtr& aTextValue, TPoint& aPoint,THuiCanvasT
             if (cachedImage->iUseColorModulation)
                 {
                 iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetOpacity(oldOpacity);
                 }
             }
         }
@@ -1068,10 +1074,12 @@ void CHuiCanvasWsHwGc::WsDrawText3L(TPtr& aTextValue, TRect& aRect, THuiCanvasTe
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 DrawTextBrush( destinationRect );
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));    
                 }
     
             // Draw            
@@ -1079,7 +1087,8 @@ void CHuiCanvasWsHwGc::WsDrawText3L(TPtr& aTextValue, TRect& aRect, THuiCanvasTe
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor);
+                iCanvasGc->SetOpacity(oldOpacity);                        
                 }
             }
         }
@@ -1114,10 +1123,12 @@ void CHuiCanvasWsHwGc::WsDrawText4L(TPtr& aTextValue, TRect& aRect, TInt aBaseli
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 DrawTextBrush( destinationRect );
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));    
                 }
     
             // Draw            
@@ -1125,7 +1136,8 @@ void CHuiCanvasWsHwGc::WsDrawText4L(TPtr& aTextValue, TRect& aRect, TInt aBaseli
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor);
+                iCanvasGc->SetOpacity(oldOpacity);                        
                 }
             }    
         }
@@ -1160,10 +1172,12 @@ void CHuiCanvasWsHwGc::WsDrawText5L( TPtr& aTextValue, TRect& aRect, TInt aBasel
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 DrawTextBrush( destinationRect );
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));    
                 }
     
             // Draw            
@@ -1171,7 +1185,8 @@ void CHuiCanvasWsHwGc::WsDrawText5L( TPtr& aTextValue, TRect& aRect, TInt aBasel
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor);
+                iCanvasGc->SetOpacity(oldOpacity);                        
                 }
             }    
         }
@@ -1205,9 +1220,11 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical1L(TPtr& aTextValue, TInt aTextUp, THui
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));
                 }
     
             // Draw            
@@ -1215,7 +1232,8 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical1L(TPtr& aTextValue, TInt aTextUp, THui
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor);
+                iCanvasGc->SetOpacity(oldOpacity);                        
                 }
             }    
         }
@@ -1248,9 +1266,11 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical2L(TPtr& aTextValue, TInt aTextUp,TPoin
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));    
                 }
     
             // Draw            
@@ -1258,7 +1278,8 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical2L(TPtr& aTextValue, TInt aTextUp,TPoin
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor); 
+                iCanvasGc->SetOpacity(oldOpacity);                       
                 }
             }
         }
@@ -1292,10 +1313,12 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical3L(TPtr& aTextValue, TInt aTextUp, TRec
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 DrawTextBrush( destinationRect );
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));  
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));  
                 }
     
             // Draw            
@@ -1303,7 +1326,8 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical3L(TPtr& aTextValue, TInt aTextUp, TRec
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor); 
+                iCanvasGc->SetOpacity(oldOpacity);                       
                 }
             }
         }
@@ -1341,10 +1365,12 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical4L(TPtr& aTextValue, TRect& aRect, TInt
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 DrawTextBrush( destinationRect );
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor)); 
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));   
                 }
     
             // Draw            
@@ -1352,7 +1378,8 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical4L(TPtr& aTextValue, TRect& aRect, TInt
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor);
+                iCanvasGc->SetOpacity(oldOpacity);                        
                 }
             }
         }
@@ -1390,10 +1417,12 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical5L(TPtr& aTextValue, TRect& aRect, TInt
             destinationRect.Move(-dx,-dy);
             
             TRgb oldPenColor = iCanvasGc->PenColor();
+            TReal32 oldOpacity = iCanvasGc->Opacity();
             if (cachedImage->iUseColorModulation)
                 {
                 DrawTextBrush( destinationRect );
-                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));    
+                iCanvasGc->SetPenColor(ConvertToLinear(iWsPenColor));  
+                iCanvasGc->SetOpacity(TReal32(iWsPenColor.Alpha() / 255.f));  
                 }
     
             // Draw            
@@ -1401,7 +1430,8 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical5L(TPtr& aTextValue, TRect& aRect, TInt
     
             if (cachedImage->iUseColorModulation)
                 {
-                iCanvasGc->SetPenColor(oldPenColor);                        
+                iCanvasGc->SetPenColor(oldPenColor);
+                iCanvasGc->SetOpacity(oldOpacity);                        
                 }
             }
         }
@@ -1876,12 +1906,15 @@ void CHuiCanvasWsHwGc::EndDrawL(const TRegion& aUpdateRegion, TBool aUpdateDispl
     if (aUpdateDisplay && renderbuffer && iCanvasGc->Gc())
         {
         THuiRealRect updatedRect = aUpdateRegion.BoundingRect();
-
+        TInt w = 0; 
+		TInt h = 0;
         // Handle relative rotation
-        TRect displayArea = iVisual->Display()->VisibleArea();
-        TInt w = displayArea.Width();
-        TInt h = displayArea.Height();
-                
+        if (iVisual->Display())
+            {
+            TRect displayArea = iVisual->Display()->VisibleArea();
+            w = displayArea.Width();
+            h = displayArea.Height();
+            }
         // ...select right rotation...
         if (iRelativeOrientation == CHuiGc::EOrientationCW90)
             {
@@ -2103,6 +2136,15 @@ void CHuiCanvasWsHwGc::DisableUpdateRegion()
         }
     }
 
+static TRect CalculateClipRect(CHuiCanvasRenderBuffer* aRenderbuffer)
+    {
+    const TInt KHuiDefaultSize = 2048;
+    return 
+        aRenderbuffer && aRenderbuffer->IsInitialized() ? 
+        TRect( aRenderbuffer->Size() ) :
+        TRect( TSize( KHuiDefaultSize, KHuiDefaultSize ) );
+    }
+
 void CHuiCanvasWsHwGc::BindRenderBuffer(CHuiCanvasRenderBuffer* aRenderbuffer, const TRegion& aUpdateRegion)
     {
     // Disable effective opacity when rendering to a buffer
@@ -2125,15 +2167,15 @@ void CHuiCanvasWsHwGc::BindRenderBuffer(CHuiCanvasRenderBuffer* aRenderbuffer, c
     
     // Set new clipping region which does not clip anything. 
     // We want always draw aUpdateRegion fully to the aRenderbuffer. 
-    TRect displayArea = iCanvasGc->Gc()->DisplayArea(); 
-    
-    iCanvasGc->Gc()->SetClip(displayArea); // this call does not transform region anymore
+            
+    iCanvasGc->Gc()->SetClip(CalculateClipRect(aRenderbuffer)); // this call does not transform region anymore
     
     // We use translation to get screen coordinates to match render buffer coordinates
     iCanvasGc->PushTransformationMatrix();
     iCanvasGc->Translate(x, y, 0.f);
         
     // Handle relative rotation
+    TRect displayArea = iCanvasGc->Gc()->DisplayArea();
     TInt w = displayArea.Width();
     TInt h = displayArea.Height();
     

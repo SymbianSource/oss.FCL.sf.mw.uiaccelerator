@@ -22,6 +22,16 @@
 #include "HuiRenderPlugin.h"
 #include "HuiCmdBufferBrush.h" // MHuiEffectable
 
+#include "alfmoduletestconf.h"
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    // Provides TLS object data for test cases.
+    // This is used only if module test hooks are set on.
+    #include "huistatictlsdata.h"
+#endif // USE_MODULE_TEST_HOOKS_FOR_ALF
+// Provides module test hook defines.
+#include "alfmoduletestdefines.h"
+
+
 EXPORT_C CHuiFxEffect* CHuiFxEffect::NewL(CHuiFxEngine& aEngine)
     {
     CHuiFxEffect* e = new (ELeave) CHuiFxEffect( aEngine );
@@ -107,6 +117,40 @@ TBool CHuiFxEffect::NotifyEffectEndObserver()
         {
         return ETrue; // fade effect does not have observer that would need notification
         }
+    
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+    TTime endTime;
+    endTime.UniversalTime();
+    
+	// There might be several BeginFullScreen for single effects. We want to calculate
+	// reaction time from the first BeginFullScreen event to this point
+    TInt timeStamps = 0;
+    AMT_GET_TIME_POINT_COUNT(iHandle, timeStamps);
+    
+    TInt64 temp;
+    TBool effects(EFalse); // dummy, 1 if effects were on for this time stamp
+    AMT_GET_TIME(temp, iHandle, 0, effects);
+    TTime startTime(temp);
+    
+    AMT_GET_TIME(temp, iHandle, timeStamps - 1, effects);
+    TTime effectStartTime(temp);
+    
+    TInt64 effectTime = endTime.MicroSecondsFrom(effectStartTime).Int64();
+    TReal fps = (TReal)iFramesDrawn / ((TReal)effectTime / 1000000.0f) ; 
+
+    TInt64 totalEffectTime = endTime.MicroSecondsFrom(startTime).Int64();
+    TInt64 reactionTime = effectStartTime.MicroSecondsFrom(startTime).Int64();
+        
+    RDebug::Printf("CHuiFxEffect::NotifyEffectEndObserver - Reaction time \t0x%x\t%f\tVisible effect time:\t%f\ts. (%f FPS). Total effect time:\t%f", 
+            iHandle,
+            (TReal)reactionTime / 1000000.0f,
+            ((TReal)effectTime)/1000000,
+            fps,
+            ((TReal)totalEffectTime)/1000000.0f 
+            );
+    AMT_RESET_TIME(iHandle);
+#endif
+    
     if (iEffectEndObserver)
         {
         // The callback can be called only once when the effect finishes
@@ -217,13 +261,13 @@ TBool CHuiFxEffect::IsCachedRenderTargetSupported() const
 TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque)
     {
     RRegion dummy;
-    TBool ret = CachedDraw(aGc, aDisplayRect, aRefreshCachedRenderTarget, aOpaque, dummy);
+    TBool ret = CachedDraw(aGc, aDisplayRect, aRefreshCachedRenderTarget, aOpaque, dummy,EFalse);
     dummy.Close();
     return ret;
     }
 
 // TODO: effect area should be reduced if aClipRegion is smaller than aDisplayRect.
-TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque, const TRegion& aClipRegion, TInt aAlpha)
+TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque, const TRegion& aClipRegion, TBool aHasSurface, TInt aAlpha)
     {
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxEffect::CachedDraw - 0x%x"), this);
@@ -320,7 +364,7 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
             if (cachedRenderTargetNeedsRefresh)
                 {
                 // Render to cached render target
-                iRoot->Draw(*iEngine, aGc, *iCachedRenderTarget, *iCachedRenderTarget);                
+                iRoot->Draw(*iEngine, aGc, *iCachedRenderTarget, *iCachedRenderTarget, aHasSurface);                
 #ifdef HUIFX_TRACE    
                 RDebug::Print(_L("CHuiFxEffect::CachedDraw - refreshed cached render buffer 0x%x"), this);
 #endif
@@ -376,13 +420,13 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
             }
         
         // Normal drawing
-        iRoot->Draw(*iEngine, aGc, *target, *target);
+        iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
         }
                 
     return ETrue;    
     }
 
-EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect)
+EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aHasSurface)
     {
     // Prepare all layers
 #ifdef HUIFX_TRACE    
@@ -439,7 +483,7 @@ EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect)
         return EFalse;
         }
 
-    iRoot->Draw(*iEngine, aGc, *target, *target);
+    iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
     return ETrue;
     }
 
@@ -553,6 +597,13 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
 
             if (iFramesDrawn == 1)
                 {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+				// This is about the time when first frame from the effect is on screen
+                TTime endTime;
+                endTime.UniversalTime();
+                
+                AMT_ADD_TIME(iHandle, endTime.Int64(), ETrue);
+#endif
                 aElapsedTime = 0;
                 iFramesDrawn++;
                 }
@@ -561,6 +612,15 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
         }
     else
         {
+#ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
+        if (iFramesDrawn == 1)
+            {
+            // This is about the time when first frame from the effect is on screen
+            TTime endTime;
+            endTime.UniversalTime();
+            AMT_ADD_TIME(iHandle, endTime.Int64(), ETrue);
+            }
+#endif
         iRoot->AdvanceTime(aElapsedTime);
         }
     iElapsedTime += aElapsedTime;
