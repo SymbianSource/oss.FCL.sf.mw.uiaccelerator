@@ -51,7 +51,7 @@ CAlfOogmMonitorPlugin::CAlfOogmMonitorPlugin()
 //
 CAlfOogmMonitorPlugin::~CAlfOogmMonitorPlugin()
     {
-    
+    iAlfDirectClient.Disconnect();
     }
 
 // -----------------------------------------------------------------------------

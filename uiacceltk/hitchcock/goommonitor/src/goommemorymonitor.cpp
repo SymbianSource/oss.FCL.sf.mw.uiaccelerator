@@ -253,7 +253,17 @@ void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
         {
         return;
         }
-    iForegroundAppUid = aForegroundAppUid;    
+    
+    if(iForegroundAppUid != aForegroundAppUid)
+        {
+        iForegroundAppUid = aForegroundAppUid;
+        iForegroundAppHasChanged = ETrue;
+        iRendswitched = 0;
+        }
+    else
+        {
+        iForegroundAppHasChanged = EFalse;
+        }
 
     // Refresh the low and good memory thresholds as they may have changed due to the new foreground application
     RefreshThresholds(aForegroundAppUid);
@@ -325,31 +335,59 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
     // Run the memory freeing actions
     iGOomActionList->FreeMemory(aMaxPriority);
     
-    SwitchMemMode(EGOomLowMemMode);
     }
 
 void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
     {
     if(iMemMode == aMemMode)
+        {
+        if(iMemMode == EGOomGoodMemMode)
+            {
+            TRACES("CMemoryMonitor::SwitchMemMode NOT switching rendering mode. Already in GOOD Mode");
+            }
+        else
+            {
+            TRACES("CMemoryMonitor::SwitchMemMode NOT switching rendering mode. Already in LOW Mode");
+            }
         return;
+        }
 
 #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS    
     TWsEvent event;
  
     if(aMemMode == EGOomLowMemMode)
         {
+        if(iRendswitched < 3)
+            iRendswitched ++;
+        else
+            return;
+        
         iLowOnMemWgs.Reset();
         iGOomWindowGroupList->GetListOfWindowGroupsWSurfaces(iLowOnMemWgs);
         event.SetType(KGoomMemoryLowEvent);
+        TRACES("CMemoryMonitor::SwitchMemMode. Switching rendering mode to SW, Sending KGoomMemoryLowEvent");
         }
     else
         {
+        if(iRendswitched > 0)
+            {
+            if(iRendswitched < 3)
+                iRendswitched ++;
+            else
+                {
+                TRACES("CMemoryMonitor::SwitchMemMode GOOM Detected SW-HW-SW looping. NOT switching to HW rendering mode");
+                return;
+                }
+            }
+    
         event.SetType(KGoomMemoryGoodEvent);
+        TRACES("CMemoryMonitor::SwitchMemMode. Switching rendering mode to HW, Sending KGoomMemoryGoodEvent");
         }
     
     for (TInt i = iLowOnMemWgs.Count()-1; i>=0; i--)
         {
         iWs.SendEventToWindowGroup(iLowOnMemWgs[i], event);
+        TRACES1("CMemoryMonitor::SwitchMemMode. Sending event to wg %d",iLowOnMemWgs[i]);
         }
 #endif
     

@@ -163,20 +163,6 @@ void CGOomActionList::BuildPluginActionListL(CGOomWindowGroupList& aWindowGroupL
         {
         // Get the config for this plugin
         CGOomRunPluginConfig& pluginConfig = aConfig.GetPluginConfig(iPluginList->Uid(pluginIndex));
-        TInt priority = pluginConfig.CalculatePluginPriority(aWindowGroupList);
-
-        TGOomSyncMode syncMode = pluginConfig.iSyncMode;
-        TInt ramEstimate = pluginConfig.iRamEstimate;
-
-        TActionRef::TActionType actionType;
-
-        if (pluginConfig.PluginType() == EGOomAppPlugin)
-            {
-            actionType = TActionRef::EAppPlugin;
-            }
-        else
-            actionType = TActionRef::ESystemPlugin;
-
 
         //get skip plugin config for foreground app
         TUint foregroundUid = iMonitor.ForegroundAppUid();
@@ -197,12 +183,27 @@ void CGOomActionList::BuildPluginActionListL(CGOomWindowGroupList& aWindowGroupL
                         continue ; //skip this and continue with next plugin
                         }
             }
-        
-        TActionRef ref = TActionRef(actionType, priority, syncMode, ramEstimate, *(iRunPluginActions[actionsIndex]), aWindowGroupList.GetIndexFromAppId(pluginConfig.TargetApp()));
-        iAppsProtectedByPlugins.Append(pluginConfig.TargetApp());
-        TRACES2("Creating Plugin Action Item %x , TargetAppId %x", iPluginList->Uid(pluginIndex), pluginConfig.TargetApp());
-        //It is valid to have plugins with equal priority
-        User::LeaveIfError(iActionRefs.InsertInOrderAllowRepeats(ref, ComparePriorities));
+
+        actionsIndex--;
+        CGOomRunPluginConfig * nextConfigForSamePlugin = &pluginConfig; 
+        while(nextConfigForSamePlugin)
+            {
+            TInt priority = nextConfigForSamePlugin->CalculatePluginPriority(aWindowGroupList);
+            TGOomSyncMode syncMode = nextConfigForSamePlugin->iSyncMode;
+            TInt ramEstimate = nextConfigForSamePlugin->iRamEstimate;
+            TActionRef::TActionType actionType;
+            if (nextConfigForSamePlugin->PluginType() == EGOomAppPlugin)
+                actionType = TActionRef::EAppPlugin;
+            else
+                actionType = TActionRef::ESystemPlugin;
+
+            TActionRef ref = TActionRef(actionType, priority, syncMode, ramEstimate, *(iRunPluginActions[++actionsIndex]), aWindowGroupList.GetIndexFromAppId(nextConfigForSamePlugin->TargetApp()));
+            iAppsProtectedByPlugins.Append(nextConfigForSamePlugin->TargetApp());
+            TRACES2("Creating Plugin Action Item %x , TargetAppId %x", iPluginList->Uid(pluginIndex), nextConfigForSamePlugin->TargetApp());
+            //It is valid to have plugins with equal priority
+            User::LeaveIfError(iActionRefs.InsertInOrderAllowRepeats(ref, ComparePriorities));
+            nextConfigForSamePlugin = nextConfigForSamePlugin->iNextConfig;
+            }
 
         actionsIndex++;
         }
@@ -737,6 +738,7 @@ void CGOomActionList::StateChanged()
                 }
             else
                 {
+                iMonitor.SwitchMemMode(CMemoryMonitor::EGOomLowMemMode);
                 TRACES1("CGOomActionList::StateChanged: All current Plugin actions complete, below good threshold, Time to kill bad guys. freeMemory=%d", freeMemory);
                 iRunningKillAppActions = ETrue;
                 iMonitor.RunCloseAppActions(iMaxPriority);
@@ -782,6 +784,14 @@ void CGOomActionList::ConstructL(CGOomConfig& aConfig)
         CGOomRunPlugin* action = CGOomRunPlugin::NewL(iPluginList->Uid(pluginIndex), pluginConfig, *this, iPluginList->Implementation(pluginIndex));
 
         iRunPluginActions.AppendL(action);
+        
+        CGOomRunPluginConfig * nextConfigForSamePlugin = pluginConfig.iNextConfig; 
+        while(nextConfigForSamePlugin)
+            {
+            CGOomRunPlugin* action = CGOomRunPlugin::NewL(iPluginList->Uid(pluginIndex), *(nextConfigForSamePlugin), *this, iPluginList->Implementation(pluginIndex));
+            iRunPluginActions.AppendL(action);
+            nextConfigForSamePlugin = nextConfigForSamePlugin->iNextConfig; 
+            }
         }
 
 	//references to v2 plugin types removed as these are not yet used by GOOM

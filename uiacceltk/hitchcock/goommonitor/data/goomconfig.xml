@@ -47,7 +47,7 @@ threshold values are used.
 <!--		The uid DEFAULT_APP refers to all applications, which priority is not specifically
 		defined in the conf file.
 -->
-		<close_app uid="DEFAULT_APP" priority="80" sync_mode="check" close_timeout="1000" wait_after_close="2000">
+		<close_app uid="DEFAULT_APP" priority="80" sync_mode="check" close_timeout="1000" wait_after_close="1000">
 			<app_close_idle_priority idle_time="900" priority="50"></app_close_idle_priority>
 			<app_close_idle_priority idle_time="43200" priority="20"></app_close_idle_priority>
 		</close_app>
@@ -79,9 +79,10 @@ threshold values are used.
 		defined in the conf file.
 -->
 		<system_plugin uid="DEFAULT_PLUGIN" priority="10" sync_mode="check" sw_rend="not_supported"></system_plugin>
-		<system_plugin uid="E4B6C988" priority="3" sync_mode="check" sw_rend="supported"></system_plugin> <!-- ALFOOGMPLUGIN -->
-		<system_plugin uid="2002DC75" priority="4" sync_mode="check" sw_rend="supported"></system_plugin> <!-- HbThemeserverOOGMPLUGIN? -->
-		<system_plugin uid="2002C30A" priority="5" sync_mode="continue"></system_plugin> <!-- FLASHOOGMPLUGIN -->
+		<system_plugin uid="2002DC75" priority="3" sync_mode="continue" sw_rend="not_supported"></system_plugin> <!-- HbThemeserverOOGMPLUGIN? -->
+		<system_plugin uid="E4B6C988" priority="4" sync_mode="check" sw_rend="supported"></system_plugin> <!-- ALFOOGMPLUGIN -->
+		<system_plugin uid="2002DC75" priority="5" sync_mode="continue" sw_rend="supported" ></system_plugin> <!-- HbThemeserverOOGMPLUGIN? -->
+		<system_plugin uid="2002C30A" priority="6" sync_mode="continue"></system_plugin> <!-- FLASHOOGMPLUGIN -->
 	</system_plugin_settings>
 	
 <!--	The priority of executing each application plugin is defined here.

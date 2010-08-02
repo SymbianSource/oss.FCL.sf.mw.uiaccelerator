@@ -42,6 +42,7 @@ TUint CGOomRunPluginConfig::CalculatePluginPriority(const CGOomWindowGroupList& 
 CGOomRunPluginConfig::~CGOomRunPluginConfig()
     {
     FUNC_LOG;
+    delete iNextConfig;
     }
     
 

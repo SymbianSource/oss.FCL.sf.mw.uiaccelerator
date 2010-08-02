@@ -32,6 +32,10 @@
 #include "alfclientserver.h"
 #include "alfsrvtexturemanager.h"
 #include "alfsrvscreenbuffermanager.h"
+#include "alfstreamerconsts.h"
+#include "alfdecoderserverclient.h"
+
+
 
 #include <coemain.h>
 
@@ -292,20 +296,6 @@ void CAlfAppSrvSession::FocusGainedL( TBool aDoTransitionEffect )
        	iAnimatedTextures.operator[](index)->EnableAnimation(ETrue);     
         }
 
-    if ( aDoTransitionEffect && AlfServer()->TransitionEffects()->IsEnabled() &&
-         (display->DisplayType() != CHuiDisplay::EDisplayOffScreenBuffer))        
-        {
-       	ASSERT(AlfServer()->TransitionEffects() != NULL);
-       	AlfServer()->TransitionEffects()->StartPhase( MAlfTransEffectPlugin::EFirstPhase, 
-       	    aDoTransitionEffect, *iEffectEnv );            
-       	
-       	iControlGroupOrder.Reset();
-        }
-    else
-        {
-//        ShowControlGroupsInOrderL(*display);
-        }    
-
 	// This is needed for Huitk BitBlit() to succeed 
     
 #ifdef SYMBIAN_BUILD_GCE
@@ -354,9 +344,6 @@ TBool CAlfAppSrvSession::FocusLostL( TBool aDoTransitionEffect )
         return didTransition;
         }
 
-/*        
-#ifdef HUI_FX
-*/
     if (display->DisplayType() != CHuiDisplay::EDisplayOffScreenBuffer) 
     	{
     	// Disable all animated textures for the session
@@ -371,40 +358,6 @@ TBool CAlfAppSrvSession::FocusLostL( TBool aDoTransitionEffect )
        	// as the background will be visible if the effect does not cover full screen
        	// or is partially transparent.
     	}
-/*    	
-#else
-    // Do not hide or set transparency if this is off-screen buffer         
-    if (display->DisplayType() != CHuiDisplay::EDisplayOffScreenBuffer) 
-    	{
-    	// Disable all animated textures for the session
-    	for (TInt index = 0; index < iAnimatedTextures.Count(); index++)
-        	{
-      		iAnimatedTextures.operator[](index)->EnableAnimation(EFalse); 
-        	}
-
-     	if ( aDoTransitionEffect && AlfServer()->TransitionEffects()->IsEnabled() )
-        	{
-        	StoreControlGroupOrderL(*display, EFalse ); // do not hide  
-        	ASSERT(AlfServer()->TransitionEffects() != NULL);
-        	AlfServer()->TransitionEffects()->StartPhase( MAlfTransEffectPlugin::EFirstPhase, 
-            	aDoTransitionEffect, *iEffectEnv );            
-        	didTransition = ETrue;
-        	}
-    	// Hide control groups 
-    	else 
-        	{
-        	StoreControlGroupOrderL(*display, ETrue ); // hide as well     
-    		}
-    		
-#ifdef SYMBIAN_BUILD_GCE
-        // When alf application is not focused we dont draw background because it is
-        // not visible as the alf application is not visible either (its controlgroups
-        // were just hidden in the code above).
-   	    display->SetClearBackgroundL(CHuiDisplay::EClearNone);
-#endif
-    	}
-#endif    		
-*/
     
     return didTransition;
     }
@@ -2737,6 +2690,17 @@ void CAlfAppSrvSession::RemoveTextureInfo( TInt aTextureId )
         {
         iTextureInfo.Remove( pos );
         }
+
+    //Photos is never killed if it is excluded here. hence commenting
+	/*
+	if (!iTextureInfo.Count())
+        {
+        if (AlfAppUi()->BridgerClient())
+            {
+            AlfAppUi()->BridgerClient()->SendBlind(EAlfExcludeFromGoomTargets, TIpcArgs(SecureId(),ClientWindowGroup()));
+            }
+        }
+	*/
     }
 
 TInt CAlfAppSrvSession::GetTextureSize( 
@@ -2764,6 +2728,15 @@ void CAlfAppSrvSession::SetTextureSize(
     const TBool highPriority = ( aPriority < 0 );
     aPriority = Max( 0, aPriority );
     aPriority = Min( 1, aPriority );
+
+    if (!iTextureInfo.Count())
+        {
+        if (AlfAppUi()->BridgerClient())
+            {
+            AlfAppUi()->BridgerClient()->SendBlind(EAlfVolunteerForGoomTarget, TIpcArgs(SecureId(), ClientWindowGroup()));
+            }
+        }
+
 
     TInt pos = FindTextureInfoById( aTextureId );
     if ( pos != KErrNotFound )
