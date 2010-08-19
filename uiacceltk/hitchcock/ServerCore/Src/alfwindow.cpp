@@ -28,6 +28,10 @@
 #include <string.h>
 #include <s32mem.h>
 
+#ifdef ALF_MEMORYLOGGING
+#include <hal.h>
+#endif
+
 // ---------------------------------------------------------------------------
 // NewL
 // ---------------------------------------------------------------------------
@@ -59,7 +63,30 @@ CAlfWindow::~CAlfWindow()
         delete iData;
         }
     }
-        
+
+void CAlfWindow::ReportOOM()
+    {
+#ifdef ALF_MEMORYLOGGING
+    RDebug::Printf("CAlfWindow::ReportOOM");
+    TInt totalSpaceAllocated = 0;
+    TInt cellAllocatedInHeap = User::AllocSize(totalSpaceAllocated);
+    TInt largestFreeBlock = 0;
+    TInt totalFreeSpaceInHeap = User::Available(largestFreeBlock);
+    TInt freeRAM = 0;
+    if ( HAL::Get( HALData::EMemoryRAMFree, freeRAM ) != KErrNone )
+        {
+        freeRAM = -1;
+        }
+
+    RDebug::Printf("CAlfWindow::ReportOOM - Allocated space: %d, Amount of allocated cells: %d, Largest free block: %d, Free space in heap: %d",
+            totalSpaceAllocated,
+            cellAllocatedInHeap,
+            largestFreeBlock,
+            totalFreeSpaceInHeap);
+    RDebug::Printf("CAlfWindow::ReportOOM - Free RAM in system: %d", freeRAM);
+#endif
+    }
+
 // ---------------------------------------------------------------------------
 // WsInfo
 // ---------------------------------------------------------------------------
@@ -507,21 +534,28 @@ TAny* CAlfWindow::CreateSetWindowAreaL(
     const TInt size = ( 4*aRegion.Count() + 4 ) * sizeof(TInt32);
     TAny* data = (TAny*)iData->iWindowManager->Bridge()->AppendVarDataL( size, aOffset );
 
-    RMemWriteStream str( data, size );
-    str.WriteInt32L( aScreenNumber );
-    str.WriteInt32L( aOrigin.iX );
-    str.WriteInt32L( aOrigin.iY );
-    str.WriteInt32L( aRegion.Count() );
-        
-    for (TInt i = 0; i < aRegion.Count(); ++i )
+    if (data)
         {
-        const TRect rect(aRegion[i]);
-        str.WriteInt32L(rect.iTl.iX);
-        str.WriteInt32L(rect.iTl.iY);
-        str.WriteInt32L(rect.iBr.iX);
-        str.WriteInt32L(rect.iBr.iY);
+        RMemWriteStream str( data, size );
+        str.WriteInt32L( aScreenNumber );
+        str.WriteInt32L( aOrigin.iX );
+        str.WriteInt32L( aOrigin.iY );
+        str.WriteInt32L( aRegion.Count() );
+            
+        for (TInt i = 0; i < aRegion.Count(); ++i )
+            {
+            const TRect rect(aRegion[i]);
+            str.WriteInt32L(rect.iTl.iX);
+            str.WriteInt32L(rect.iTl.iY);
+            str.WriteInt32L(rect.iBr.iX);
+            str.WriteInt32L(rect.iBr.iY);
+            }
         }
-    
+    else
+        {
+        CAlfWindow::ReportOOM();
+        }
+        
     return data;
     }
 
@@ -629,6 +663,56 @@ TBool CAlfWindow::TransparencyAlphaChannel() const
     }
 
 // ---------------------------------------------------------------------------
+// SetScreenDeviceValid
+// ---------------------------------------------------------------------------
+//
+void CAlfWindow::SetScreenDeviceValid(TBool aValid)
+    {
+    if ( WsInfo().iNodeType != MWsWindowTreeNode::EWinTreeNodeClient )
+        {
+        // We intentionally omit other than client windows. Actually, we 
+		// we should get this valid information only for top level windows.
+		return;
+        }
+
+    if (!IsInsertedToScene())
+        {
+        iData->iScreenDeviceValid = aValid;
+        return;        
+        }
+        
+    TAlfWServInfo wservInfo = WsInfo();
+
+    TInt offset;
+    TAlfWindowAttributes* windowAttributes = CreateWindowAttributes(offset);
+    if ( windowAttributes )
+        {
+        windowAttributes->iActive = aValid; 
+        windowAttributes->iScreenNumber = wservInfo.iScreenNumber;
+        
+        TAlfBridgerData d;
+        d.Set(EAlfDSSetScreenDeviceValid, 
+            wservInfo.iRefId.iWindowGroupId, 
+            wservInfo.iRefId.iWindowIdentifer, 
+            (TAny*)offset); 
+
+        if (iData->iWindowManager->PostIt(d))
+            {
+            iData->iScreenDeviceValid = aValid;
+            }
+        }    
+    }
+
+// ---------------------------------------------------------------------------
+// IsScreenDeviceValid
+// ---------------------------------------------------------------------------
+//
+TBool CAlfWindow::IsScreenDeviceValid() const
+    {
+    return iData->iScreenDeviceValid;
+    }
+
+// ---------------------------------------------------------------------------
 // IsIncludedToVisibilityCalculation
 // ---------------------------------------------------------------------------
 //
@@ -707,6 +791,7 @@ void CAlfWindow::ConstructL(TUint aId, CAlfWindowManager& aOwner, const TSize& a
     iData->iWindowArea = RRegion();
     iData->iTransparencyAlphaChannel = EFalse;
     iData->iIncludeToVisibilityCalculation = EFalse;
+    iData->iScreenDeviceValid = ETrue;
     
     SetSize(aSizeInPixels);
     }
@@ -891,6 +976,10 @@ void CAlfWindow::PostPartialBuffer( TAny* aPtr, TInt aSize, TBool aPartial, TBoo
             // ???
             }
         }
+    else
+        {
+        ReportOOM();
+        }
     
     }
 
@@ -924,6 +1013,10 @@ void CAlfWindow::PostBuffer( TAny* aPtr, TInt aSize, TInt aNodeFlags )
             // ???
             }
         }
+    else
+        {
+        CAlfWindow::ReportOOM();
+        }
     }
 
 // ---------------------------------------------------------------------------
@@ -955,6 +1048,10 @@ TAlfWindowAttributes* CAlfWindow::CreateWindowAttributes(TInt& aIndex)
         {
         *attributes = empty;
         }
+    else
+        {
+        CAlfWindow::ReportOOM();
+        }
     return attributes;
     }
 
@@ -970,6 +1067,10 @@ TAlfWindowCommandBufferAttributes* CAlfWindow::CreateWindowCommandBufferAttribut
     if ( windowCommandBuffer )
         {
         *windowCommandBuffer = empty;
+        }
+    else
+        {
+        CAlfWindow::ReportOOM();
         }
     return windowCommandBuffer;
     }

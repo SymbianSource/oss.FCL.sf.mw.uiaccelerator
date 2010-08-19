@@ -206,10 +206,6 @@ EXPORT_C CHuiFxVisualLayer::~CHuiFxVisualLayer()
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxVisualLayer::~CHuiFxVisualLayer - 0x%x "), this);
 #endif
-    if(iRenderBuffer && iEngine)
-        {
-        iEngine->ReleaseRenderbuffer(iRenderBuffer);
-        }
     
     delete iExtBitmapFile;
     delete iParameterManager;
@@ -240,6 +236,16 @@ EXPORT_C TBool CHuiFxVisualLayer::PrepareDrawL(CHuiFxEngine& aEngine)
     return ETrue;
     }
 
+EXPORT_C void CHuiFxVisualLayer::ReleaseAllCachedRenderTargets(CHuiFxEngine& aEngine)
+    {
+    if(iRenderBuffer)
+        {
+        aEngine.ReleaseRenderbuffer(iRenderBuffer);
+        iRenderBuffer = NULL;
+        }
+    }
+
+
 EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer &aTarget, CHuiFxRenderbuffer& /*aSource*/, TBool /*aHasSurface*/)
     {
 #ifdef HUIFX_TRACE    
@@ -252,8 +258,7 @@ EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
     
     if (iRenderBuffer && iRenderBuffer->Size() != backbufferSize)
         {
-        iEngine->ReleaseRenderbuffer(iRenderBuffer);
-        iRenderBuffer = NULL;
+        ReleaseAllCachedRenderTargets(aEngine);
         }
     
     if(!iRenderBuffer)
@@ -263,7 +268,6 @@ EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
             {
             return;
             }
-        iEngine = &aEngine;
         forceRefresh = ETrue;
         }
     
@@ -538,7 +542,13 @@ void CHuiFxVisualLayer::SetVisualContentState(TBool aChanged, TBool aOpaque)
     {
     if( iVisualContentOpaque != aOpaque || aChanged)
         {
-        iVisualContentChanged = aChanged;
+        iVisualContentChanged = ETrue;
         }
+    else
+        {
+        iVisualContentChanged = EFalse;
+        }
+    
     iVisualContentOpaque = aOpaque;
     }
+	

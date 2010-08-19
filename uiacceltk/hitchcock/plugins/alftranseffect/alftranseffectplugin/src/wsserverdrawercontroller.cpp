@@ -694,7 +694,6 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 		}
 #endif //WSSERVERDRAWER_TIME_LOG
 
-/////////////////////
 	if(aType == AknTransEffect::EParameterAvkonInternal)	
 		{ 
 		const TUid appuid = aUid1;

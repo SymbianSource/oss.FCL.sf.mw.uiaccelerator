@@ -98,13 +98,21 @@ EXPORT_C void AlfServerStarter::StartL(TRequestStatus& aStatus, TBool aCreatePro
 	        }
 	    else
 	    	{
+            // Maximum heap size for alfredserver thread. 
+            // Emulator has smaller heap size in order not to cause memory issues.
+#ifdef __WINSCW__
+            const TInt KAlfServerMaxHeapSize = 10*1024*1024;
+#else
+            const TInt KAlfServerMaxHeapSize = 16*1024*1024;
+#endif
+
     	    RThread serverThread;
     	    User::LeaveIfError(serverThread.Create(
 	    	        KAlfServerThreadName,
 	    	        AlfThreadFucntion,
 	    	        16384, // magic
 	    	        4*1024*1024, // uses own heap for now
-	    	        10*1024*1024,
+	    	        KAlfServerMaxHeapSize,
 	    	        0,
 	    	        EOwnerThread));
 	    	    

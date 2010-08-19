@@ -318,6 +318,25 @@ public:
             TInt aDuration,
             TBool& aCoverageRegionModified );
 
+    // Experimental
+    
+    /**
+     * Checks if visual that's flagged as not ready for current orientation is reachable.
+     */
+    TBool IsVisualNotReadyReachable();
+
+    /**
+     * Recursive helper function for IsVisualNotReadyReachable.
+     */
+    TBool IsVisualNotReadyReachableRecursive(
+            CHuiLayout* aLayout,
+            CHuiControlGroup& aControlGroup,
+            CHuiControl& aControl,
+            TBool& aFullscreenCovered, 
+            const TRect& aFullscreen,
+            CAlfScreen* aScreen,
+            TBool aChildCanBeOpaque, 
+            TBool aOnlyForEmbeddedAlfApp);
 	
     void LayoutSwitchStart();
     void LayoutSwitchComplete();
@@ -406,7 +425,16 @@ private:
 	*/    
     TBool StoreLayoutIfRequiredByEffectL(CHuiLayout* aLayout, CFullScreenEffectState& aEvent, TBool& aNeededStoredLayout);
 
+    /**
+     * HandleGfxRedirection
+	 *
+	 * Redirect effect to correct application in case of effect requested for host application, but
+	 * embedded (chained) application is on top of it.
+	 *
+     * If effect setup has been already made for the layout, effect is not redirected.  
+     */
     void HandleGfxRedirection(CFullScreenEffectState& aEvent, CHuiLayout*& aLayout);
+
     /**
      * Handles begin and end fullscreen events
      */
@@ -591,6 +619,8 @@ private:
 	void HandleSetTransparencyAlphaChannelL( TAlfBridgerData& aData );
 	
 	void HandleIncludeToVisibilityCalculationL( TAlfBridgerData& aData );
+	
+	void HandleSetScreenDeviceValidL( TAlfBridgerData& aData );
 	
 	void HandleSetWindowAreaL( TAlfBridgerData& aData );
 	
@@ -878,6 +908,16 @@ private:
      * visibility calculations will clip to old sizes.
      */
     void UpdateRootVisualsToFullscreen();
+    
+    /**
+     * Report memory consumption details (if enabled).
+     */
+    void ReportMemory();
+    
+    /**
+     * Clears rasterizer cache.
+     */
+    void ClearRasterizerCache();
     
 private:
 

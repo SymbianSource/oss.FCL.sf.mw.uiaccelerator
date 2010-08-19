@@ -234,8 +234,7 @@ CStateBase* CPhase2State::SignalL(TSignal aSignal)
 			iEngine.SendAbortFullscreen();
 			return CRestingState::NewL(iEngine,iHandler);
 		case EFinishFullscreen:
-		    if ( ( iEngine.Action() == 1001 || iEngine.Action() == AknTransEffect::EApplicationExit ) &&
-		        !iEngine.EffectFinishedFullScreen() )
+		    if (!iEngine.EffectFinishedFullScreen())
 		        {
 		        iEngine.SendAbortFullscreen();
 		        }

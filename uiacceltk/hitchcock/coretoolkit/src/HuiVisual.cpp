@@ -45,10 +45,12 @@ struct CHuiVisual::THuiVisualPrivateData
     {
 public: // Functions
     // Constructor: initialize the data
-    THuiVisualPrivateData() : iTacticons(), iDropShadow(NULL)
+    THuiVisualPrivateData() 
+        : iTacticons(), iDropShadow(NULL), iEffect(NULL),
+          iEffectParser(NULL), iEffectable(NULL), iStoredRenderBuffer(NULL),
+          iStoredRenderBufferModificationsEnabled(ETrue),
+          iFreezed(EFalse)
         {
-        iEffect = NULL;
-        iEffectParser = NULL;
         }
         
     // Destructor: destruct the data
@@ -228,7 +230,6 @@ EXPORT_C void CHuiVisual::ConstructL()
     {
     iVisualData = new (ELeave) THuiVisualPrivateData;
     iVisualData->iEffectable = new CHuiEffectable(this);
-    iVisualData->iStoredRenderBuffer = NULL;
     }
 
 
@@ -277,12 +278,15 @@ EXPORT_C CHuiVisual::~CHuiVisual()
     delete iBrushes;
     delete iTag;
     delete iTransform;
-    delete iVisualData->iEffectable;
-    if (iVisualData->iStoredRenderBuffer)
+    if (iVisualData)
         {
-        iVisualData->iStoredRenderBuffer->UnInitialize();
+        delete iVisualData->iEffectable;
+        if (iVisualData->iStoredRenderBuffer)
+            {
+            iVisualData->iStoredRenderBuffer->UnInitialize();
+            }
+        delete iVisualData->iStoredRenderBuffer;
         }
-    delete iVisualData->iStoredRenderBuffer;
     delete iVisualData;
     
     iOwner = NULL;

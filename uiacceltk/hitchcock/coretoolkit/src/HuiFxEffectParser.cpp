@@ -729,7 +729,7 @@ void CHuiFxEffectParser::ParseAnimationNodeL(CMDXMLNode* aNode, PARAM_TYPE& aPar
             TReal32 time = ParseFloatAttributeL(aNode, KLitAt);
             TReal32 aux1 = ParseFloatAttributeL(aNode, KLitAux1, EFalse);
             TReal32 aux2 = ParseFloatAttributeL(aNode, KLitAux2, EFalse);
-            VALUE_TYPE value = ParseAnimationKeyFrameValueL<PARAM_TYPE::ValueType, TIMELINE_TYPE>(aNode->FirstChild(), aTimeLine);
+            VALUE_TYPE value = ParseAnimationKeyFrameValueL<typename PARAM_TYPE::ValueType, TIMELINE_TYPE>(aNode->FirstChild(), aTimeLine);
             TRAPD(err, aTimeLine.AppendKeyFrameL(time, value, aux1, aux2));
             if (err != KErrNone)
                 {

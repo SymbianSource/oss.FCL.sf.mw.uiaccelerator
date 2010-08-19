@@ -58,7 +58,9 @@ public:
             CAlfHierarchyModel* aModel, 
             RMemReadStream* aStream, 
             MWsWindowTreeNode::TType aType );
-
+    
+    static void ReportOOM();
+    
 protected:
 
 	void ConstructL( 

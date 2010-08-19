@@ -85,12 +85,11 @@ EXPORT_C void CHuiFxEffect::ConstructL( )
 
 EXPORT_C CHuiFxEffect::~CHuiFxEffect()
     {
+    ReleaseCachedRenderTarget();
+    
     delete iRoot;
     iRoot = NULL;
     NotifyEffectEndObserver();
-    
-    ReleaseCachedRenderTarget();
-    
     iEngine->RemoveEffect(this);
     if (iEngine && iGroupId != KErrNotFound && !(iFlags & KHuiReadyToDrawNotified))
         {
@@ -181,6 +180,11 @@ void CHuiFxEffect::ReleaseCachedRenderTarget()
         iEngine->ReleaseRenderbuffer(iCachedRenderTarget);
         iCachedRenderTarget = NULL;
         }                
+    
+    if(iRoot)
+        {
+        iRoot->ReleaseAllCachedRenderTargets(*iEngine);
+        }
     }
 
 void CHuiFxEffect::PrepareCachedRenderTarget(const TPoint& aPosition, const TSize& aSize, TBool aClear, TBool aEnableBackground)
@@ -189,7 +193,8 @@ void CHuiFxEffect::PrepareCachedRenderTarget(const TPoint& aPosition, const TSiz
     if (iCachedRenderTarget && 
         iCachedRenderTarget->Size() != aSize)
         {
-        ReleaseCachedRenderTarget();
+        iEngine->ReleaseRenderbuffer(iCachedRenderTarget);
+        iCachedRenderTarget = NULL;
         }            
     
     // Accure new buffer
@@ -441,7 +446,11 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
     else
         {
         // Release cached render target just in case it is reserved for some reason
-        ReleaseCachedRenderTarget();
+        if (iCachedRenderTarget)
+            {
+            iEngine->ReleaseRenderbuffer(iCachedRenderTarget);
+            iCachedRenderTarget = NULL;
+            }  
 
         // Use default onscreen render target
         if (!target)

@@ -84,6 +84,7 @@ enum TAlfDecoderServerBindings
     EAlfDSSetTransparencyAlphaChannel,
     EAlfDSIncludeToVisibilityCalculation,
     EAlfDSSetDistractionWindow,
+    EAlfDSSetScreenDeviceValid,
 
     KUnInitialized // This must be kept as last command!
     };

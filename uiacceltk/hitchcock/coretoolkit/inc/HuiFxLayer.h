@@ -32,6 +32,7 @@ public:
     IMPORT_C virtual ~CHuiFxLayer();
 
     IMPORT_C virtual TBool PrepareDrawL(CHuiFxEngine& aEngine);
+    IMPORT_C virtual void ReleaseAllCachedRenderTargets(CHuiFxEngine& aEngine);
     virtual void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface) = 0;
     IMPORT_C virtual TBool VisualArea(TRect& aRect);
     IMPORT_C virtual TBool Margin( TMargins &m );

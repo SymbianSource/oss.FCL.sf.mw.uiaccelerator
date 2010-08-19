@@ -3043,8 +3043,9 @@ void CHuiCanvasTextureCache::SelectPreservedUnusedRenderBufferEntries(RPointerAr
 //
 void CHuiCanvasTextureCache::HandleOutOfTextureMemory()
     {
-    RDebug::Print(_L("CHuiCanvasTextureCache::HandleOutOfTextureMemory: Out of memory happened !"));
-
+#ifdef HUI_DEBUG_PRINT_CANVAS_TEXTURE_CACHE
+    RDebug::Print(_L("CHuiCanvasTextureCache::HandleOutOfTextureMemory"));
+#endif
     DeleteAllReleasedEntries(EFalse);    
     
     // TODO: Who you gonna call when texture memory is full and we cannot ourself

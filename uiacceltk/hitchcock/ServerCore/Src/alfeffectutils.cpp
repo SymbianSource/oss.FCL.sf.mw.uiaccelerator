@@ -27,6 +27,8 @@ const TInt KRosterFreezeEndIntervalInMs = 50;
 // Maximum amount of end checks to be performed. 
 // This can be lower, should be visible enough to see, if heuristics fail.
 const TInt KRosterFreezeEndAttempts = 50;
+// Timeout for implicit blank off.
+const TInt KAlfImplicitBlankerTimeoutInMs = 250;
 
 // ---------------------------------------------------------
 // CAlfRosterFreezeEndTimer
@@ -119,6 +121,8 @@ CAlfLayoutSwitchEffectCoordinator::CAlfLayoutSwitchEffectCoordinator( CAlfBridge
 
 CAlfLayoutSwitchEffectCoordinator::~CAlfLayoutSwitchEffectCoordinator()
     {   
+    delete iRosterFreezeEndTimer;
+    delete iImplicitBlankTimer;
     }
 
 // ---------------------------------------------------------
@@ -128,8 +132,64 @@ CAlfLayoutSwitchEffectCoordinator::~CAlfLayoutSwitchEffectCoordinator()
 void CAlfLayoutSwitchEffectCoordinator::Blank(TBool aEnabled)
     {
     __ALFLOGSTRING1("CAlfLayoutSwitchEffectCoordinator::Blank %d", aEnabled);
-    iBlankEnabled = aEnabled;
-    Event( aEnabled ? EEventBlankOn : EEventBlankOff );
+    iAknBlankEnabled = aEnabled;
+    HandleBlankChange();
+    }
+
+// ---------------------------------------------------------
+// CAlfLayoutSwitchEffectCoordinator::ImplicitBlank
+// ---------------------------------------------------------
+//
+void CAlfLayoutSwitchEffectCoordinator::ImplicitBlank()
+    {
+    __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::ImplicitBlank");
+        
+    if (!iImplicitBlankTimer)
+        {
+        iImplicitBlankTimer = CPeriodic::New(CActive::EPriorityHigh);
+        if (!iImplicitBlankTimer)
+            {
+            return;
+            }
+        }
+        
+    iImplicitBlankEnabled = ETrue;
+    HandleBlankChange();
+    
+    if (iImplicitBlankTimer)
+        {
+        iImplicitBlankTimer->Cancel();
+        iImplicitBlankTimer->Start(KAlfImplicitBlankerTimeoutInMs*1000, KAlfImplicitBlankerTimeoutInMs*1000, 
+            TCallBack(DoImplicitBlankOff, this));
+        }
+    }
+    
+// ---------------------------------------------------------
+// CAlfLayoutSwitchEffectCoordinator::DoImplicitBlankOff
+// ---------------------------------------------------------
+//
+TInt CAlfLayoutSwitchEffectCoordinator::DoImplicitBlankOff(TAny* aAny)
+    {
+    __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::DoImplicitBlankOff");
+        
+    CAlfLayoutSwitchEffectCoordinator* self = static_cast<CAlfLayoutSwitchEffectCoordinator*>(aAny);
+    self->iImplicitBlankTimer->Cancel();
+    self->iImplicitBlankEnabled = EFalse;
+    self->HandleBlankChange();
+    
+    return KErrNone;
+    }
+
+// ---------------------------------------------------------
+// CAlfLayoutSwitchEffectCoordinator::HandleBlankChange
+// ---------------------------------------------------------
+//
+void CAlfLayoutSwitchEffectCoordinator::HandleBlankChange()
+    {
+    TBool newBlankState = iAknBlankEnabled || iImplicitBlankEnabled;
+    
+    iBlankEnabled = newBlankState;
+    Event( newBlankState ? EEventBlankOn : EEventBlankOff );
     }
     
 // ---------------------------------------------------------

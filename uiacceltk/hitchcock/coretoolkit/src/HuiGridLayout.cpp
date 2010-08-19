@@ -273,7 +273,8 @@ EXPORT_C void CHuiGridLayout::SetColumnsL(const RArray<TInt>& aWeights)
     axis.iWeights.Reset();
     for(TInt i = 0; i < aWeights.Count(); ++i)
         {
-        THuiMetric weight(TReal32(aWeights[i]), EHuiUnitWeight);
+        TInt weightValue(aWeights[i]);
+        THuiMetric weight(TReal32(weightValue), EHuiUnitWeight); 
         User::LeaveIfError(axis.iWeights.Append(weight));
         }
     }
@@ -284,7 +285,8 @@ EXPORT_C void CHuiGridLayout::SetRowsL(const RArray<TInt>& aWeights)
     axis.iWeights.Reset();
     for(TInt i = 0; i < aWeights.Count(); ++i)
         {
-        THuiMetric weight(TReal32(aWeights[i]), EHuiUnitWeight);
+        TInt weightValue(aWeights[i]);
+        THuiMetric weight(TReal32(weightValue), EHuiUnitWeight); 
         User::LeaveIfError(axis.iWeights.Append(weight));
         }
     }

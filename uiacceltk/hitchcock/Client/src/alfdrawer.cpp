@@ -51,7 +51,7 @@ public:
     TInt ReadPixels(CFbsBitmap* aBitmap);
 
 private:
-    RAlfDirectClient iClient;
+    RAlfDirectClient& iClient;
     };
    
 /**

@@ -205,10 +205,9 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
     FUNC_LOG;
     // keep only one notification active at a moment
 #ifdef USE_ASYNCYH_NOTIFICATIONS 
-   
+    TInt current = GetFreeMemory();
     if (aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_LT_NOK)
         {
-        TInt current = GetFreeMemory();
         if(current >= iGoodThreshold  && (!NeedToPostponeMemGood()))
             {
             TRACES2("FreeMemThresholdCrossedL : crossed good threshold Free %d, GThresh %d, Calling MemoryGood",current, iGoodThreshold);
@@ -230,15 +229,20 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         }
     else//if aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_GT_NOK
         {
-        TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
-        iMemAllocationsGrowing->Stop();
-        iMemAllocationsGoingDown->Continue();
-        if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
+        if(current < iLowThreshold)
             {
-            if(iSynchTimer->IsActive())
-                iSynchTimer->Cancel();
-            StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
+            TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
+            iMemAllocationsGrowing->Stop();
+            iMemAllocationsGoingDown->Continue();
+            if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
+                {
+                if(iSynchTimer->IsActive())
+                    iSynchTimer->Cancel();
+                StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
+                }
             }
+        else
+            TRACES2("FreeMemThresholdCrossedL : crossed low threshold %d, FALSE ALARM, FreeMem = %d", iLowThreshold, current);
         }
 #endif
     }
@@ -253,7 +257,17 @@ void CMemoryMonitor::HandleFocusedWgChangeL(TInt aForegroundAppUid)
         {
         return;
         }
-    iForegroundAppUid = aForegroundAppUid;    
+    
+    if(iForegroundAppUid != aForegroundAppUid)
+        {
+        iForegroundAppUid = aForegroundAppUid;
+        iForegroundAppHasChanged = ETrue;
+        iRendswitched = 0;
+        }
+    else
+        {
+        iForegroundAppHasChanged = EFalse;
+        }
 
     // Refresh the low and good memory thresholds as they may have changed due to the new foreground application
     RefreshThresholds(aForegroundAppUid);
@@ -338,12 +352,25 @@ void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
  
     if(aMemMode == EGOomLowMemMode)
         {
+        if(iRendswitched < 3)
+            iRendswitched ++;
+        else
+            return;
+        
         iLowOnMemWgs.Reset();
         iGOomWindowGroupList->GetListOfWindowGroupsWSurfaces(iLowOnMemWgs);
         event.SetType(KGoomMemoryLowEvent);
         }
     else
         {
+        if(iRendswitched > 0)
+            {
+            if(iRendswitched < 3)
+                iRendswitched ++;
+            else
+                return;
+            }
+    
         event.SetType(KGoomMemoryGoodEvent);
         }
     

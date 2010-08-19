@@ -283,6 +283,7 @@ CAlfServerDrawer::~CAlfServerDrawer()
     delete iControlController;
     delete iFullScreenController;
     delete iFinishFullScreen;
+    delete iControlTimeout;
     delete iFullScreenTimeout;
     iActiveControlFx.Close();
 #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF

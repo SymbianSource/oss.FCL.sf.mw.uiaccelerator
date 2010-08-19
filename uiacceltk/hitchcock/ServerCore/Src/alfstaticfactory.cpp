@@ -69,7 +69,12 @@ public:
         iPtr(ptr),
         iSession(aSession)
         {}
-        
+
+    void ClearPtr()
+        {
+        iPtr = NULL;
+        }
+    
     TBool OfferEventL(const THuiEvent& aEvent)
         {
         if ( aEvent.IsPointerEvent() )
@@ -116,9 +121,13 @@ public:
     
     ~CAlfControl2()
         {
-        *iPtr = 0;
+		// iPtr might have been cleared previously
+        if (iPtr != NULL)
+            {
+            *iPtr = 0;
+            }
         
-        // Remove possbile pointer observers
+        // Remove possible pointer observers
         if ( Env().DisplayCount() )
             {
             CHuiDisplay& disp = Env().PrimaryDisplay(); // assume one display
@@ -144,7 +153,14 @@ private:
     void HandleCmdL(TInt aCommandId, const TDesC8& aInputBuffer, TDes8& aResponse);    
     CAlfControl2* iControl;
     ~CAlfControlHandler() 
-        { 
+        {
+		// Clear the control's iPtr so that it wouldn't be left as dangling pointer
+		// and cause potential memory corruption
+        if (iControl != NULL)
+            {
+            iControl->ClearPtr();
+            }
+        
         if (iControl && !iControl->ControlGroup())
             {
             delete iControl; 

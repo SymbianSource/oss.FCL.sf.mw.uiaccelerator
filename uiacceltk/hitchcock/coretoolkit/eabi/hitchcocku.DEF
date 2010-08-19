@@ -2005,4 +2005,9 @@ EXPORTS
 	_ZNK7CHuiEnv12AppIconCacheEv @ 2004 NONAME
 	_ZN11CHuiDisplay24SetSkinSizeChangePendingEv @ 2005 NONAME
 	_ZNK10CHuiVisual26EffectReadyToDrawNextFrameEv @ 2006 NONAME
+	_ZN7CHuiEnv24HandleOutOfTextureMemoryEv @ 2007 NONAME
+	_ZN11CHuiFxLayer29ReleaseAllCachedRenderTargetsER12CHuiFxEngine @ 2008 NONAME
+	_ZN16CHuiFxGroupLayer29ReleaseAllCachedRenderTargetsER12CHuiFxEngine @ 2009 NONAME
+	_ZN17CHuiFxFilterLayer29ReleaseAllCachedRenderTargetsER12CHuiFxEngine @ 2010 NONAME
+	_ZN17CHuiFxVisualLayer29ReleaseAllCachedRenderTargetsER12CHuiFxEngine @ 2011 NONAME
 

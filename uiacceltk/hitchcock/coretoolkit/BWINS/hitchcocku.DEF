@@ -1604,4 +1604,9 @@ EXPORTS
 	?Find@CAppIconCache@@QAEPAVCFbsBitmap@@_JVTSize@@@Z @ 1603 NONAME ; class CFbsBitmap * CAppIconCache::Find(long long)
 	?SetSkinSizeChangePending@CHuiDisplay@@QAEXXZ @ 1604 NONAME ; void CHuiDisplay::SetSkinSizeChangePending(void)	
 	?EffectReadyToDrawNextFrame@CHuiVisual@@UBEHXZ @ 1605 NONAME ; int CHuiVisual::EffectReadyToDrawNextFrame(void) const
+	?HandleOutOfTextureMemory@CHuiEnv@@QAEXXZ @ 1606 NONAME ; void CHuiEnv::HandleOutOfTextureMemory(void)
+	?ReleaseAllCachedRenderTargets@CHuiFxVisualLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1607 NONAME ; void CHuiFxVisualLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
+	?ReleaseAllCachedRenderTargets@CHuiFxGroupLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1608 NONAME ; void CHuiFxGroupLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
+	?ReleaseAllCachedRenderTargets@CHuiFxFilterLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1609 NONAME ; void CHuiFxFilterLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
+	?ReleaseAllCachedRenderTargets@CHuiFxLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1610 NONAME ; void CHuiFxLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
 

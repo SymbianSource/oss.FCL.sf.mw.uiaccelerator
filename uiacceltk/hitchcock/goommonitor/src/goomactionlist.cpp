@@ -235,7 +235,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     if (aWindowGroupList.Count())
             {
             // Go through each item in the wglist, create an app close action for this application
-            TInt wgIndex = aWindowGroupList.Count() - 1;
+            TInt wgIndex = 0;
             
             TRACES1("BuildActionListL: Windowgroup list count %d ",aWindowGroupList.Count());
     
@@ -246,7 +246,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     
             TRACES1("BuildActionListL: Foreground App %x ", foregroundUid);
             
-            while (wgIndex >= 0)
+            while (wgIndex < aWindowGroupList.Count())
                 {
                 CGOomCloseAppConfig* appCloseConfig = NULL;
     
@@ -256,7 +256,8 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                 
                 if(AppCloseActionAlreadyExists(aWindowGroupList, appId))
                     {
-                    wgIndex--;
+                    TRACES2("CGOomActionList::BuildKillAppActionListL - Action item already exists for this app %x wgid %d", appId, aWindowGroupList.WgId(wgIndex).iId)
+                    wgIndex++;
                     continue;
                     }
                     
@@ -318,7 +319,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                     TRACES3("BuildActionListL: Adding app to action list, Uid = %x, wgId = %d, wgIndex = %d", appId, wgId, wgIndex);
                     }
     
-                wgIndex--;
+                wgIndex++;
                 }
             }
             
@@ -334,7 +335,10 @@ TBool CGOomActionList::AppCloseActionAlreadyExists(CGOomWindowGroupList& aWindow
         if(ref.Type() == TActionRef::EAppClose )
             {
             if(aWindowGroupList.AppIdfromWgId(ref.WgId(), ETrue) == appId)
+                {
+                TRACES2("CGOomActionList::AppCloseActionAlreadyExists AppId %x already added with wgid %d",appId, ref.WgId());
                 return ETrue;
+                }
             }
         }
         return EFalse;
@@ -661,19 +665,21 @@ void CGOomActionList::AppNotExiting(TInt aWgId)
     {
     FUNC_LOG;
 
-    TInt index = iCloseAppActions.Count();
-    TRACES1("CGOomCloseApp::AppNotExiting: count of actions %d",index);
+    TInt index = 0;
 
-    while (index--)
+    while (index < iCloseAppActions.Count())
         {
         CGOomCloseApp* action = iCloseAppActions[index];
-        TRACES3("CGOomCloseApp::AppNotExiting: %d %d %d", aWgId, action->WgId(), action->IsRunning());
+        TRACES3("CGOomCloseApp::AppNotExiting: recvd from %d , checking against %d , isRunning %d", aWgId, action->WgId(), action->IsRunning());
         
         if ( (action->WgId() == aWgId) && (action->IsRunning()) )
             {
-            TRACES1("CGOomCloseApp::AppNotExiting: App with window group id %d has not responded to the close event", aWgId);
+            TRACES1("CGOomCloseApp::AppNotExiting: App with window group id %d has responded to the close event", aWgId);
             action->CloseAppEvent();
+            break;
             }
+        
+        index++;
         }
     }
 

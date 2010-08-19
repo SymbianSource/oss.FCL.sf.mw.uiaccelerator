@@ -57,6 +57,7 @@ void CGOomRunPlugin::FreeMemory(TInt aBytesRequested, TBool aUseSwRendering)
     else
         {
         iPlugin.FreeRam(aBytesRequested, 0);
+        iFreeMemoryWithSwRenderingCalled = EFalse;
         }
 
     iFreeMemoryCalled = ETrue;
