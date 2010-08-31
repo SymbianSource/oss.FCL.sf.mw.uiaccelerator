@@ -112,9 +112,7 @@ enum THuiCanvasFlags
     /** Flag to indicate whether surface is visible (based on visibility calculation) */
     EHuiCanvasFlagSurfaceVisible = 0x800,
     /** Flag to indicate avkon clearer window. This needs to be drawn, but excluded in the heuristics determining application screen coverage */
-    EHuiCanvasFlagDistractionWindow = 0x1000,
-    /** Flag to indicate that visual is not ready */
-    EHuiCanvasVisualFlagNotReady = 0x2000
+    EHuiCanvasFlagDistractionWindow = 0x1000
     };
 
 /**
@@ -456,7 +454,6 @@ private:
     
     TBool CanSkipDrawing() const;
     TBool KeepNoCache() const;
-    TBool EffectReadyToDrawNextFrame() const; 
 
 private: 
 

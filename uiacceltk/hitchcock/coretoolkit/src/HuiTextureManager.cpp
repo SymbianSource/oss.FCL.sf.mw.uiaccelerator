@@ -2449,8 +2449,7 @@ void CHuiTextureManager::TextureMemUsage() const
 	{
 	TReal32 totalMemUsage = 0;
 	TReal32 avgBitDepth = 0;
-	TInt count = iTextures.Count();
-    for(TInt i = 0; i < count; ++i)
+    for(TInt i = 0; i < iTextures.Count(); ++i)
         {
         if( iTextures[i]->iTexture )
             {            
@@ -2471,15 +2470,12 @@ void CHuiTextureManager::TextureMemUsage() const
     buf.AppendNum( avgBitDepth );
     User::InfoPrint( buf );      
 	}
-
 TInt CHuiTextureManager::EstimatedTextureMemUsage(TInt aAverageBitsPerPixel) const
     {
     TReal32 averageBytesPerPixel =  TReal32(aAverageBitsPerPixel)/8.f;
 	TReal32 totalMemUsage = 0;
     TInt pixels = 0;
-    TInt count = iTextures.Count();
-    
-    for(TInt i = 0; i < count; ++i)
+    for(TInt i = 0; i < iTextures.Count(); ++i)
         {
         // TODO: Exclude NVG textures !
         if( iTextures[i]->iTexture /*&& 

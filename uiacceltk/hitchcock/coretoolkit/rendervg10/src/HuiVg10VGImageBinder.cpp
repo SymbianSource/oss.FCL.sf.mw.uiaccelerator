@@ -98,11 +98,10 @@ TInt CHuiVg10VgImageBinder::BindClientBuffer(TUint aBuffer)
         EGLConfig config = iRenderPlugin->EglConfig(0);
 
         // Create a pbuffer surface
-        iEglPBufferSurface_Client = iRenderPlugin->CreatePBufferSurface(iRenderPlugin->EglDisplay(),
-                                                                EGL_OPENVG_IMAGE, 
-                                                                static_cast<EGLClientBuffer>(aBuffer),
-                                                                config );        
-        
+        iEglPBufferSurface_Client = eglCreatePbufferFromClientBuffer(iRenderPlugin->EglDisplay(),
+                EGL_OPENVG_IMAGE, 
+                static_cast<EGLClientBuffer>(aBuffer),    // Use the param image as buffer
+                config, NULL);
         if (iEglPBufferSurface_Client == EGL_NO_SURFACE)
             {
             HUI_DEBUG1(_L("CHuiVg10VgImageBinder::BindClientBuffer() - EGL Surface could not be created, eglErr: %04x"), eglGetError() );

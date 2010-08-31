@@ -163,20 +163,6 @@ void CGOomActionList::BuildPluginActionListL(CGOomWindowGroupList& aWindowGroupL
         {
         // Get the config for this plugin
         CGOomRunPluginConfig& pluginConfig = aConfig.GetPluginConfig(iPluginList->Uid(pluginIndex));
-        TInt priority = pluginConfig.CalculatePluginPriority(aWindowGroupList);
-
-        TGOomSyncMode syncMode = pluginConfig.iSyncMode;
-        TInt ramEstimate = pluginConfig.iRamEstimate;
-
-        TActionRef::TActionType actionType;
-
-        if (pluginConfig.PluginType() == EGOomAppPlugin)
-            {
-            actionType = TActionRef::EAppPlugin;
-            }
-        else
-            actionType = TActionRef::ESystemPlugin;
-
 
         //get skip plugin config for foreground app
         TUint foregroundUid = iMonitor.ForegroundAppUid();
@@ -197,12 +183,27 @@ void CGOomActionList::BuildPluginActionListL(CGOomWindowGroupList& aWindowGroupL
                         continue ; //skip this and continue with next plugin
                         }
             }
-        
-        TActionRef ref = TActionRef(actionType, priority, syncMode, ramEstimate, *(iRunPluginActions[actionsIndex]), aWindowGroupList.GetIndexFromAppId(pluginConfig.TargetApp()));
-        iAppsProtectedByPlugins.Append(pluginConfig.TargetApp());
-        TRACES2("Creating Plugin Action Item %x , TargetAppId %x", iPluginList->Uid(pluginIndex), pluginConfig.TargetApp());
-        //It is valid to have plugins with equal priority
-        User::LeaveIfError(iActionRefs.InsertInOrderAllowRepeats(ref, ComparePriorities));
+
+        actionsIndex--;
+        CGOomRunPluginConfig * nextConfigForSamePlugin = &pluginConfig; 
+        while(nextConfigForSamePlugin)
+            {
+            TInt priority = nextConfigForSamePlugin->CalculatePluginPriority(aWindowGroupList);
+            TGOomSyncMode syncMode = nextConfigForSamePlugin->iSyncMode;
+            TInt ramEstimate = nextConfigForSamePlugin->iRamEstimate;
+            TActionRef::TActionType actionType;
+            if (nextConfigForSamePlugin->PluginType() == EGOomAppPlugin)
+                actionType = TActionRef::EAppPlugin;
+            else
+                actionType = TActionRef::ESystemPlugin;
+
+            TActionRef ref = TActionRef(actionType, priority, syncMode, ramEstimate, *(iRunPluginActions[++actionsIndex]), aWindowGroupList.GetIndexFromAppId(nextConfigForSamePlugin->TargetApp()));
+            iAppsProtectedByPlugins.Append(nextConfigForSamePlugin->TargetApp());
+            TRACES2("Creating Plugin Action Item %x , TargetAppId %x", iPluginList->Uid(pluginIndex), nextConfigForSamePlugin->TargetApp());
+            //It is valid to have plugins with equal priority
+            User::LeaveIfError(iActionRefs.InsertInOrderAllowRepeats(ref, ComparePriorities));
+            nextConfigForSamePlugin = nextConfigForSamePlugin->iNextConfig;
+            }
 
         actionsIndex++;
         }
@@ -235,7 +236,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     if (aWindowGroupList.Count())
             {
             // Go through each item in the wglist, create an app close action for this application
-            TInt wgIndex = 0;
+            TInt wgIndex = aWindowGroupList.Count() - 1;
             
             TRACES1("BuildActionListL: Windowgroup list count %d ",aWindowGroupList.Count());
     
@@ -246,7 +247,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     
             TRACES1("BuildActionListL: Foreground App %x ", foregroundUid);
             
-            while (wgIndex < aWindowGroupList.Count())
+            while (wgIndex >= 0)
                 {
                 CGOomCloseAppConfig* appCloseConfig = NULL;
     
@@ -256,8 +257,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                 
                 if(AppCloseActionAlreadyExists(aWindowGroupList, appId))
                     {
-                    TRACES2("CGOomActionList::BuildKillAppActionListL - Action item already exists for this app %x wgid %d", appId, aWindowGroupList.WgId(wgIndex).iId)
-                    wgIndex++;
+                    wgIndex--;
                     continue;
                     }
                     
@@ -319,7 +319,7 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                     TRACES3("BuildActionListL: Adding app to action list, Uid = %x, wgId = %d, wgIndex = %d", appId, wgId, wgIndex);
                     }
     
-                wgIndex++;
+                wgIndex--;
                 }
             }
             
@@ -335,10 +335,7 @@ TBool CGOomActionList::AppCloseActionAlreadyExists(CGOomWindowGroupList& aWindow
         if(ref.Type() == TActionRef::EAppClose )
             {
             if(aWindowGroupList.AppIdfromWgId(ref.WgId(), ETrue) == appId)
-                {
-                TRACES2("CGOomActionList::AppCloseActionAlreadyExists AppId %x already added with wgid %d",appId, ref.WgId());
                 return ETrue;
-                }
             }
         }
         return EFalse;
@@ -665,21 +662,19 @@ void CGOomActionList::AppNotExiting(TInt aWgId)
     {
     FUNC_LOG;
 
-    TInt index = 0;
+    TInt index = iCloseAppActions.Count();
+    TRACES1("CGOomCloseApp::AppNotExiting: count of actions %d",index);
 
-    while (index < iCloseAppActions.Count())
+    while (index--)
         {
         CGOomCloseApp* action = iCloseAppActions[index];
-        TRACES3("CGOomCloseApp::AppNotExiting: recvd from %d , checking against %d , isRunning %d", aWgId, action->WgId(), action->IsRunning());
+        TRACES3("CGOomCloseApp::AppNotExiting: %d %d %d", aWgId, action->WgId(), action->IsRunning());
         
         if ( (action->WgId() == aWgId) && (action->IsRunning()) )
             {
-            TRACES1("CGOomCloseApp::AppNotExiting: App with window group id %d has responded to the close event", aWgId);
+            TRACES1("CGOomCloseApp::AppNotExiting: App with window group id %d has not responded to the close event", aWgId);
             action->CloseAppEvent();
-            break;
             }
-        
-        index++;
         }
     }
 
@@ -743,6 +738,7 @@ void CGOomActionList::StateChanged()
                 }
             else
                 {
+                iMonitor.SwitchMemMode(CMemoryMonitor::EGOomLowMemMode);
                 TRACES1("CGOomActionList::StateChanged: All current Plugin actions complete, below good threshold, Time to kill bad guys. freeMemory=%d", freeMemory);
                 iRunningKillAppActions = ETrue;
                 iMonitor.RunCloseAppActions(iMaxPriority);
@@ -788,6 +784,14 @@ void CGOomActionList::ConstructL(CGOomConfig& aConfig)
         CGOomRunPlugin* action = CGOomRunPlugin::NewL(iPluginList->Uid(pluginIndex), pluginConfig, *this, iPluginList->Implementation(pluginIndex));
 
         iRunPluginActions.AppendL(action);
+        
+        CGOomRunPluginConfig * nextConfigForSamePlugin = pluginConfig.iNextConfig; 
+        while(nextConfigForSamePlugin)
+            {
+            CGOomRunPlugin* action = CGOomRunPlugin::NewL(iPluginList->Uid(pluginIndex), *(nextConfigForSamePlugin), *this, iPluginList->Implementation(pluginIndex));
+            iRunPluginActions.AppendL(action);
+            nextConfigForSamePlugin = nextConfigForSamePlugin->iNextConfig; 
+            }
         }
 
 	//references to v2 plugin types removed as these are not yet used by GOOM

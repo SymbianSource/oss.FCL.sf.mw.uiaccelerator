@@ -76,10 +76,6 @@ EXPORT_C TBool CHuiFxFilterLayer::PrepareDrawL(CHuiFxEngine& aEngine)
     return iFilter->PrepareDrawL(aEngine);
     }
 
-EXPORT_C void CHuiFxFilterLayer::ReleaseAllCachedRenderTargets(CHuiFxEngine& /*aEngine*/)
-    {
-    // currently filter effects do not permanently reserve their render targets, only for frame drawing.
-    }
 
 EXPORT_C TBool CHuiFxFilterLayer::Changed() const
     {

@@ -146,8 +146,6 @@ public: // effect cache methods
     void PrepareCachedRenderTarget(const TPoint& aPosition, const TSize& aSize, TBool aClear, TBool aEnableBackground);
     void ReleaseCachedRenderTarget();
     
-    TBool PrepareDrawL(CHuiGc& aGc, const TRect& aDisplayRect);
-    
     /*
      * CachedDraw is typically much faster than normal draw as it keeps effect result in pre-rendered format
      * instead of doing it on-the-fly as normal draw. There are however few issues that must be noted:
@@ -212,8 +210,6 @@ protected:
 	
     TInt iFramesDrawn;
     TReal32 iElapsedTime;
-    
-    MHuiEffectable* iEffectable; // not own
     };
 
 #endif /*HUIFXEFFECT_H_*/

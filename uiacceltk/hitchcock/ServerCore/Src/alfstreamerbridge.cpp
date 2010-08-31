@@ -96,7 +96,6 @@ CAlfStreamerBridge::~CAlfStreamerBridge()
     {
     iDataBuf.Close();
     iQueueSema.Close();
-    iMessages.Close();
 #ifdef ALF_DEBUG_TRACK_DRAWING
     delete iCommandDebugger;
 #endif
@@ -204,8 +203,7 @@ TInt CAlfStreamerBridge::AddData( TAlfDecoderServerBindings aOp,TInt aI1,TInt aI
         }
     else if (iVarDataAddedButNotPosted)
         {
-		__ALFLOGSTRING1("CAlfStreamerBridge::AddData - Data lost, error: %d", err);
-        iVarDataAddedButNotPosted = EFalse; // data lost 
+	iVarDataAddedButNotPosted = EFalse; // data lost 
         iQueueSema.Signal();
         }
 	    
@@ -415,7 +413,7 @@ EXPORT_C const TAny* CAlfStreamerBridge::AppendVarDataL( TInt aSize, TInt& aInde
         }
     if ( iDataBuf.Length() + aSize >= iDataBuf.MaxLength() )
         {
-        TRAPD(err, iDataBuf.ReAllocL( iDataBuf.MaxLength() + aSize + KIncreaseVariableBufferSize ));
+        TRAPD(err, iDataBuf.ReAllocL( iDataBuf.MaxLength() + KInitialVariableBufferSize ));
         if ( err )
             {
             __ALFLOGSTRING("CAlfStreamerBridge::AppendVarDataL, realloc failed");

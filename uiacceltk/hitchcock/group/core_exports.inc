@@ -3,7 +3,7 @@
 *  Name        : core_exports.inc
 *  Part of     : Alfred UI Toolkit
 *  Description : Exported header files.
-*  Version     : %version: tr1sido#8.1.38 %
+*  Version     : %version: tr1sido#8.1.37 %
 *
 *  Copyright © 2006-2007 Nokia.  All rights reserved.
 *  This material, including documentation and any related computer
@@ -91,8 +91,6 @@ PRJ_EXPORTS
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_cascade_disappear.fxml
 ../coretoolkit/data/optionsmenu_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/optionsmenu_disappear.fxml
-../coretoolkit/data/phone_callui_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/phone_callui_appear.fxml
-../coretoolkit/data/phone_callui_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/phone_callui_disappear.fxml
 ../coretoolkit/data/photos_fullscreen_close.fxml /epoc32/release/winscw/urel/z/resource/effects/photos_fullscreen_close.fxml
 ../coretoolkit/data/photos_fullscreen_open.fxml /epoc32/release/winscw/urel/z/resource/effects/photos_fullscreen_open.fxml
 ../coretoolkit/data/photos_gridview_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/photos_gridview_appear.fxml
@@ -186,8 +184,6 @@ PRJ_EXPORTS
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_cascade_disappear.fxml
 ../coretoolkit/data/optionsmenu_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/optionsmenu_disappear.fxml
-../coretoolkit/data/phone_callui_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/phone_callui_appear.fxml
-../coretoolkit/data/phone_callui_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/phone_callui_disappear.fxml
 ../coretoolkit/data/photos_fullscreen_close.fxml /epoc32/release/winscw/udeb/z/resource/effects/photos_fullscreen_close.fxml
 ../coretoolkit/data/photos_fullscreen_open.fxml /epoc32/release/winscw/udeb/z/resource/effects/photos_fullscreen_open.fxml
 ../coretoolkit/data/photos_gridview_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/photos_gridview_appear.fxml
@@ -281,8 +277,6 @@ PRJ_EXPORTS
 ../coretoolkit/data/optionsmenu_cascade_appear.fxml /epoc32/data/z/resource/effects/optionsmenu_cascade_appear.fxml
 ../coretoolkit/data/optionsmenu_cascade_disappear.fxml /epoc32/data/z/resource/effects/optionsmenu_cascade_disappear.fxml
 ../coretoolkit/data/optionsmenu_disappear.fxml /epoc32/data/z/resource/effects/optionsmenu_disappear.fxml
-../coretoolkit/data/phone_callui_appear.fxml /epoc32/data/z/resource/effects/phone_callui_appear.fxml
-../coretoolkit/data/phone_callui_disappear.fxml /epoc32/data/z/resource/effects/phone_callui_disappear.fxml
 ../coretoolkit/data/photos_fullscreen_close.fxml /epoc32/data/z/resource/effects/photos_fullscreen_close.fxml
 ../coretoolkit/data/photos_fullscreen_open.fxml /epoc32/data/z/resource/effects/photos_fullscreen_open.fxml
 ../coretoolkit/data/photos_gridview_appear.fxml /epoc32/data/z/resource/effects/photos_gridview_appear.fxml

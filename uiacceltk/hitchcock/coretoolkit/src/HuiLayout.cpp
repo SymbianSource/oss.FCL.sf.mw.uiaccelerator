@@ -494,7 +494,7 @@ EXPORT_C void CHuiLayout::Draw(CHuiGc& aGc) const
     		}
     	}
 
-    if(iOpacity.Now() <= EPSILON && !Effect())
+    if(iOpacity.Now() <= EPSILON && (Effect() && !Effect()->IsSemitransparent()))
         {
         // This will not be visible due to being completely transparent.
         return;
@@ -540,33 +540,12 @@ EXPORT_C void CHuiLayout::Draw(CHuiGc& aGc) const
     
     if (canUseEffectDrawing)
         {
-        Effectable()->EffectSetOpacityAdditive(0.0f, ETrue);
-        // PrepareDrawL will update iEffectOpacity for current frame
-        if(Effect()->PrepareDrawL(aGc, area))
-            {
-            if(iEffectOpacity <= 0.f)
-                {
-                if(Clipping())
-                    {
-                    // Restore original clipping rectangle.
-                    aGc.PopClip();
-                    }
-
-                
-                DrawBrushes(aGc, EHuiBrushLayerForeground);
-
-                // Restore original transformation.
-                Transform(aGc, EFalse);
-                EnterLocalProjection(aGc, EFalse);
-                return;
-                }
-        
-            // Note that EHuiVisualFlagOpaqueHint improves performance a lot in cached effect drawing 
-            TBool transparent = !(Flags() & EHuiVisualFlagOpaqueHint) && iOpacity.Now() < 1.0f;
-            TBool refreshCache = Changed();                
-            didDrawEffect =  Effect()->CachedDraw(aGc, area, refreshCache, !transparent);
-            }
+        // Note that EHuiVisualFlagOpaqueHint improves performance a lot in cached effect drawing 
+        TBool transparent = !(Flags() & EHuiVisualFlagOpaqueHint) && iOpacity.Now() < 1.0f;
+        TBool refreshCache = Changed();                
+        didDrawEffect =  Effect()->CachedDraw(aGc, area, refreshCache, !transparent);
         }
+    
     if ( !didDrawEffect )
         {
         // huilayout does not draw itself, only children.

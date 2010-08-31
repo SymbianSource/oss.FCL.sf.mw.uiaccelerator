@@ -204,11 +204,11 @@ void CHuiCmdBufferBrush::EffectSetEffect(CHuiFxEffect* aEffect)
     iEffect = aEffect;
     }
 
-TReal32 CHuiCmdBufferBrush::EffectOpacity() const
+TReal32 CHuiCmdBufferBrush::EffectOpacityTarget() const
     {
     return 1.0;
     }
-void CHuiCmdBufferBrush::EffectSetOpacityAdditive(TReal32 /*aOpacity*/, TBool /*aReplace*/)
+void CHuiCmdBufferBrush::EffectSetOpacity(TReal32 aOpacity)
     {
     // empty
     }
@@ -242,10 +242,6 @@ void CHuiCmdBufferBrush::EffectSetSource( TBool /*aIsInput1*/ )
 TBool CHuiCmdBufferBrush::EffectGetSource() const
     {
     return EFalse;
-    }
-TBool CHuiCmdBufferBrush::EffectReadyToDrawNextFrame() const
-    {
-    return ETrue;
     }
 
 void CHuiCmdBufferBrush::DestroyBuffer(CHuiCanvasCommandBuffer *aBuffer)

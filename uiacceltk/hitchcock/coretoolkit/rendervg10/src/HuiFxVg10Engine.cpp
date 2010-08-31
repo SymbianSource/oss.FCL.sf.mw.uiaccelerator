@@ -45,8 +45,7 @@ void CHuiFxVg10Engine::ConstructL(CHuiVg10RenderPlugin& aPlugin)
     CHuiFxEngine::ConstructL(EHuiFxEngineVg10);
     iPlugin = &aPlugin;
     iDefaultBuffer = 0;
-	// usually we don't have any vg context set at this point, so we cannot yet create the actual paint
-    iCompPaint = VG_INVALID_HANDLE; 
+    iCompPaint = vgCreatePaint();
     }
 
 CHuiFxVg10Engine::~CHuiFxVg10Engine()

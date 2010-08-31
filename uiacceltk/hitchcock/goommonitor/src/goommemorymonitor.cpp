@@ -205,9 +205,10 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
     FUNC_LOG;
     // keep only one notification active at a moment
 #ifdef USE_ASYNCYH_NOTIFICATIONS 
-    TInt current = GetFreeMemory();
+   
     if (aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_LT_NOK)
         {
+        TInt current = GetFreeMemory();
         if(current >= iGoodThreshold  && (!NeedToPostponeMemGood()))
             {
             TRACES2("FreeMemThresholdCrossedL : crossed good threshold Free %d, GThresh %d, Calling MemoryGood",current, iGoodThreshold);
@@ -229,20 +230,15 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         }
     else//if aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_GT_NOK
         {
-        if(current < iLowThreshold)
+        TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
+        iMemAllocationsGrowing->Stop();
+        iMemAllocationsGoingDown->Continue();
+        if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
             {
-            TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
-            iMemAllocationsGrowing->Stop();
-            iMemAllocationsGoingDown->Continue();
-            if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
-                {
-                if(iSynchTimer->IsActive())
-                    iSynchTimer->Cancel();
-                StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
-                }
+            if(iSynchTimer->IsActive())
+                iSynchTimer->Cancel();
+            StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
             }
-        else
-            TRACES2("FreeMemThresholdCrossedL : crossed low threshold %d, FALSE ALARM, FreeMem = %d", iLowThreshold, current);
         }
 #endif
     }
@@ -339,13 +335,22 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
     // Run the memory freeing actions
     iGOomActionList->FreeMemory(aMaxPriority);
     
-    SwitchMemMode(EGOomLowMemMode);
     }
 
 void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
     {
     if(iMemMode == aMemMode)
+        {
+        if(iMemMode == EGOomGoodMemMode)
+            {
+            TRACES("CMemoryMonitor::SwitchMemMode NOT switching rendering mode. Already in GOOD Mode");
+            }
+        else
+            {
+            TRACES("CMemoryMonitor::SwitchMemMode NOT switching rendering mode. Already in LOW Mode");
+            }
         return;
+        }
 
 #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS    
     TWsEvent event;
@@ -360,6 +365,7 @@ void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
         iLowOnMemWgs.Reset();
         iGOomWindowGroupList->GetListOfWindowGroupsWSurfaces(iLowOnMemWgs);
         event.SetType(KGoomMemoryLowEvent);
+        TRACES("CMemoryMonitor::SwitchMemMode. Switching rendering mode to SW, Sending KGoomMemoryLowEvent");
         }
     else
         {
@@ -368,15 +374,20 @@ void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
             if(iRendswitched < 3)
                 iRendswitched ++;
             else
+                {
+                TRACES("CMemoryMonitor::SwitchMemMode GOOM Detected SW-HW-SW looping. NOT switching to HW rendering mode");
                 return;
+                }
             }
     
         event.SetType(KGoomMemoryGoodEvent);
+        TRACES("CMemoryMonitor::SwitchMemMode. Switching rendering mode to HW, Sending KGoomMemoryGoodEvent");
         }
     
     for (TInt i = iLowOnMemWgs.Count()-1; i>=0; i--)
         {
         iWs.SendEventToWindowGroup(iLowOnMemWgs[i], event);
+        TRACES1("CMemoryMonitor::SwitchMemMode. Sending event to wg %d",iLowOnMemWgs[i]);
         }
 #endif
     

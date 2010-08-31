@@ -79,9 +79,10 @@ threshold values are used.
 		defined in the conf file.
 -->
 		<system_plugin uid="DEFAULT_PLUGIN" priority="10" sync_mode="check" sw_rend="not_supported"></system_plugin>
-		<system_plugin uid="2002DC75" priority="3" sync_mode="continue" sw_rend="supported"></system_plugin> <!-- HbThemeserverOOGMPLUGIN? -->
+		<system_plugin uid="2002DC75" priority="3" sync_mode="continue" sw_rend="not_supported"></system_plugin> <!-- HbThemeserverOOGMPLUGIN? -->
 		<system_plugin uid="E4B6C988" priority="4" sync_mode="check" sw_rend="supported"></system_plugin> <!-- ALFOOGMPLUGIN -->
-		<system_plugin uid="2002C30A" priority="5" sync_mode="continue"></system_plugin> <!-- FLASHOOGMPLUGIN -->
+		<system_plugin uid="2002DC75" priority="5" sync_mode="continue" sw_rend="supported" ></system_plugin> <!-- HbThemeserverOOGMPLUGIN? -->
+		<system_plugin uid="2002C30A" priority="6" sync_mode="continue"></system_plugin> <!-- FLASHOOGMPLUGIN -->
 	</system_plugin_settings>
 	
 <!--	The priority of executing each application plugin is defined here.

@@ -60,6 +60,8 @@ public:
     
     inline TBool IsSwRendSupported();
     
+    CGOomRunPluginConfig * iNextConfig;
+    
 private:
     CGOomRunPluginConfig(TUint aPluginId, TGOomPluginType aPluginType);
     

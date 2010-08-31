@@ -32,7 +32,6 @@ public:
     IMPORT_C virtual ~CHuiFxLayer();
 
     IMPORT_C virtual TBool PrepareDrawL(CHuiFxEngine& aEngine);
-    IMPORT_C virtual void ReleaseAllCachedRenderTargets(CHuiFxEngine& aEngine);
     virtual void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface) = 0;
     IMPORT_C virtual TBool VisualArea(TRect& aRect);
     IMPORT_C virtual TBool Margin( TMargins &m );
@@ -76,9 +75,6 @@ public: // effect cache
     void EnableMargin(TBool aEnable);
     virtual void EnableMarginApplyChildren(TBool aEnable);
     TBool IsMarginEnabled() const;
-    
-    // Internal
-    virtual void SetVisualContentState(TBool aChanged, TBool aOpaque);
     
     // Internal flag to tell wheter transparency is enabled
     virtual TBool IsSemitransparent() const;

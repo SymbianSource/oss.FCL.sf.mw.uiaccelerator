@@ -25,6 +25,8 @@
 // Extension interface "uids"
 #define KGoomClientSecureId     0x1000
 
-
+// Goom Events through Window Server
+#define KGoomMemoryLowEvent 0x10282DBF
+#define KGoomMemoryGoodEvent 0x20026790
 
 #endif // GOOMMONITORPLUGIN_HRH

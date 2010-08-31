@@ -500,20 +500,13 @@ void CHuiRosterImpl::Draw(CHuiGc& aGc, CHuiDisplay* aDisplay) const
         // some other part of the effect, so this workaround won't work correctly in those cases. 
         // To get those working, propably whole opacity effect handling should be re-written 
         // differently.
-        CHuiRosterImpl* nonconst = const_cast<CHuiRosterImpl*>(this);
-        nonconst->Effectable()->EffectSetOpacityAdditive(0.0f, ETrue);
-        // PrepareDraw will update iEffectOpacity to correct opacity for this effect frame
-        if(iEffect->PrepareDrawL(aGc, displayRect))
+        if (iEffect->IsSemitransparent() || iEffectOpacity < 1.f)
             {
-            if (iEffectOpacity < 1.f)
-                {
-                iEffect->ForceCachedRenderTargetUsage(ETrue);
-                }        
-
-            RRegion dummy;
-            didDrawEffect = iEffect->CachedDraw(aGc, displayRect, refreshCache, opaque, dummy, EFalse, iEffectOpacity*255);        
-            dummy.Close();
-            }
+            iEffect->ForceCachedRenderTargetUsage(ETrue);
+            }        
+        RRegion dummy;
+        didDrawEffect = iEffect->CachedDraw(aGc, displayRect, refreshCache, opaque, dummy, EFalse, iEffectOpacity*255);        
+        dummy.Close();
         }
     
     if (!didDrawEffect)
@@ -1838,12 +1831,12 @@ void CHuiRosterImpl::EffectSetEffect(CHuiFxEffect* aEffect)
     SetChanged();
     }
 
-TReal32 CHuiRosterImpl::EffectOpacity() const
+TReal32 CHuiRosterImpl::EffectOpacityTarget() const
     {
     return iEffectOpacity; 
     }
 
-void CHuiRosterImpl::EffectSetOpacityAdditive(TReal32 aOpacity, TBool /*aReplace*/)
+void CHuiRosterImpl::EffectSetOpacity(TReal32 aOpacity)
     {
     iEffectOpacity = aOpacity;
     }
@@ -1882,11 +1875,6 @@ void CHuiRosterImpl::EffectSetSource( TBool aIsInput1 )
 TBool CHuiRosterImpl::EffectGetSource() const
     {
     return iIsInput1;
-    }
-
-TBool CHuiRosterImpl::EffectReadyToDrawNextFrame() const
-    {
-    return ETrue;
     }
 
 void CHuiRosterImpl::SetMemoryLevel(THuiMemoryLevel /*aLevel*/)

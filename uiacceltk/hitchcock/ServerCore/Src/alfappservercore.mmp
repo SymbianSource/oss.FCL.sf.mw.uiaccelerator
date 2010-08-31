@@ -38,11 +38,6 @@ MACRO ALF_DRAW_FRAME_BEFORE_END_CALLBACK
 
 // MACRO ALF_DEBUG_PRINT_NODE_INFO
 
-// Have these lines active if you want to have additional memory logging.
-// Comment these lines out if you don't want any memory logging.
-//MACRO ALF_MEMORYLOGGING
-//#define ALF_MEMORYLOGGING
-
 
 TARGET                  alfappservercore.dll
 TARGETTYPE              dll
@@ -138,8 +133,4 @@ LIBRARY                 bafl.lib
 
 #ifdef HUI_DEBUG_TRACK_DRAWING
 LIBRARY					alfcommanddebug.lib
-#endif
-
-#ifdef ALF_MEMORYLOGGING
-LIBRARY                 hal.lib
 #endif

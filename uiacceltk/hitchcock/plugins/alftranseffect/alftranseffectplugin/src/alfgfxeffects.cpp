@@ -143,7 +143,6 @@ CAlfGfxEffects::~CAlfGfxEffects()
     delete iPolicyHandler;
     delete iSysDisable;
     delete iEngine;
-    delete iSyncronizedGroupDefitionEndChecker;
     __ALFFXLOGSTRING("CAlfGfxEffects::~CAlfGfxEffects <<");
     }
     

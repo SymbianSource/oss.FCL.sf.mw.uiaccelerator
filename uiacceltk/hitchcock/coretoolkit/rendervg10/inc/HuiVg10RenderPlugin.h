@@ -298,15 +298,6 @@ public:
 	    return iEGLStateForTextureUpload;
 	    }
 	
-    /**
-     * Helper function for creating new PBuffer surfaces.
-	 * If out of memory happens this method tries to internally free all
-	 * the possible memory that can be freed and tries again. If still there is
-	 * not enough available memory EGL_NO_SURFACE is returned
-     */
-    EGLSurface CreatePBufferSurface(EGLDisplay aDisplay,
-                EGLenum aBuffertype, EGLClientBuffer aBuffer, EGLConfig aConfig);
-    
 protected:
 
     /* Constructors. */

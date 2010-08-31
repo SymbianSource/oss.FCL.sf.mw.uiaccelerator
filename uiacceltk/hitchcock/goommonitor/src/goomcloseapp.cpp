@@ -25,7 +25,6 @@
 #include "goomappclosetimer.h"
 #include "goomappclosewatcher.h"
 #include "goomactionref.h"
-#include "goommonitorsession.h"
 
 
 CGOomCloseApp* CGOomCloseApp::NewL(MGOomActionObserver& aStateChangeObserver, RWsSession& aWs)

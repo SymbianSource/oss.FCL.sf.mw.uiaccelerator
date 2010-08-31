@@ -171,17 +171,6 @@ EXPORT_C TBool CHuiFxGroupLayer::PrepareDrawL(CHuiFxEngine& aEngine)
     return ETrue;
     }
 
-EXPORT_C void CHuiFxGroupLayer::ReleaseAllCachedRenderTargets(CHuiFxEngine& aEngine)
-    {
-    // Currently grouplayer itself does not use any cached render buffers which it would not free right after drawing a frame
-
-    // still release all child layer's render targets
-    for( TInt i=0 ; i < iLayers.Count() ; i++ )
-        {
-        iLayers[i]->ReleaseAllCachedRenderTargets(aEngine);
-        }    
-    }
-
 EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, 
                                      CHuiFxRenderbuffer& aSource, TBool aHasSurface)
     {
@@ -484,12 +473,4 @@ void CHuiFxGroupLayer::SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels
         {
         iLayers[i]->SetAlwaysReadSurfacePixels(aAlwaysReadSurfacePixels);
         }
-    }
-
-void CHuiFxGroupLayer::SetVisualContentState(TBool aChanged, TBool aOpaque)
-    {
-    for( TInt i=0 ; i < iLayers.Count() ; i++ )
-        {
-        iLayers[i]->SetVisualContentState(aChanged, aOpaque);
-        }    
     }

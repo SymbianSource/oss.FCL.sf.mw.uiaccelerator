@@ -69,26 +69,13 @@ void CHuiFxVg10OffscreenRenderbuffer::ConstructL(CHuiVg10RenderPlugin& aPlugin, 
     // Create a context
     iContext = eglCreateContext(iPlugin->EglDisplay(), config,
             iPlugin->EglSharedContext(), NULL);
-
-    if(iContext == EGL_NO_CONTEXT)
-        {
-        EGLint err = eglGetError();
-        RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::InitializeL() - EGLContext creation failed: EglError -- %04x"), err);
-        User::Leave(KErrGeneral);
-        }
+    ASSERT(iContext);
     
     // Create a pbuffer surface
-    CHuiVg10RenderPlugin& renderer = CHuiStatic::Vg10Renderer();
-    iSurface = renderer.CreatePBufferSurface(iPlugin->EglDisplay(), EGL_OPENVG_IMAGE,                                 
-                                    iImage, config);
-
-    if(iSurface == EGL_NO_SURFACE)
-         {
-         EGLint err = eglGetError();
-         RDebug::Print(_L("CHuiFxVg10OffscreenRenderbuffer::InitializeL() - EGLSurface creation failed: EglError -- %04x"), err);
-         User::Leave(KErrGeneral);
-         }
-   
+    iSurface = eglCreatePbufferFromClientBuffer(iPlugin->EglDisplay(), EGL_OPENVG_IMAGE,
+                                                iImage, config, NULL);
+    ASSERT(iSurface);   
+    
     // Initialize the context
     iGc = iPlugin->CreateGcL();
     this->InitGc(aSize);

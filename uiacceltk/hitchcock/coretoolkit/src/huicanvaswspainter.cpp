@@ -2754,15 +2754,7 @@ void CHuiCanvasWsPainter::SelectGcL()
     if ( oldGc && oldGc != iCanvasWsGc )
         {
         oldGc->ClearCache();
-        
-        // delete SW rendering GC when not needed
-        if ( oldGc == iCanvasWsBitGc ) 
-            {
-            delete iCanvasWsBitGc;
-            iCanvasWsBitGc = NULL;
-            }
         }
-
     if ( iCanvasWsGc )
         {
         // Forward 'enable render buffer' setting to new GC.

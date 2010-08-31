@@ -1781,12 +1781,6 @@ EXPORT_C THuiMemoryLevel CHuiEnv::MemoryLevel()
     return iMemoryLevel;
     }
 
-EXPORT_C void CHuiEnv::HandleOutOfTextureMemory()
-    {
-    iCanvasTextureCache->HandleOutOfTextureMemory();
-    }
-
-
 EXPORT_C void CHuiEnv::Synchronize(TInt aId, MHuiSynchronizationObserver* aObserver)
     {
     TInt err = iSynchObservers.Append(aObserver);

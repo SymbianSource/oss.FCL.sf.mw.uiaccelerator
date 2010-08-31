@@ -48,8 +48,6 @@ public:
     static CAlfWindow* NewL(TUint aId, CAlfWindowManager& aOwner, const TSize& aSizeInPixels);
     
     virtual ~CAlfWindow();
-    
-    static void ReportOOM();
         
 public: 
     // getters
@@ -290,19 +288,8 @@ public:
      * Include to visibility calculation.
      */
     void IncludeToVisibilityCalculation(TBool aActive);
-
-    /**
-     * Sets screen device valid/invalid.
-     * @param aValid ETrue if screen device valid, EFalse otherwise.
-     */
-    void SetScreenDeviceValid(TBool aValid);
-	
-    /**
-     * Returns ETrue if screen device is valid.
-     */
-    TBool IsScreenDeviceValid() const;    
-
-public: // utils
+    
+    public: // utils
     
     /**
 	 * SetFlag

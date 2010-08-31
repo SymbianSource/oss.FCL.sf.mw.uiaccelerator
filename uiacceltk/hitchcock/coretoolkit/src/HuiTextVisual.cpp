@@ -359,6 +359,7 @@ inline TRgb ConvertToLinear(TRgb aColor)
             (color & 0xff000000);
         }
 //#endif    
+    return aColor;
     }
 
     

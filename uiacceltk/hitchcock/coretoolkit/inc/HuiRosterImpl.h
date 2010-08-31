@@ -325,14 +325,13 @@ public:
 	
 	// From MHuiEffectable
     void EffectSetEffect(CHuiFxEffect* aEffect);
-    TReal32 EffectOpacity() const;
-    void EffectSetOpacityAdditive(TReal32 aOpacity, TBool aReplace);
+    TReal32 EffectOpacityTarget() const;
+    void EffectSetOpacity(TReal32 aOpacity);
     void EffectDrawSelf( CHuiGc &aGc, const TRect & aDisplayRect) const;
     THuiRealRect EffectDisplayRect() const __SOFTFP;
     void SetLoadingEffect(TBool aLoading);
     void EffectSetSource( TBool aIsInput1 );
     TBool EffectGetSource() const;	
-    TBool EffectReadyToDrawNextFrame() const;
     
     // From MHuiMemoryLevelObserver
     void SetMemoryLevel(THuiMemoryLevel aLevel);

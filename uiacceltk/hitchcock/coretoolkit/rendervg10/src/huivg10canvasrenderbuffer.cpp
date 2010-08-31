@@ -145,7 +145,7 @@ void CHuiVg10CanvasRenderBuffer::InitializeL(const TSize& aSize)
     iContext = eglCreateContext(renderer.EglDisplay(), config,
             renderer.EglSharedContext(), NULL);
 
-    if(iContext == EGL_NO_CONTEXT)
+    if(!iContext)
         {
         PopEGLContext();
 
@@ -155,11 +155,9 @@ void CHuiVg10CanvasRenderBuffer::InitializeL(const TSize& aSize)
         }
 
     // Create a pbuffer surface
-
-    iSurface = renderer.CreatePBufferSurface(renderer.EglDisplay(), EGL_OPENVG_IMAGE,                                 
-                                    iImage, config);
-  
-    if(iSurface == EGL_NO_SURFACE)
+    iSurface = eglCreatePbufferFromClientBuffer(renderer.EglDisplay(), EGL_OPENVG_IMAGE,
+                                                iImage, config, NULL);
+    if(!iSurface)
         {
         PopEGLContext();
 
