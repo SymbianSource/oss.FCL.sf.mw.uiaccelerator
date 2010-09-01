@@ -227,14 +227,19 @@ void CAlfStreamerServer::HandleClientExit(const CAlfStreamerServerSession* aClie
 CAlfStreamerServer::~CAlfStreamerServer()
     {
     delete iThemesListener;
-    delete iWindowMgr;
     delete iWindowHierarcy;
+    iWindowHierarcy = NULL;
     iCompositionSessions.Close();
     iCompositionHostSessions.Close();
     iCompositionTokens.Close();
     iWindowServerSessions.Close();
     iAlfTargets.Close();
     iOptionalGRAM.Close();
+    iSignals.Close();
+     // Remove "effectpluginnotunloaded" from 10282CAF.rss in order to really unload effect plugin
+    // iWindowMgr->DestroyPlugin(TUid::Uid(0x2001e2cf)); // effects plugin. window manager needed for unloading.
+    delete iWindowMgr;
+    iWindowMgr = NULL;
     }
 
 void CAlfStreamerServer::AppendCompositionSessionL(CAlfStreamerServerSession* aSession, TBool aHost)
@@ -797,6 +802,12 @@ CAlfStreamerServerSession::~CAlfStreamerServerSession()
     TInt i = 0;
     RImplInfoPtrArray pluginArray;
     REComSession::ListImplementationsL( KAlfGfxPluginInterfaceUId, pluginArray );    
+    CAlfWindowManager* windowMgr = NULL;
+    if (Server())
+        {
+        windowMgr = ((CAlfStreamerServer*)(Server()))->WindowMgr();
+        }
+            
     for ( i = iLoadedPlugins.Count() - 1; i >= 0; i-- )
         {
         TInt j = 0;    
@@ -805,9 +816,9 @@ CAlfStreamerServerSession::~CAlfStreamerServerSession()
             TUid loaded = TUid::Uid(iLoadedPlugins[i]);
             TUid listed = pluginArray[j]->ImplementationUid();
             TPtrC8 listedopaque = pluginArray[j]->OpaqueData();
-            if ( loaded == listed && ( (listedopaque.CompareF( KAlfDoNotUnloadPlugin )) != 0 ) )
+            if ( loaded == listed && ( (listedopaque.CompareF( KAlfDoNotUnloadPlugin )) != 0 ) && windowMgr)
                 {
-                ((CAlfStreamerServer*)(Server()))->WindowMgr()->DestroyPlugin(TUid::Uid(iLoadedPlugins[i]));
+                windowMgr->DestroyPlugin(TUid::Uid(iLoadedPlugins[i]));
                 }
             }
         }

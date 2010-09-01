@@ -124,6 +124,7 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         void Blank(TBool aEnabled);
         void LowMemoryEvent();
         void BeginLayoutSwitch();
+        void ImplicitBlank();
         
         void Event(TEvent aEvent);
         void Transition(TState aNewState, TState aPreviousState);
@@ -138,7 +139,8 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         void HandleThemeEvent(TEvent aEvent);
 
         void FreezeFinished();
-
+        void HandleBlankChange();
+        
     public:            
         TBool IsThemeEffectEnabled() const;
         TBool LayoutSwitchEffectsExist() const;
@@ -166,6 +168,7 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         
         static TInt DoFreezeFinished(TAny* aAny);
         static TInt DoNextLayoutSwitchContext(TAny* aAny);
+        static TInt DoImplicitBlankOff(TAny* aAny);
         
     private: // Data
         
@@ -174,9 +177,12 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         TThreadPriority iOriginalPriority;
         CAlfRosterFreezeEndTimer* iRosterFreezeEndTimer;
         TBool iBlankEnabled;
+        TBool iImplicitBlankEnabled;
+        TBool iAknBlankEnabled;
         
         TState iCurrentState;
         TBool iLayoutSwitchNotCompleted;
+        CPeriodic* iImplicitBlankTimer;
 	};
 
 // ---------------------------------------------------------
@@ -257,7 +263,7 @@ NONSHARABLE_CLASS(CEffectState) : public CBase
         TRect iRect;
         TBool iLongAppStartTimeout;
         TBool iTimeout;
-        
+        TBool iIsRedirected;
          
         void SetState(TEffectState aState);
        

@@ -33,6 +33,11 @@
 #else
     #include "alflogger.h"
 #endif
+
+#ifdef ALF_MEMORYLOGGING
+#include <hal.h>
+#endif
+
 // ---------------------------------------------------------------------------
 // Constructor
 // ---------------------------------------------------------------------------
@@ -42,6 +47,30 @@ CAlfNode::CAlfNode( ) :
     {
     }
 
+
+void CAlfNode::ReportOOM()
+    {
+#ifdef ALF_MEMORYLOGGING
+    RDebug::Printf("CAlfNode::ReportOOM");
+
+    TInt totalSpaceAllocated = 0;
+    TInt cellsAllocatedInHeap = User::AllocSize(totalSpaceAllocated);
+    TInt largestFreeBlock = 0;
+    TInt totalFreeSpaceInHeap = User::Available(largestFreeBlock);
+    TInt freeRAM = 0;
+    if ( HAL::Get( HALData::EMemoryRAMFree, freeRAM ) != KErrNone )
+        {
+        freeRAM = -1;
+        }
+        
+    RDebug::Printf("CAlfNode::ReportOOM - Allocated space: %d, Amount of allocated cells: %d, Largest free block: %d, Free space in heap: %d",
+            totalSpaceAllocated,
+            cellsAllocatedInHeap,
+            largestFreeBlock,
+            totalFreeSpaceInHeap);
+    RDebug::Printf("CAlfNode::ReportOOM - Free RAM in system: %d", freeRAM);
+#endif
+    }
 // ---------------------------------------------------------------------------
 // ConstructL
 // ---------------------------------------------------------------------------
@@ -365,61 +394,60 @@ TInt CAlfNode::OrdinalPosition()
 // ---------------------------------------------------------------------------
 //
 
-// ---------------------------------------------------------------------------
-// CAlfNode::TraverseNodeTree
-// Traverse through node tree and fill node array 
-// ---------------------------------------------------------------------------
-//
-
 void CAlfNode::TraverseNodeTree( CAlfNode* node,  RPointerArray<CAlfNode>& nodes, TBool aTraverseOnlySiblings, TBool aAddMe)
     {
     // Exit if we've already finished walking the tree.
     if ( node == NULL) 
         { 
-        __ALFLOGSTRING(" returning NULL");                                  
+        __ALFLOGSTRING("TraverseNodeTree returning - NULL");                                  
         return;
         }
-    if (!aTraverseOnlySiblings)
+    
+    while ( node )
         {
-        if ( node->iSpriteChild ) 
-            {
-        CAlfNode* spritenode = node->iSpriteChild ;
-            while ( spritenode )
+        if (!aTraverseOnlySiblings)
+            {   
+            if ( node->iSpriteChild ) 
                 {
-                nodes.Append( spritenode );                
-                spritenode = spritenode->iSibling;
+                CAlfNode* spritenode = node->iSpriteChild ;
+                while ( spritenode )
+                    {
+                    nodes.Append( spritenode );                
+                    spritenode = spritenode->iSibling;
+                    }
                 }
-            }
     
-        if( node->iTextCursor )
-            {
-            nodes.Append(node->iTextCursor );            
-            }
-    
-        if( node->iAnimChild )
-            {
-            CAlfNode* animnode = node->iAnimChild ;
-            while ( animnode )
+            if( node->iTextCursor )
                 {
-                nodes.Append( animnode );                
-                animnode = animnode->iSibling;
+                nodes.Append(node->iTextCursor );            
                 }
-            }
+    
+            if( node->iAnimChild )
+                {
+                CAlfNode* animnode = node->iAnimChild ;
+                while ( animnode )
+                    {
+                    nodes.Append( animnode );                
+                    animnode = animnode->iSibling;
+                    }
+                }
         
-        if ( node->iChild)
-            {                
-            TraverseNodeTree(node->iChild , nodes, EFalse, ETrue);            
+            if ( node->iChild)
+                {                
+                TraverseNodeTree(node->iChild , nodes, EFalse, ETrue);            
+                }
+            } 
+
+        if (aAddMe)
+            {
+            nodes.Append( node );
             }
-        } 
 
-    if (aAddMe)
-        {
-        nodes.Append( node );
-        }
-
-    if ( node->iSibling )
-        {                
-        TraverseNodeTree(node->iSibling, nodes, ETrue, ETrue);               
+        // Without recursion, continue with the following:
+        // TraverseNodeTree(node->iSibling, nodes, ETrue, ETrue);
+        node = node->iSibling;
+        aTraverseOnlySiblings = ETrue;
+        aAddMe = ETrue;
         }
     }
 
@@ -990,7 +1018,14 @@ TAny* CAlfNode::CreateWindowAttributes(TInt& aIndex, TInt aSize )
     {
     TAny* attributes = NULL;
     TRAP_IGNORE(attributes = (TAny*)iModel->Server().Bridge()->AppendVarDataL( aSize, aIndex ))
-    Mem::FillZ( (TUint8*)attributes, aSize ); // Initialize the returned memory area to 0
+    if (attributes)
+        {
+        Mem::FillZ( (TUint8*)attributes, aSize ); // Initialize the returned memory area to 0
+        }
+    else
+        {
+        CAlfNode::ReportOOM();
+        }
     return attributes;
     }
 
@@ -1307,14 +1342,21 @@ void CAlfNode::UpdateOrdinalPosition()
             // position must be updated, because it not necessary the first drawn.
             TInt offset;
             TAlfWindowAttributes* windowAttributes = (TAlfWindowAttributes*)CreateWindowAttributes(offset, sizeof(TAlfWindowAttributes));
-            windowAttributes->iOrdinalPosition = ordinal; 
-            windowAttributes->iWindowNodeType = iType;
-            windowAttributes->iScreenNumber = iScreenNumber;
-            // for updating window group ordinals
-            iModel->Server().Bridge()->AddData( EAlfDSReorder, 
-                    iGroupId, 
-                    iId, 
-                    (TAny*)offset );
+            if (windowAttributes)
+                {
+                windowAttributes->iOrdinalPosition = ordinal; 
+                windowAttributes->iWindowNodeType = iType;
+                windowAttributes->iScreenNumber = iScreenNumber;
+                // for updating window group ordinals
+                iModel->Server().Bridge()->AddData( EAlfDSReorder, 
+                        iGroupId, 
+                        iId, 
+                        (TAny*)offset );
+                }
+			else
+				{
+		        CAlfNode::ReportOOM();
+				}
             }
         }
     AMT_MAP_NODE_SET_ORDINAL_POSITION();
@@ -1384,8 +1426,10 @@ void CAlfNodeVisual::CommitCommands( TInt aCurrentPos, TInt aFrameSize, TBool aP
         {
         nodeFlags |= EAlfWinNodeFlagOpaque;         
         }
-        
-    if ( iType == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor )
+    
+	// New drawing commands always replace all the previous drawing commands for text cursor and anim nodes.
+    if (   iType == MWsWindowTreeNode::EWinTreeNodeStandardTextCursor 
+        || iType == MWsWindowTreeNode:: EWinTreeNodeAnim )
         {
         emptyBuffer = ETrue;
         }
@@ -1510,6 +1554,13 @@ void CAlfNodeVisual::FlagChanged( MWsWindowTreeObserver::TFlags aFlag, TBool aNe
                 }
             break;
             }
+        case MWsWindowTreeObserver::EScreenDeviceValid:
+            {
+            iWindow->SetScreenDeviceValid(aNewValue);
+            break;
+            }
+        default:
+            break;
         }
     if ( aFlag == MWsWindowTreeObserver::ENonFading && HasChildren() )
         {
@@ -1902,17 +1953,24 @@ void CAlfNodeGroup::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream* aStr
     
     TInt offset;
     TAlfWindowAttributes* windowAttributes = (TAlfWindowAttributes*)CreateWindowAttributes(offset, sizeof(TAlfWindowAttributes));
-    windowAttributes->iWindowNodeType = iType; 
-    windowAttributes->iClientHandle = clientHandle;
-    windowAttributes->iScreenNumber = iScreenNumber;
-    windowAttributes->iSecureId = iSecureId;
-    windowAttributes->iParentNodeId = parentId;
-	
-    iModel->Server().Bridge()->AddData( EAlfDSNewWindow, 
-            iGroupId, 
-            iId, 
-            (TAny*)offset );
-    
+    if (windowAttributes)
+        {
+        windowAttributes->iWindowNodeType = iType; 
+        windowAttributes->iClientHandle = clientHandle;
+        windowAttributes->iScreenNumber = iScreenNumber;
+        windowAttributes->iSecureId = iSecureId;
+        windowAttributes->iParentNodeId = parentId;
+        
+        iModel->Server().Bridge()->AddData( EAlfDSNewWindow, 
+                iGroupId, 
+                iId, 
+                (TAny*)offset );
+        }
+    else
+        {
+        CAlfNode::ReportOOM();
+        }
+        
     AMT_MAP_STREAMER_NODE_GROUP_CONSTRUCT();
 	}
 
@@ -1949,8 +2007,8 @@ void CAlfNodeGroup::WindowGroupChained( TUint32 aChainedGroup )
     if (iModel)
         {
         iModel->Server().Bridge()->AddData( EAlfDSGroupChained, 
-                iId, 
-                aChainedGroup, 
+                iGroupId, 
+                iChainedTo->iGroupId, 
                 (TAny*)iScreenNumber
                 );                
         }
@@ -1962,16 +2020,18 @@ void CAlfNodeGroup::WindowGroupChained( TUint32 aChainedGroup )
 //
 void CAlfNodeGroup::GroupChainBrokenAfter(  )
 	{
+    TUint32 oldChainedTo = 0; 
 	if ( iChainedTo )
 		{
 		iChainedTo->iChainedFrom = NULL;
+		oldChainedTo = iChainedTo->iId;
 		iChainedTo = NULL;
 		}
 	if (iModel)
 		{
 		iModel->Server().Bridge()->AddData( EAlfDSGroupChainBroken, 
+		        oldChainedTo, 
 				iId, 
-				0, 
 				(TAny*)iScreenNumber );                
 		}
 
@@ -1990,20 +2050,33 @@ CAlfNodeGroup::~CAlfNodeGroup()
     	}
     if ( iChainedFrom )
     	{
-    	iChainedFrom->iChainedTo = NULL;
+        if (iModel)
+            {
+            iModel->Server().Bridge()->AddData( EAlfDSGroupChainBroken, 
+                    iChainedFrom->iId, 
+                    iId, 
+                    (TAny*)iScreenNumber );                
+            }
     	}
     
     if (iModel)
         {
         TInt offset;
         TAlfWindowAttributes* windowAttributes = (TAlfWindowAttributes*)CreateWindowAttributes(offset, sizeof(TAlfWindowAttributes));
-        windowAttributes->iWindowNodeType = iType; 
-        windowAttributes->iScreenNumber = iScreenNumber; 
-
-        iModel->Server().Bridge()->AddData( EAlfDSDestroyWindow, 
-                iGroupId, 
-                iId, 
-                (TAny*)offset );
+        if (windowAttributes)
+            {
+            windowAttributes->iWindowNodeType = iType; 
+            windowAttributes->iScreenNumber = iScreenNumber; 
+    
+            iModel->Server().Bridge()->AddData( EAlfDSDestroyWindow, 
+                    iGroupId, 
+                    iId, 
+                    (TAny*)offset );
+            }
+		else
+			{
+			CAlfNode::ReportOOM();
+			}
         iWindow = 0; // just in case
         }
     RemoveDependencies( iParent->iChild );
@@ -2136,19 +2209,26 @@ void CAlfNodeTextCursor::ConstructL( CAlfHierarchyModel* aModel, RMemReadStream*
     TInt offset;
     // pass rest of the cursor data
     TAlfCursorDataBufferAttributes* attributes = (TAlfCursorDataBufferAttributes*)CreateWindowAttributes(offset, sizeof(TAlfCursorDataBufferAttributes));
-    attributes->iColor = iColor;
-    attributes->iFlags = iFlags;
-    attributes->iFlashInterval = iFlashInterval;
-    attributes->iScreenNumber = iScreenNumber;
-    
-    aModel->Server().Bridge()->AddData( EAlfDSSetCursorData, 
-            iGroupId, 
-            iId, 
-            (TAny*)offset );
-    
-    UpdateOrdinalPosition();
-    
-    AMT_MAP_STREAMER_TEXT_CURSOR_CONSTRUCT();
+    if (attributes)
+        {
+        attributes->iColor = iColor;
+        attributes->iFlags = iFlags;
+        attributes->iFlashInterval = iFlashInterval;
+        attributes->iScreenNumber = iScreenNumber;
+        
+        aModel->Server().Bridge()->AddData( EAlfDSSetCursorData, 
+                iGroupId, 
+                iId, 
+                (TAny*)offset );
+        
+        UpdateOrdinalPosition();
+        
+        AMT_MAP_STREAMER_TEXT_CURSOR_CONSTRUCT();
+        }
+	else
+		{
+		CAlfNode::ReportOOM();
+		}
     }
 
 // ---------------------------------------------------------------------------
@@ -2198,17 +2278,23 @@ void CAlfNodeTextCursor::AttributeChangedL( RMemReadStream* aStream )
         }
     TInt offset;
     TAlfCursorDataBufferAttributes* attributes = (TAlfCursorDataBufferAttributes*)CreateWindowAttributes(offset, sizeof(TAlfCursorDataBufferAttributes));
-       attributes->iColor = iColor;
-       attributes->iFlags = iFlags;
-       attributes->iFlashInterval = iFlashInterval;
-       attributes->iScreenNumber = iScreenNumber;
-       __ALFLOGSTRING("Forwarding cursor data");
-       iModel->Server().Bridge()->AddData( EAlfDSSetCursorData, 
+    if (attributes)
+        {
+        attributes->iColor = iColor;
+        attributes->iFlags = iFlags;
+        attributes->iFlashInterval = iFlashInterval;
+        attributes->iScreenNumber = iScreenNumber;
+        __ALFLOGSTRING("Forwarding cursor data");
+        iModel->Server().Bridge()->AddData( EAlfDSSetCursorData, 
                iGroupId, 
                iId, 
                (TAny*)offset );
-       
-   AMT_MAP_STREAMER_TEXT_CURSOR_CHANGE();
+        AMT_MAP_STREAMER_TEXT_CURSOR_CHANGE();
+        }
+	else
+		{
+		CAlfNode::ReportOOM();
+		}		
     }
 CAlfNodeTextCursor::~CAlfNodeTextCursor( )
     {

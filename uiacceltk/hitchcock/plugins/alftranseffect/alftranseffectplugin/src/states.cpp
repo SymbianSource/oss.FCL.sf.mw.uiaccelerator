@@ -173,7 +173,8 @@ CStateBase* CPhase1State::SignalL(TSignal aSignal)
 		        }
             return CRestingState::NewL(iEngine,iHandler);
 		case EEndFullscreen:
-			TInt triggeredLongStartEffect = iEngine.SendEndFullscreen();
+			TInt triggeredLongStartEffect;
+			triggeredLongStartEffect = iEngine.SendEndFullscreen();
 			__ALFFXLOGSTRING1("CPhase1State::SignalL - Was long app start triggered? Stay in Phase1", triggeredLongStartEffect);
 			if (triggeredLongStartEffect)
 			    {
@@ -233,8 +234,7 @@ CStateBase* CPhase2State::SignalL(TSignal aSignal)
 			iEngine.SendAbortFullscreen();
 			return CRestingState::NewL(iEngine,iHandler);
 		case EFinishFullscreen:
-		    if ( ( iEngine.Action() == 1001 || iEngine.Action() == AknTransEffect::EApplicationExit ) &&
-		        !iEngine.EffectFinishedFullScreen() )
+		    if (!iEngine.EffectFinishedFullScreen())
 		        {
 		        iEngine.SendAbortFullscreen();
 		        }

@@ -63,6 +63,12 @@ EXPORT_C TBool CHuiFxLayer::PrepareDrawL(CHuiFxEngine& /*aEngine*/)
     return ETrue;
     }
 
+EXPORT_C void CHuiFxLayer::ReleaseAllCachedRenderTargets(CHuiFxEngine& /*aEngine*/)
+    {
+    // Nothing to do
+    }
+
+
 EXPORT_C TBool CHuiFxLayer::VisualArea( TRect& /*aRect*/ )
     {
     // No area in base class
@@ -173,6 +179,11 @@ void CHuiFxLayer::EnableMarginApplyChildren(TBool /*aEnable*/)
     /* empty in baseclass */
     }
 
+
+void CHuiFxLayer::SetVisualContentState(TBool /*aChanged*/, TBool /*aOpaque*/)
+    {
+    /* empty in baseclass */
+    }
 
 TBool CHuiFxLayer::IsMarginEnabled() const
     {

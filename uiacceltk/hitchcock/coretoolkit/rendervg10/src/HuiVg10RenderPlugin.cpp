@@ -565,3 +565,23 @@ void CHuiVg10RenderPlugin::ReadAllowsVisualPBufferSurfaces()
 #endif
     }
 
+
+EGLSurface CHuiVg10RenderPlugin::CreatePBufferSurface(EGLDisplay aDisplay,
+            EGLenum aBuffertype, EGLClientBuffer aBuffer, EGLConfig aConfig)
+    {
+    EGLSurface newSurface = EGL_NO_SURFACE;
+    newSurface = eglCreatePbufferFromClientBuffer(aDisplay, aBuffertype, aBuffer, aConfig, NULL);
+
+    // if oom condition, free all the cached memory and try again
+    if(newSurface == EGL_NO_SURFACE)
+        {
+        if(eglGetError() == EGL_BAD_ALLOC)
+            {
+            CHuiEnv* env = CHuiEnv::Static();  
+            env->HandleOutOfTextureMemory();
+            newSurface = eglCreatePbufferFromClientBuffer(aDisplay, aBuffertype, aBuffer, aConfig, NULL);
+            }
+        }
+    return newSurface;
+    }
+

@@ -972,7 +972,7 @@ CAlfAppSrvSessionBase* CAlfAppUi::ActiveSession()
 // Handles window server event.
 // ---------------------------------------------------------------------------
 //
-EXPORT_C void CAlfAppUi::HandleWsEventL(const TWsEvent& aEvent, CCoeControl* aDestination)
+EXPORT_C void CAlfAppUi::HandleWsEventL(const TWsEvent& aEvent, CCoeControl* /*aDestination*/)
     {
     if (aEvent.Type() >= EEventPointer && aEvent.Type() <= 	EEventDragDrop )
         {
@@ -1253,7 +1253,7 @@ void CAlfAppUi::MAlfSrvUintSettingChangedL( TAlfSrvSetting aSetting, TUint aNewV
     }
 
 
-TTypeUid::Ptr CAlfAppUi::MopSupplyObject(TTypeUid aId)
+TTypeUid::Ptr CAlfAppUi::MopSupplyObject(TTypeUid /*aId*/)
     {
     return TTypeUid::Null();
     }

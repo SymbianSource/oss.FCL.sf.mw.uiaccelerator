@@ -84,14 +84,14 @@ public: // from CHuiBrush
 public: // from MHuiEffectable
    //void SetEffect(CHuiFxEffect* aEffect);
    void EffectSetEffect(CHuiFxEffect* aEffect);
-   TReal32 EffectOpacityTarget() const;
-   void EffectSetOpacity(TReal32 aOpacity);
+   TReal32 EffectOpacity() const;
+   void EffectSetOpacityAdditive(TReal32 aOpacity, TBool aReplace);
    void EffectDrawSelf( CHuiGc &aGc, const TRect & aDisplayRect) const;
    THuiRealRect EffectDisplayRect() const __SOFTFP;
    void SetLoadingEffect(TBool aLoading);
    void EffectSetSource( TBool aIsInput1 );
    TBool EffectGetSource() const;
-
+   TBool EffectReadyToDrawNextFrame() const;
    
 public: // from MHuiCmdBufDestroyObserver
     void DestroyBuffer(CHuiCanvasCommandBuffer *aBuffer);

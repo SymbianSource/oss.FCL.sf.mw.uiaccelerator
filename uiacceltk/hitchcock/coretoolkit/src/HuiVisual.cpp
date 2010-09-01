@@ -45,10 +45,12 @@ struct CHuiVisual::THuiVisualPrivateData
     {
 public: // Functions
     // Constructor: initialize the data
-    THuiVisualPrivateData() : iTacticons(), iDropShadow(NULL)
+    THuiVisualPrivateData() 
+        : iTacticons(), iDropShadow(NULL), iEffect(NULL),
+          iEffectParser(NULL), iEffectable(NULL), iStoredRenderBuffer(NULL),
+          iStoredRenderBufferModificationsEnabled(ETrue),
+          iFreezed(EFalse)
         {
-        iEffect = NULL;
-        iEffectParser = NULL;
         }
         
     // Destructor: destruct the data
@@ -82,14 +84,16 @@ class CHuiEffectable : public CBase, public MHuiEffectable
 public: // from MHuiEffectable
     CHuiEffectable(CHuiVisual *aVisual) : iVisual(aVisual) { }
     void EffectSetEffect(CHuiFxEffect* aEffect);
-    TReal32 EffectOpacityTarget() const;
-    void EffectSetOpacity(TReal32 aOpacity);
+    TReal32 EffectOpacity() const;
+    void EffectSetOpacityAdditive(TReal32 aOpacity, TBool aReplace);
     void EffectDrawSelf( CHuiGc &aGc, const TRect & aDisplayRect) const;
     THuiRealRect EffectDisplayRect() const __SOFTFP;
     void SetLoadingEffect(TBool aLoading);    
     void EffectSetSource( TBool aIsInput1 );
     TBool EffectGetSource() const;
+    TBool EffectReadyToDrawNextFrame() const;
 
+    
 private:
     CHuiVisual *iVisual;
     TBool iIsInput1;
@@ -107,14 +111,22 @@ TBool CHuiEffectable::EffectGetSource() const
     return iIsInput1;
     }
 
-TReal32 CHuiEffectable::EffectOpacityTarget() const
+TBool CHuiEffectable::EffectReadyToDrawNextFrame() const
     {
-    return iVisual->iOpacity.Target();
+    return iVisual->EffectReadyToDrawNextFrame();
     }
 
-void CHuiEffectable::EffectSetOpacity(TReal32 aOpacity)
+TReal32 CHuiEffectable::EffectOpacity() const
     {
-    iVisual->iOpacity.Set( aOpacity );
+    return iVisual->iEffectOpacity;
+    }
+
+void CHuiEffectable::EffectSetOpacityAdditive(TReal32 aOpacity, TBool aReplace)
+    {
+    if( aReplace || aOpacity > iVisual->iEffectOpacity)
+        {
+        iVisual->iEffectOpacity = aOpacity;
+        }
     }
 
 void CHuiEffectable::EffectDrawSelf( CHuiGc &aGc, const TRect & aDisplayRect) const
@@ -184,6 +196,11 @@ TBool CHuiVisual::Freezed() const
     return iVisualData->iFreezed;
 }
 
+EXPORT_C TBool CHuiVisual::EffectReadyToDrawNextFrame() const
+    {
+    return  ETrue;
+    }
+
 EXPORT_C CHuiVisual* CHuiVisual::AddNewL(CHuiControl& aOwnerControl,
                                          CHuiLayout* aParentLayout)
     {
@@ -195,6 +212,7 @@ EXPORT_C CHuiVisual* CHuiVisual::AddNewL(CHuiControl& aOwnerControl,
 
 EXPORT_C CHuiVisual::CHuiVisual(MHuiVisualOwner& aOwner)
         : iOpacity(1.f),
+          iEffectOpacity(1.f),
           iOwner(&aOwner), 
           // Set the maximum size to unlimited.
           iMaxSize(TSize(KMaxTInt, KMaxTInt)),
@@ -212,7 +230,6 @@ EXPORT_C void CHuiVisual::ConstructL()
     {
     iVisualData = new (ELeave) THuiVisualPrivateData;
     iVisualData->iEffectable = new CHuiEffectable(this);
-    iVisualData->iStoredRenderBuffer = NULL;
     }
 
 
@@ -261,12 +278,15 @@ EXPORT_C CHuiVisual::~CHuiVisual()
     delete iBrushes;
     delete iTag;
     delete iTransform;
-    delete iVisualData->iEffectable;
-    if (iVisualData->iStoredRenderBuffer)
+    if (iVisualData)
         {
-        iVisualData->iStoredRenderBuffer->UnInitialize();
+        delete iVisualData->iEffectable;
+        if (iVisualData->iStoredRenderBuffer)
+            {
+            iVisualData->iStoredRenderBuffer->UnInitialize();
+            }
+        delete iVisualData->iStoredRenderBuffer;
         }
-    delete iVisualData->iStoredRenderBuffer;
     delete iVisualData;
     
     iOwner = NULL;
@@ -917,10 +937,30 @@ EXPORT_C void CHuiVisual::Draw(CHuiGc& aGc) const
         
         if (canUseEffectDrawing)
             {
-            // Note that EHuiVisualFlagOpaqueHint improves performance a lot in cached effect drawing 
-            TBool transparent = !(Flags() & EHuiVisualFlagOpaqueHint);
-            TBool refreshCache = Changed();                
-            didDrawEffect = iVisualData->iEffect->CachedDraw(aGc, displayRect, refreshCache, !transparent);
+            Effectable()->EffectSetOpacityAdditive(0.0f, ETrue);
+            // PrepareDrawL will update iEffectOpacity for current frame
+            if(iVisualData->iEffect->PrepareDrawL(aGc, displayRect))
+                {
+                if(iEffectOpacity <= 0.f)
+                    {
+                    if(Clipping())
+                        {
+                        aGc.PopClip();
+                        }
+                    
+                    // Draw foreground brushes (over the content).
+                    DrawBrushes(aGc, EHuiBrushLayerForeground);
+
+                    // Undo local transformation.
+                    Transform(aGc, EFalse);
+                    EnterLocalProjection(aGc, EFalse);
+                    return;
+                    }
+                // Note that EHuiVisualFlagOpaqueHint improves performance a lot in cached effect drawing 
+                TBool transparent = !(Flags() & EHuiVisualFlagOpaqueHint);
+                TBool refreshCache = Changed();                
+                didDrawEffect = iVisualData->iEffect->CachedDraw(aGc, displayRect, refreshCache, !transparent);
+                }
             }
 
         if (!didDrawEffect) 

@@ -12,15 +12,11 @@
 * Contributors:
 *
 * Description:   Build information file for project alfappserver
-*  Version     : %version: tr1sido#128.1.12 %
+*  Version     : %version: tr1sido#128.1.10 %
 *
 */
 
-#ifndef ALF_USE_OPENWF_COMPOSITION
-#ifdef SYMBIAN_GRAPHICS_BUILD_OPENWF_WSERV
-#define ALF_USE_OPENWF_COMPOSITION
-#endif
-#endif
+
 
 PRJ_PLATFORMS
 DEFAULT

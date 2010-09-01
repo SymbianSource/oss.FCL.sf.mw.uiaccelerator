@@ -694,7 +694,6 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 		}
 #endif //WSSERVERDRAWER_TIME_LOG
 
-/////////////////////
 	if(aType == AknTransEffect::EParameterAvkonInternal)	
 		{ 
 		const TUid appuid = aUid1;
@@ -768,10 +767,12 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 		{
 		if(fstype == CStateHandler::EExit) //application will exit and avkon flags must be reset (otherwise
 		    {
+		    __ALFFXLOGSTRING1("CWsServerDrawerController::BeginFullscreen - Removing 0x%x Avkon app status", toUid);
 			iAppInfoCache->RemoveAvkonUid(toUid); //repeating calls may allow check pass
 		    }
 		else
 		    {
+		    __ALFFXLOGSTRING1("CWsServerDrawerController::BeginFullscreen - Inserting 0x%x as app status", toUid);
 			iAppInfoCache->SetAvkonUid(toUid);
 		    }
 		}
@@ -820,6 +821,13 @@ void CWsServerDrawerController::BeginFullscreen(TInt aType, const TUid aUid1, co
 		{
         __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - Special argument. Abort.");
 		return;
+		}
+
+	if (aType == AknTransEffect::EParameterAvkonInternal && iEngine->Action() == AknTransEffect::EAppStartupBackground)
+		{
+        // skip the effect, as promised earlier...
+        __ALFFXLOGSTRING("CWsServerDrawerController::BeginFullscreen - EAppStartupBackground -> Skip effect. Return");
+        return;
 		}
 
 

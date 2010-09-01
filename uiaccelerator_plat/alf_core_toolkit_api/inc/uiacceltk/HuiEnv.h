@@ -1006,6 +1006,9 @@ public:
     IMPORT_C void NotifyMemoryLevel(THuiMemoryLevel aMemoryLevel);
     IMPORT_C THuiMemoryLevel MemoryLevel();
     
+    // This is for internally use only, tries to free any available cached resources alf may have reserved
+    IMPORT_C void HandleOutOfTextureMemory();
+    
     void DoSynchronize();
     TBool iPauseDrawing;
 private:

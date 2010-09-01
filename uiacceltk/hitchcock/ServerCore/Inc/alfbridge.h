@@ -159,7 +159,7 @@ public:
             CHuiRoster& aRoster, 
             CHuiControlGroup& aGroup, 
             TInt aWhere, 
-            TInt aScreenNumber );
+            TInt aScreenNumber = 0);
 
     /**
      * This method sets the windowgroup id for the alf window.
@@ -202,8 +202,8 @@ public:
   	 */
     void AlfGfxEffectEndCallBack( TInt aHandle );
    
-    TInt FindClientWindowGroupId( TInt aScreenNumber, CHuiControlGroup& aControlGroup );
-    TInt FindWindowGroupNodeId( TInt aScreenNumber, CHuiControlGroup& aControlGroup ) const;
+    TInt FindClientWindowGroupId(CHuiControlGroup& aControlGroup );
+    TInt FindWindowGroupNodeId(CHuiControlGroup& aControlGroup ) const;
     
     void CleanAllFxVisuals();
 
@@ -318,6 +318,25 @@ public:
             TInt aDuration,
             TBool& aCoverageRegionModified );
 
+    // Experimental
+    
+    /**
+     * Checks if visual that's flagged as not ready for current orientation is reachable.
+     */
+    TBool IsVisualNotReadyReachable();
+
+    /**
+     * Recursive helper function for IsVisualNotReadyReachable.
+     */
+    TBool IsVisualNotReadyReachableRecursive(
+            CHuiLayout* aLayout,
+            CHuiControlGroup& aControlGroup,
+            CHuiControl& aControl,
+            TBool& aFullscreenCovered, 
+            const TRect& aFullscreen,
+            CAlfScreen* aScreen,
+            TBool aChildCanBeOpaque, 
+            TBool aOnlyForEmbeddedAlfApp);
 	
     void LayoutSwitchStart();
     void LayoutSwitchComplete();
@@ -405,6 +424,16 @@ private:
     *					OR storing was not required. 
 	*/    
     TBool StoreLayoutIfRequiredByEffectL(CHuiLayout* aLayout, CFullScreenEffectState& aEvent, TBool& aNeededStoredLayout);
+
+    /**
+     * HandleGfxRedirection
+	 *
+	 * Redirect effect to correct application in case of effect requested for host application, but
+	 * embedded (chained) application is on top of it.
+	 *
+     * If effect setup has been already made for the layout, effect is not redirected.  
+     */
+    void HandleGfxRedirection(CFullScreenEffectState& aEvent, CHuiLayout*& aLayout);
 
     /**
      * Handles begin and end fullscreen events
@@ -591,6 +620,8 @@ private:
 	
 	void HandleIncludeToVisibilityCalculationL( TAlfBridgerData& aData );
 	
+	void HandleSetScreenDeviceValidL( TAlfBridgerData& aData );
+	
 	void HandleSetWindowAreaL( TAlfBridgerData& aData );
 	
 	void HandleReorderWindowL( TAlfBridgerData& aData );
@@ -616,6 +647,10 @@ private:
 	void HandleSetNodeTracking( TAlfBridgerData& aData );
 	
 	void HandleSetFadeEffectL( TAlfBridgerData& aData );
+	
+	void HandleGroupChained( TAlfBridgerData& aData);
+	
+	void HandleGroupChainBroken( TAlfBridgerData& aData);
 	
 	void HandleMoveWindowToNewGroupL( TAlfBridgerData& aData );
 
@@ -711,12 +746,26 @@ private:
     CHuiCanvasVisual* FindVisualByClientSideIds(TUint32 aClientSideId, TUint32 aClientSideGroupId );
 
     /**
+	 * FindChainedGroup
+	 * 
+	 * Find chained windowgroup from iWindowChainsArray. Return 0, if not found.
+	 */
+    TUint32 FindChainedGroup(TUint32 aTreeNodeId);
+
+    /**
+	 * IsChainedGroup
+	 * 
+	 * @return ETrue if group is chained.
+	 */    
+    TBool IsChainedGroup(TUint32 aTreeNodeId);
+    
+    /**
      * This method finds controlgroup which has been assosiated with given window group id. 
      * Control group may or may not be active in roster.
      *
      * @param aWindowGroupNodeId Node id of the window group, internal.
      */
-    CHuiControlGroup* FindControlGroup(TInt aWindowGroupNodeId, TInt aScreenNumber );
+    CHuiControlGroup* FindControlGroup(TInt aWindowGroupNodeId, TInt aScreenNumber = 0);
 
     /**
      * This method finds controlgroup which has been assosiated with window server window group id. 
@@ -740,6 +789,12 @@ private:
      * @return Pointer to found control gruop. NULL if not found.
      */
     CHuiControlGroup* FindControlGroupBySecureId( TInt aSecureId, TInt aWgId = -1 ) const;
+	 /**
+	  *	FindControlGroupBySecureId
+	  *
+	  *	Returns a list of window groups belonging to aSecureId.
+	  */
+    void FindControlGroupBySecureId( TInt aSecureId, RPointerArray<CHuiControlGroup>& aGroupList);
     
     /**
      * Finds control gruop which matches the full screen effect end state.
@@ -761,7 +816,7 @@ private:
      *
      * @param aWindowGroupNodeId Node id of the window group, internal.
      */
-    void DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber );
+    void DeleteControlGroupL(TInt aWindowGroupNodeId, TInt aScreenNumber = 0);
 
     /**
      * Creates a control group
@@ -787,7 +842,7 @@ private:
      * 
      */
 
-    void ReorderAlfControlGroupsL( TInt aScreenNumber );
+    void ReorderAlfControlGroupsL( TInt aScreenNumber = 0);
         
     /**
      * Called to notify the observer that a display refresh is about to begin.
@@ -853,6 +908,16 @@ private:
      * visibility calculations will clip to old sizes.
      */
     void UpdateRootVisualsToFullscreen();
+    
+    /**
+     * Report memory consumption details (if enabled).
+     */
+    void ReportMemory();
+    
+    /**
+     * Clears rasterizer cache.
+     */
+    void ClearRasterizerCache();
     
 private:
 
@@ -1009,6 +1074,18 @@ public:
         };
     
     RHashMap<TUint32,THashVisualStruct> iWindowHashArray;
+    
+    class TChainData
+        {
+    public:
+        TChainData(TUint32 aParent, TUint32 aChainee) : iParent(aParent), iChainee(aChainee)
+            {
+            }
+        TUint32 iParent;
+        TUint32 iChainee;
+        };
+    RHashMap<TUint32,TChainData> iWindowChainsArray;
+    
     CHuiControl* iOrphanStorage; // owned. holds the visuals which are orphaned from their control group
     class TRegisteredEffectsStruct
         {

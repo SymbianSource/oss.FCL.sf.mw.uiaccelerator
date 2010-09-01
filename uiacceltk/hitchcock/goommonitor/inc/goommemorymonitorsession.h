@@ -42,6 +42,7 @@ private:
     TInt iFunction;
     TInt iMinimumMemoryRequested;
     TBool iUseAbsoluteTargets;
+    TUint iClientId;
     };
 
 #endif /*GOOMMEMORYMONITORSESSION_H*/

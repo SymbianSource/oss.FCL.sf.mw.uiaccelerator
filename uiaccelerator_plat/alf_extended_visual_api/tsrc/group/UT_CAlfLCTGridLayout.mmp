@@ -1,0 +1,79 @@
+/*
+* Copyright (c) 2004 Nokia Corporation and/or its subsidiary(-ies).
+* All rights reserved.
+* This component and the accompanying materials are made available
+* under the terms of "Eclipse Public License v1.0"
+* which accompanies this distribution, and is available
+* at the URL "http://www.eclipse.org/legal/epl-v10.html".
+*
+* Initial Contributors:
+* Nokia Corporation - initial contribution.
+*
+* Contributors:
+*
+* Description: 
+*
+*/
+
+
+TARGET          UT_CAlfLCTGridLayout.dll
+TARGETTYPE      dll
+TARGETPATH      /DigiaEUnit/Tests
+UID             0x1000af5a 0x01700000
+
+CAPABILITY              ALL -TCB
+VENDORID                VID_DEFAULT
+ 
+// Sources needed by the test
+// Sources needed by the test
+#include <bldvariant.hrh>		
+#include "../../../../uiacceltk/hitchcock/commoninc/alfuids.h"
+
+USERINCLUDE             ../../../../uiacceltk/hitchcock/client/inc
+USERINCLUDE             ../../../../uiacceltk/hitchcock/commoninc
+
+
+#include <platform_paths.hrh>
+MW_LAYER_SYSTEMINCLUDE
+
+
+LIBRARY                 apgrfx.lib
+LIBRARY                 apparc.lib
+LIBRARY                 avkon.lib
+LIBRARY                 cone.lib
+LIBRARY                 efsrv.lib
+LIBRARY                 eikcore.lib
+LIBRARY                 EUnit.lib
+LIBRARY                 euser.lib
+LIBRARY                 fbscli.lib
+LIBRARY                 flogger.lib
+LIBRARY                 ImageConversion.lib
+LIBRARY                 ws32.lib
+LIBRARY                 aknicon.lib
+LIBRARY                 hal.lib
+LIBRARY                 bitgdi.lib
+LIBRARY                 ftokenclient.lib
+LIBRARY                 gdi.lib 
+LIBRARY                 hwrmlightclient.lib
+LIBRARY                 aknskins.lib
+LIBRARY                 SvgEngine.lib
+
+LIBRARY                 aknlayout2hierarchy.lib
+LIBRARY                 aknfepuiinterface.lib
+LIBRARY                 goommonitor.lib
+
+LIBRARY                 alfclient.lib
+
+USERINCLUDE             ../inc
+
+SYSTEMINCLUDE           /epoc32/include/Digia/EUnit
+SYSTEMINCLUDE           ../../../../inc
+
+LIBRARY aknlayout2scalable.lib
+LIBRARY cdlengine.lib
+LIBRARY centralrepository.lib
+
+// End of file
+SOURCEPATH ../src
+SOURCE UT_CAlfLCTGridLayout.cpp UT_CAlfLCTGridLayoutDllMain.cpp
+

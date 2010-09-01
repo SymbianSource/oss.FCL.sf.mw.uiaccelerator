@@ -75,12 +75,7 @@ void CGOomConfig::AddPluginConfigL(CGOomRunPluginConfig* aPluginConfig)
     CGOomRunPluginConfig** runPluginConfig = iPluginToConfigMapping.Find(aPluginConfig->Id());
     if (runPluginConfig)
         {
-        //GOomMonitorPanic(KPluginConfigAddedTwice);
-        while((*runPluginConfig)->iNextConfig != NULL)
-            *runPluginConfig = (*runPluginConfig)->iNextConfig;
-        
-        (*runPluginConfig)->iNextConfig = aPluginConfig;
-        return;
+        GOomMonitorPanic(KPluginConfigAddedTwice);
         }
     
     iPluginToConfigMapping.InsertL(aPluginConfig->Id(), aPluginConfig);

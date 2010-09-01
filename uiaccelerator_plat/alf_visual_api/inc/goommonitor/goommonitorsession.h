@@ -21,6 +21,10 @@
 
 #include <e32std.h>
 
+// Goom Events through Window Server
+#define KGoomMemoryLowEvent 0x10282DBF
+#define KGoomMemoryGoodEvent 0x20026790
+
 /**
  *  The maximum amount of memory that can be allocated without permission.
  */

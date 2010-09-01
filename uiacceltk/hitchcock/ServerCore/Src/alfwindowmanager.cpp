@@ -208,6 +208,7 @@ void CAlfWindowManager::BindWindowToHitchL(CAlfWindow* aWindow, CAlfWindowManage
 	aWindow->SetSurfaceExtent(aWindow->SurfaceExtent());
     aWindow->SetWindowArea();
     aWindow->SetTransparencyAlphaChannel(aWindow->TransparencyAlphaChannel());
+    aWindow->SetScreenDeviceValid(aWindow->IsScreenDeviceValid());
     aWindow->IncludeToVisibilityCalculation(aWindow->IsIncludedToVisibilityCalculation());
 	aWindow->SetActive(aWindow->IsActive());
 	}
@@ -253,16 +254,23 @@ EXPORT_C void CAlfWindowManager::DestroyWindow(CAlfWindow& aWindow)
 
         TInt offset;
         TAlfWindowAttributes* windowAttributes = CreateWindowAttributes(offset);
-        windowAttributes->iWindowNodeType = wservInfo.iNodeType; 
-        windowAttributes->iScreenNumber = wservInfo.iScreenNumber; 
+        if (windowAttributes)
+            {
+            windowAttributes->iWindowNodeType = wservInfo.iNodeType; 
+            windowAttributes->iScreenNumber = wservInfo.iScreenNumber; 
 
-    	TAlfBridgerData data;
-        data.Set(EAlfDSDestroyWindow, 
-            wservInfo.iRefId.iWindowGroupId, 
-            wservInfo.iRefId.iWindowIdentifer, 
-            (TAny*)offset); 
-
-        PostIt(data);
+            TAlfBridgerData data;
+            data.Set(EAlfDSDestroyWindow, 
+                wservInfo.iRefId.iWindowGroupId, 
+                wservInfo.iRefId.iWindowIdentifer, 
+                (TAny*)offset); 
+    
+            PostIt(data);
+            }
+		else
+            {
+            CAlfWindow::ReportOOM();
+            }
 
         iData->iWindows.Remove(i);
         delete &aWindow;
@@ -316,7 +324,7 @@ EXPORT_C void CAlfWindowManager::EnableDestroyWindowNotificationsL(CAlfWindowFxP
 // Decaprecated
 // ---------------------------------------------------------------------------
 //   
-EXPORT_C CAlfWindow* CAlfWindowManager::ReserveL( const TWindowIdentifier& /*aId*/, TBool aReserveBuffer /*= ETrue*/ )
+EXPORT_C CAlfWindow* CAlfWindowManager::ReserveL( const TWindowIdentifier& /*aId*/, TBool /*aReserveBuffer = ETrue*/ )
     {
     return 0; // we never get here 
     }
@@ -658,7 +666,14 @@ TAlfWindowAttributes* CAlfWindowManager::CreateWindowAttributes(TInt& aIndex)
     TAlfWindowAttributes empty;
     TAlfWindowAttributes* attributes = NULL;
     TRAP_IGNORE(attributes = (TAlfWindowAttributes*)Bridge()->AppendVarDataL( sizeof(TAlfWindowAttributes), aIndex ))
-    *attributes = empty;
+    if (attributes)
+        {
+        *attributes = empty;
+        }
+    else
+        {
+        CAlfWindow::ReportOOM();
+        }
     return attributes;
     }
 
@@ -671,7 +686,14 @@ TAlfWindowCommandBufferAttributes* CAlfWindowManager::CreateWindowCommandBufferA
     TAlfWindowCommandBufferAttributes empty;    
     TAlfWindowCommandBufferAttributes* windowCommandBuffer = NULL;    
     TRAP_IGNORE(windowCommandBuffer = (TAlfWindowCommandBufferAttributes*)Bridge()->AppendVarDataL( sizeof(TAlfWindowCommandBufferAttributes), aIndex ))    
-    *windowCommandBuffer = empty;
+    if (windowCommandBuffer)
+        {
+        *windowCommandBuffer = empty;
+        }
+    else
+        {
+        CAlfWindow::ReportOOM();
+        }
     return windowCommandBuffer;
     }
 

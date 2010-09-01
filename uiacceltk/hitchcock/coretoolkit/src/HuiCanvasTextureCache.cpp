@@ -3043,8 +3043,9 @@ void CHuiCanvasTextureCache::SelectPreservedUnusedRenderBufferEntries(RPointerAr
 //
 void CHuiCanvasTextureCache::HandleOutOfTextureMemory()
     {
-    RDebug::Print(_L("CHuiCanvasTextureCache::HandleOutOfTextureMemory: Out of memory happened !"));
-
+#ifdef HUI_DEBUG_PRINT_CANVAS_TEXTURE_CACHE
+    RDebug::Print(_L("CHuiCanvasTextureCache::HandleOutOfTextureMemory"));
+#endif
     DeleteAllReleasedEntries(EFalse);    
     
     // TODO: Who you gonna call when texture memory is full and we cannot ourself
@@ -3138,40 +3139,41 @@ TInt CHuiCanvasTextureCache::CalculateUnusedCanvasTextureUsageInKbytes()
     {
     // TODO: This should handle NVG textures
     
+    // No need to fetch only the unused texture entries to a separate binary
+    // ordered tree (with FindUnusedEntries()), just going the cached
+    // texts & images through once is enough.
     TInt totalUnusedTextureBytes = 0;
+    TSize textureSize(0,0);
     
     // Texts
-    RPointerArray<CHuiCanvasTextImage> textEntries;
-    
-    FindUnusedTextEntries(textEntries);
-
-    for(TInt i=textEntries.Count() - 1; i >= 0; i--)
+    for(TInt i = iCachedTexts.Count() - 1; i >= 0; i--)
         {
-        TSize textureSize = textEntries[i]->iTexture->Size();    
-        totalUnusedTextureBytes += textureSize.iWidth * textureSize.iHeight * KHuiCanvasTextEstimatedBpp/8.f;
-        }            
-    
-    textEntries.Close();        
-
-    // Images
-    RPointerArray<CHuiCanvasGraphicImage> imageEntries;
-    
-    FindUnusedImageEntries(imageEntries);
-
-    for(TInt i=imageEntries.Count() - 1; i >= 0; i--)
-        {
-        TBool is16bit = EFalse;
-        if (imageEntries[i]->iBitmap && !imageEntries[i]->iMask && imageEntries[i]->iBitmap->ExtendedBitmapType() == KNullUid &&imageEntries[i]->iBitmap->DisplayMode() == EColor64K)
+        CHuiCanvasTextImage* entry = iCachedTexts[i];
+        // Check if the texture is being used..
+        if (!entry->iActiveUsers.Count())
             {
-            is16bit = ETrue;
+            // ..and if not, add it to the sum.
+            textureSize = entry->iTexture->Size();
+            totalUnusedTextureBytes += textureSize.iWidth * textureSize.iHeight * KHuiCanvasTextEstimatedBpp/8.f;
             }
+        }
+    
+    // Images, just like texts.
+    for(TInt i = iCachedImages.Count() - 1; i >= 0; i--)
+        {
+        CHuiCanvasGraphicImage* entry = iCachedImages[i];    
+        if (!entry->iActiveUsers.Count())
+            {
+            TBool is16bit = EFalse;
+            if (entry->iBitmap && !entry->iMask && entry->iBitmap->ExtendedBitmapType() == KNullUid && entry->iBitmap->DisplayMode() == EColor64K)
+                {
+                is16bit = ETrue;
+                }
+            textureSize = entry->iTexture->Size();    
+            totalUnusedTextureBytes += textureSize.iWidth * textureSize.iHeight * (is16bit ? KHuiCanvasImageEstimatedBpp/16.f : KHuiCanvasImageEstimatedBpp/8.f);
+            }
+        }
 
-        TSize textureSize = imageEntries[i]->iTexture->Size();    
-        totalUnusedTextureBytes += textureSize.iWidth * textureSize.iHeight * (is16bit ? KHuiCanvasImageEstimatedBpp/16.f : KHuiCanvasImageEstimatedBpp/8.f);
-        }            
-    
-    imageEntries.Close();        
-    
     return totalUnusedTextureBytes/1024;
     }
 

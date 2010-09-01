@@ -66,6 +66,7 @@ EXPORT_C void CHuiFxEffect::SetVisual( CHuiVisual *aVisual )
     }
 EXPORT_C void CHuiFxEffect::SetVisual( MHuiEffectable *aEffectable )
     {
+    iEffectable = aEffectable;
     iRoot->SetVisual(aEffectable);
     }
 EXPORT_C void CHuiFxEffect::SetEngine( CHuiFxEngine *aEngine )
@@ -84,12 +85,11 @@ EXPORT_C void CHuiFxEffect::ConstructL( )
 
 EXPORT_C CHuiFxEffect::~CHuiFxEffect()
     {
+    ReleaseCachedRenderTarget();
+    
     delete iRoot;
     iRoot = NULL;
     NotifyEffectEndObserver();
-    
-    ReleaseCachedRenderTarget();
-    
     iEngine->RemoveEffect(this);
     if (iEngine && iGroupId != KErrNotFound && !(iFlags & KHuiReadyToDrawNotified))
         {
@@ -180,6 +180,11 @@ void CHuiFxEffect::ReleaseCachedRenderTarget()
         iEngine->ReleaseRenderbuffer(iCachedRenderTarget);
         iCachedRenderTarget = NULL;
         }                
+    
+    if(iRoot)
+        {
+        iRoot->ReleaseAllCachedRenderTargets(*iEngine);
+        }
     }
 
 void CHuiFxEffect::PrepareCachedRenderTarget(const TPoint& aPosition, const TSize& aSize, TBool aClear, TBool aEnableBackground)
@@ -188,7 +193,8 @@ void CHuiFxEffect::PrepareCachedRenderTarget(const TPoint& aPosition, const TSiz
     if (iCachedRenderTarget && 
         iCachedRenderTarget->Size() != aSize)
         {
-        ReleaseCachedRenderTarget();
+        iEngine->ReleaseRenderbuffer(iCachedRenderTarget);
+        iCachedRenderTarget = NULL;
         }            
     
     // Accure new buffer
@@ -258,6 +264,56 @@ TBool CHuiFxEffect::IsCachedRenderTargetSupported() const
         }
     }
 
+TBool CHuiFxEffect::PrepareDrawL(CHuiGc& aGc, const TRect& aDisplayRect)
+    {
+    if(!iEffectable || iEffectable->EffectReadyToDrawNextFrame() )
+         {
+         iFramesDrawn++;
+         }
+
+    // Prepare all layers
+    TRect displayArea = aGc.DisplayArea();
+    TRect targetArea = aDisplayRect;
+    targetArea.Intersection(displayArea);
+
+    if (targetArea.Width() <= 0 || targetArea.Height() <= 0)
+        {
+        // Not visible
+        return ETrue;
+        }
+    
+    if (!iEngine || !iRoot)
+        {
+        return EFalse;
+        }
+
+    if (iEngine->LowMemoryState())
+        {
+        // No memory, no effects.
+        return EFalse;
+        }
+    
+    // Check if margins are allowed to be used for this effect
+    if (EffectFlags() & KHuiFxEffectDisableMarginsFlag)
+        {
+        iRoot->EnableMargin(EFalse);
+        }
+
+    
+    iRoot->SetTargetRect(targetArea);
+    iRoot->SetSourceRect(targetArea);        
+    iRoot->SetDisplayArea(displayArea);
+    
+    TRAPD(err, iRoot->PrepareDrawL(*iEngine));
+    
+    if (err != KErrNone)
+        {
+        return EFalse;
+        }
+
+    return ETrue;
+    }
+
 TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRefreshCachedRenderTarget, TBool aOpaque)
     {
     RRegion dummy;
@@ -272,12 +328,11 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxEffect::CachedDraw - 0x%x"), this);
 #endif    
-    iFramesDrawn++;
+
     if (!CHuiStatic::Renderer().Allows(EHuiRenderPluginAllowVisualPBufferSurfaces))
         {
         return EFalse;
         }
-            
     
     CHuiFxRenderbuffer* target = NULL;
     
@@ -303,29 +358,14 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
         return EFalse;
         }
     
-    // Check if margins are allowed to be used for this effect
-    if (EffectFlags() & KHuiFxEffectDisableMarginsFlag)
-        {
-        iRoot->EnableMargin(EFalse);
-        }
-
     // Check if surface pixels are to be used for this effect in all layers.
     if (EffectFlags() & KHuiFxEnableBackgroundInAllLayers)
         {
         iRoot->SetAlwaysReadSurfacePixels(ETrue);
-        }
-    
-    iRoot->SetTargetRect(targetArea);
-    iRoot->SetSourceRect(targetArea);        
-    iRoot->SetDisplayArea(displayArea);
-    
-    TRAPD(err, iRoot->PrepareDrawL(*iEngine));
-    
-    if (err != KErrNone)
-        {
-        return EFalse;
-        }
+        } 
 
+    iRoot->SetVisualContentState(aRefreshCachedRenderTarget, aOpaque);
+    
     if (IsCachedRenderTargetSupported() && IsCachedRenderTargetPreferred())
         {
         // Background needs to be captured from surface if effect uses background AND 
@@ -406,7 +446,11 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
     else
         {
         // Release cached render target just in case it is reserved for some reason
-        ReleaseCachedRenderTarget();
+        if (iCachedRenderTarget)
+            {
+            iEngine->ReleaseRenderbuffer(iCachedRenderTarget);
+            iCachedRenderTarget = NULL;
+            }  
 
         // Use default onscreen render target
         if (!target)
@@ -422,7 +466,6 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
         // Normal drawing
         iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
         }
-                
     return ETrue;    
     }
 
@@ -432,7 +475,6 @@ EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect, TBool 
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxEffect::Draw - 0x%x"), this);
 #endif
-    iFramesDrawn++;
     if (!CHuiStatic::Renderer().Allows(EHuiRenderPluginAllowVisualPBufferSurfaces))
         {
         return EFalse;
@@ -484,6 +526,8 @@ EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect, TBool 
         }
 
     iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
+
+
     return ETrue;
     }
 
@@ -565,13 +609,13 @@ EXPORT_C void CHuiFxEffect::AdvanceTime(TReal32 aElapsedTime)
     // its whole timeline by starting the time only when first frame has been drawn.
     if (iFlags & KHuiFxDelayRunUntilFirstFrameHasBeenDrawn)
         {
-        // Sometimes the effect does not get any frames. Force the time to start, because
-        // otherwise will jam itself and possible the group, where the effect is.
-        if (iElapsedTime > 0.2 && iFramesDrawn == 0)
+        // This is a backup timer. If effect won't start before this 10sec wait there must be something wrong
+		// Force effect to start after 10seconds
+		if (iElapsedTime > 10.0 && iFramesDrawn == 0)
             {
             iFramesDrawn = 1;
 #ifdef HUIFX_TRACE            
-            RDebug::Printf("CHuiFxEffect::AdvanceTime - Not drawn, but cannot wait. release 0x%x in time %f", this, iElapsedTime);
+            RDebug::Printf("CHuiFxEffect::AdvanceTime - Not drawn in 10sec, FORCE start. There was something wrong. release 0x%x in time %f", this, iElapsedTime);
 #endif
             }
         

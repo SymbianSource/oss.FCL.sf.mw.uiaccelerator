@@ -60,6 +60,7 @@ class TAlfWindowData
     
     TBool iTransparencyAlphaChannel;
     TBool iIncludeToVisibilityCalculation;
+    TBool iScreenDeviceValid;
     };
 
 

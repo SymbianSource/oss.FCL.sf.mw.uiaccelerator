@@ -283,6 +283,7 @@ CAlfServerDrawer::~CAlfServerDrawer()
     delete iControlController;
     delete iFullScreenController;
     delete iFinishFullScreen;
+    delete iControlTimeout;
     delete iFullScreenTimeout;
     iActiveControlFx.Close();
 #ifdef USE_MODULE_TEST_HOOKS_FOR_ALF
@@ -619,7 +620,7 @@ void CAlfServerDrawer::DoSendBeginFullscreenL()
     if ( err != KErrNone || fileName.Length() == 0 || !FileExistsL( resourceDir, fileName ) )
         {
         // Did not find an effect file - nothing to show
-        __ALFFXLOGSTRING2("CAlfServerDrawer::DoSendBeginFullscreenL -  Could not get full screen kml, error %d %S", err, &fileName)
+        __ALFFXLOGSTRING4("CAlfServerDrawer::DoSendBeginFullscreenL -  Could not get full screen kml (Action: %d, toUid: 0x%x, error %d %S", iAction, iToUid, err, &fileName)
         iFromWg = KErrNotFound;
         iToWg = KErrNotFound;
         iFromScreen = KErrNotFound;

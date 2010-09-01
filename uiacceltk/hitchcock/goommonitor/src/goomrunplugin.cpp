@@ -53,13 +53,11 @@ void CGOomRunPlugin::FreeMemory(TInt aBytesRequested, TBool aUseSwRendering)
 		TInt flags = KGOomUseSwRendering;
         iPlugin.FreeRam(aBytesRequested, flags);
         iFreeMemoryWithSwRenderingCalled = ETrue;
-        TRACES("CGOomRunPlugin::FreeMemory: UseSwRendering TRUE");
         }
     else
         {
         iPlugin.FreeRam(aBytesRequested, 0);
         iFreeMemoryWithSwRenderingCalled = EFalse;
-        TRACES("CGOomRunPlugin::FreeMemory: UseSwRendering FALSE");
         }
 
     iFreeMemoryCalled = ETrue;

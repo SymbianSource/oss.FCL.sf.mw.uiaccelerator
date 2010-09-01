@@ -30,7 +30,8 @@
 class CAlfStreamerServer;
 class CAlfCommandDebug;
 
-const TInt KInitialVariableBufferSize = 2000;
+const TInt KInitialVariableBufferSize = 35000; // enough until booting to idle
+const TInt KIncreaseVariableBufferSize = 2000;
 
 // basic signalling for frame flow control
 const TInt KRELEASEWINDOWSERVER = 0;

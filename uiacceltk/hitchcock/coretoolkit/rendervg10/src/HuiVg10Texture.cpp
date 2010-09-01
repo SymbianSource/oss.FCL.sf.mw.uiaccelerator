@@ -1256,7 +1256,7 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
     VGImageFormat imageInternalFormat = VG_sARGB_8888;
 #endif
     
-    VGbitfield qualityFlags = VG_IMAGE_QUALITY_NONANTIALIASED; // | VG_IMAGE_QUALITY_BETTER | VG_IMAGE_QUALITY_FASTER;
+    VGbitfield qualityFlags = VG_IMAGE_QUALITY_NONANTIALIASED | VG_IMAGE_QUALITY_BETTER | VG_IMAGE_QUALITY_FASTER;
     image = vgCreateImage(imageInternalFormat, aDestSize.iWidth, aDestSize.iHeight, qualityFlags);
     
     // Get the configs and displays etc. needed for creating the surface
@@ -1288,11 +1288,13 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
 #endif
     
     // The VGImage will act as the surface, so the drawing will go directly to the VGImage
+    // Note - we do not call iRenderPlugin.CreatePBufferSurface since that could call
+    // CHuiEnv::HandleOutOfTextureMemory and that could cause this texture to be reset.
     EGLSurface newSurface = eglCreatePbufferFromClientBuffer(
         display, EGL_OPENVG_IMAGE,
         static_cast<EGLClientBuffer>(image),    // Use the image as buffer
         config, NULL);
-    
+        
     // Report error in debug mode, if failed creating the surface
     if ( newSurface == EGL_NO_SURFACE )
         {

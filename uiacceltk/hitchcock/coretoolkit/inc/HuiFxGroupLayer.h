@@ -27,6 +27,7 @@ class CHuiFxGroupLayer: public CHuiFxLayer
 public:
     IMPORT_C ~CHuiFxGroupLayer();
     IMPORT_C static CHuiFxGroupLayer* NewL(TBool aIsRoot = EFalse);
+    IMPORT_C void ReleaseAllCachedRenderTargets(CHuiFxEngine& aEngine);
     IMPORT_C TBool PrepareDrawL(CHuiFxEngine& aEngine);
     IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface);
     IMPORT_C void AddLayerL(const CHuiFxLayer* aLayer); // takes ownership
@@ -54,6 +55,8 @@ public:
     TBool FxmlUsesOpaqueHint() const;
     virtual void EnableMarginApplyChildren(TBool aEnable);
     virtual void SetAlwaysReadSurfacePixels(TBool aAlwaysReadSurfacePixels);
+
+    virtual void SetVisualContentState(TBool aChanged, TBool aOpaque);
 
 protected:
     IMPORT_C CHuiFxGroupLayer();
