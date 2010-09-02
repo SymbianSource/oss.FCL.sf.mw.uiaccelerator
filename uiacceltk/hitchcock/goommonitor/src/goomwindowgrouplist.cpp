@@ -241,23 +241,13 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
     // Refresh window group list
     // get all window groups, with info about parents
     TInt numGroups = iWs.NumWindowGroups();
+    iWgIds.Reset();
     iWgIds.ReserveL(numGroups);
     User::LeaveIfError(iWs.WindowGroupList(&iWgIds));
     
     // Remove all child window groups, promote parents to foremost child position
     CollapseWindowGroupTree(inactiveSurfaces);
-/*    
-#ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS
-    TWsEvent event;
-    event.SetType(KGoomMemoryLowEvent); // naive
 
-    for (TInt i = iLowOnMemWgs.Count()-1; i>=0; i--)
-        {
-        iWs.SendEventToWindowGroup(iLowOnMemWgs[i], event);
-        }
-        
-#endif    
-*/    
     // Note the current foreground window ID (if there is one)
     TBool oldForegroundWindowExists = EFalse;
 
@@ -292,6 +282,7 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
         TUint secureId = AppId(index,ETrue);
         TBool found = 0;
         TInt i = 0;
+        //TRACES1("Checking WG ID : %d", iWgIds[index].iId); 
         //todo - do we really need to check this list , when we have all ids in inactiveSurfaces[]
         for(i = 0; i < processIds.Count(); i++)
             {
@@ -316,8 +307,7 @@ void CGOomWindowGroupList::RefreshL(TBool aOptionalOnly)
             }
         
         if(!found)
-            {
-            TRACES1("Checking WG ID : %d", iWgIds[index].iId);             
+            {            
             for(TInt ii = 0; ii < inactiveSurfaces.Count(); ii++)
                 {
                 if (iWgIds[index].iId == inactiveSurfaces[ii] )

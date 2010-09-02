@@ -21,6 +21,10 @@
 
 #include <e32std.h>
 
+// Goom Events through Window Server
+#define KGoomMemoryLowEvent 0x10282DBF
+#define KGoomMemoryGoodEvent 0x20026790
+
 /**
  *  The maximum amount of memory that can be allocated without permission.
  */
@@ -174,6 +178,12 @@ public:
     * Notify the GOOM monitor that this application has finished allocating memory.  
     */
     IMPORT_C void MemoryAllocationsComplete();
+    
+    /**
+     * Request GOOM monitor to switch to HW rendering mnode
+     * returns KErrNone if succeeds , else KErrNoMemory
+     */
+    IMPORT_C TInt RequestHWRendering();
 
 private://data 
     TInt iFlags;

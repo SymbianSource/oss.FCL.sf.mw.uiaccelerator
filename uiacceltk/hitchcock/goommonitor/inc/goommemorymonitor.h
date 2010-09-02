@@ -130,7 +130,8 @@ public: // event handlers
         
         } 
     
-    void DoPostponedMemoryGood();
+    TBool DoPostponedMemoryGood();
+    TBool SwitchRenderingToHW();
     
     TBool NeedToPostponeMemGood()
         {
@@ -140,7 +141,7 @@ public: // event handlers
     void WaitAndSynchroniseMemoryState();
     void SynchroniseMemoryState();
     
-    void SwitchMemMode(TGOomMemMode aMemMode);
+    void SwitchMemMode(TGOomMemMode aMemMode, TBool aForced = 0);
     
 private:
     CMemoryMonitor();

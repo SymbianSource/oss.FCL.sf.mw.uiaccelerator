@@ -56,7 +56,7 @@ EXPORT_C TInt RGOomMonitorSession::RequestFreeMemory(TInt aBytesRequested)
         TIpcArgs p(aBytesRequested,0);
         return SendReceive(EGOomMonitorRequestFreeMemory, p);
         }
-    return KErrNone;    
+    return KErrCouldNotConnect;    
     }
 
 EXPORT_C void RGOomMonitorSession::MemoryAllocationsComplete()
@@ -83,7 +83,7 @@ EXPORT_C TInt RGOomMonitorSession::RequestOptionalRam(TInt aBytesRequested, TInt
 
         return ret;
         }
-    return KErrNone;
+    return KErrCouldNotConnect;
     }    
 
 EXPORT_C void RGOomMonitorSession::RequestOptionalRam(TInt aBytesRequested, TInt aMinimumBytesNeeded, TInt aPluginId, TRequestStatus& aStatus)
@@ -222,4 +222,15 @@ EXPORT_C void RGOomMonitorSession::AppAboutToStart(TRequestStatus& aStatus, cons
         SendReceive(EGOomMonitorRequestFreeMemory, TIpcArgs(0,aAppUid.iUid), aStatus);
 #endif
         }
+    }
+
+EXPORT_C TInt RGOomMonitorSession::RequestHWRendering()
+    {
+    FUNC_LOG;
+    if (IsConnected())
+        {        
+        RDebug::Printf("RAN_DEBUG : GOOM RGOomMonitorSession::RequestHWRendering");
+        return SendReceive(EGOomMonitorRequestHWRendering);
+        }
+    return KErrCouldNotConnect;    
     }

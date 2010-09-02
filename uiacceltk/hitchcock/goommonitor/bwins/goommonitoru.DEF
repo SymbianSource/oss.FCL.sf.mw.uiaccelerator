@@ -22,4 +22,5 @@ EXPORTS
 	?Connect@RGOomMonitorSession@@QAEHAAVTRequestStatus@@@Z @ 21 NONAME ; int RGOomMonitorSession::Connect(class TRequestStatus &)
 	?AppAboutToStart@RGOomMonitorSession@@QAEXAAVTRequestStatus@@ABVTUid@@@Z @ 22 NONAME ; void RGOomMonitorSession::AppAboutToStart(class TRequestStatus &, class TUid const &)
 	?MemoryAllocationsComplete@RGOomMonitorSession@@QAEXXZ @ 23 NONAME ; void RGOomMonitorSession::MemoryAllocationsComplete(void)
+	?RequestHWRendering@RGOomMonitorSession@@QAEHXZ @ 24 NONAME ; int RGOomMonitorSession::RequestHWRendering(void)
 

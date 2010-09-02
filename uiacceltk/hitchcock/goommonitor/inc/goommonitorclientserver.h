@@ -42,7 +42,8 @@ enum TGOomMonitorCmd
     EGOomMonitorSetPriorityNormal,
     EGOomMonitorSetPriorityHigh,
     EGoomMonitorAppAboutToStart,
-    EGoomMonitorAppUsesAbsoluteMemTargets
+    EGoomMonitorAppUsesAbsoluteMemTargets,
+    EGOomMonitorRequestHWRendering
     };
 
 #endif // GOOMMONITORCLIENTSERVER_H

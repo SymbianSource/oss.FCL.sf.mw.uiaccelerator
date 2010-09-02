@@ -337,7 +337,7 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
     
     }
 
-void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
+void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode, TBool aForced)
     {
     if(iMemMode == aMemMode)
         {
@@ -357,10 +357,13 @@ void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
  
     if(aMemMode == EGOomLowMemMode)
         {
-        if(iRendswitched < 3)
-            iRendswitched ++;
-        else
-            return;
+        if(!aForced)
+            {
+            if(iRendswitched < 3)
+                iRendswitched ++;
+            else
+                return;
+            }
         
         iLowOnMemWgs.Reset();
         iGOomWindowGroupList->GetListOfWindowGroupsWSurfaces(iLowOnMemWgs);
@@ -369,14 +372,17 @@ void CMemoryMonitor::SwitchMemMode(TGOomMemMode aMemMode)
         }
     else
         {
-        if(iRendswitched > 0)
+        if(!aForced)
             {
-            if(iRendswitched < 3)
-                iRendswitched ++;
-            else
+            if(iRendswitched > 0)
                 {
-                TRACES("CMemoryMonitor::SwitchMemMode GOOM Detected SW-HW-SW looping. NOT switching to HW rendering mode");
-                return;
+                if(iRendswitched < 3)
+                    iRendswitched ++;
+                else
+                    {
+                    TRACES("CMemoryMonitor::SwitchMemMode GOOM Detected SW-HW-SW looping. NOT switching to HW rendering mode");
+                    return;
+                    }
                 }
             }
     
@@ -730,7 +736,7 @@ TInt CMemoryMonitor::GetFreeMemory()
     return totalMem - totalUsed;
     }
 
-void CMemoryMonitor::DoPostponedMemoryGood()
+TBool CMemoryMonitor::DoPostponedMemoryGood()
     {
     FUNC_LOG;
     TInt current = GetFreeMemory();
@@ -740,6 +746,7 @@ void CMemoryMonitor::DoPostponedMemoryGood()
             {
             TRACES2("DoPostponedMemoryGood calling MemoryGOOD current %d, iGoodThreshold %d",current, iGoodThreshold);
             iGOomActionList->MemoryGood();
+            return ETrue;
             }
         else
             {
@@ -750,7 +757,22 @@ void CMemoryMonitor::DoPostponedMemoryGood()
         {
         iMemAllocationsGoingDown->Continue();
         }   
+    return EFalse;
     }    
+
+TBool CMemoryMonitor::SwitchRenderingToHW()
+    {
+    FUNC_LOG;
+    TInt current = GetFreeMemory();
+    if(current >= iGoodThreshold)
+        {
+        SwitchMemMode(EGOomGoodMemMode, ETrue);
+        iMemAllocationsGrowing->Continue();
+        return ETrue;
+        }
+    return EFalse;
+    }    
+
 
 void CMemoryMonitor::AppClosePriorityChanged(TInt aWgId, TInt aPriority)
     {
