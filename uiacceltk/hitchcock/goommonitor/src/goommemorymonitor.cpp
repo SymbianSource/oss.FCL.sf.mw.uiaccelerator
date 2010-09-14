@@ -205,9 +205,10 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
     FUNC_LOG;
     // keep only one notification active at a moment
 #ifdef USE_ASYNCYH_NOTIFICATIONS 
-    TInt current = GetFreeMemory();
+   
     if (aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_LT_NOK)
         {
+        TInt current = GetFreeMemory();
         if(current >= iGoodThreshold  && (!NeedToPostponeMemGood()))
             {
             TRACES2("FreeMemThresholdCrossedL : crossed good threshold Free %d, GThresh %d, Calling MemoryGood",current, iGoodThreshold);
@@ -229,20 +230,15 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         }
     else//if aThreshold == EGL_PROF_TOTAL_MEMORY_USAGE_GT_NOK
         {
-        if(current < iLowThreshold)
+        TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
+        iMemAllocationsGrowing->Stop();
+        iMemAllocationsGoingDown->Continue();
+        if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
             {
-            TRACES1("FreeMemThresholdCrossedL : crossed low threshold %d", iLowThreshold);
-            iMemAllocationsGrowing->Stop();
-            iMemAllocationsGoingDown->Continue();
-            if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
-                {
-                if(iSynchTimer->IsActive())
-                    iSynchTimer->Cancel();
-                StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
-                }
+            if(iSynchTimer->IsActive())
+                iSynchTimer->Cancel();
+            StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
             }
-        else
-            TRACES2("FreeMemThresholdCrossedL : crossed low threshold %d, FALSE ALARM, FreeMem = %d", iLowThreshold, current);
         }
 #endif
     }
