@@ -1114,5 +1114,10 @@ TInt RAlfClient::GetBatchBufferInfo( TAlfBatchBufferInfoType aBufferInfoType ) c
         }
     }
 
+TInt RAlfClient::ClearTextureAnimation( TInt aId )
+    {
+    TPckg<TInt> idPckg(aId);
+    return SendReceive(EAlfTextureCleanAnimation, TIpcArgs(aId) );
+    }
 // end of file
  

@@ -746,6 +746,14 @@ void CAlfAppSrvSession::DoHandleCommandL(const RMessage2& aMessage)
                 }
             break;
             }
+        case EAlfTextureCleanAnimation:
+            {
+            if ( RequireTextureOwnerId( aMessage ) )
+                {
+                TextureCleanAnimation(aMessage);
+                }
+            break;
+            }    
         case EAlfTextureStartAnimation:
             {
             if ( RequireTextureOwnerId( aMessage ) )
@@ -2904,5 +2912,19 @@ void CAlfAppSrvSession::EnvReadPixels(const RMessage2& aMessage)
     aMessage.Complete( err );
     }
 
-
+void CAlfAppSrvSession::TextureCleanAnimation(const RMessage2& aMessage)
+    {
+    TInt id = aMessage.Int0();
+    CHuiGifAnimationTexture* tex = NULL;
+    for (TInt index = 0; index < iAnimatedTextures.Count(); index++)
+        {
+        tex = iAnimatedTextures.operator[](index);
+        if (tex->Id() == id)
+            {
+            tex->DeleteAnimatedTexture();
+            break;
+            }
+        }
+    aMessage.Complete( KErrNone );    
+    }
 // End of file    

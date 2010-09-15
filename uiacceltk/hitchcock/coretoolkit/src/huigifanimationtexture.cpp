@@ -56,6 +56,13 @@ EXPORT_C void CHuiGifAnimationTexture::Start()
         {
         iTexture->SetTextureChanged(ETrue);        
         }
+    else
+        {
+        
+        iAnimationState = SetFlag(TInt(iAnimationState), TInt(EInitializing));
+            iTexture1 = &iManager.LoadTextureL(
+            *iFilename,EHuiTextureUploadFlagDefault, iTextureId1, 0);    
+        }
     CHuiStatic::ContinueRefresh();
     }
 
@@ -249,6 +256,23 @@ void CHuiGifAnimationTexture::ConstructL(const TDesC& aFilename)
     iManager.iLoadObservers.AppendL(*this);
     
    	iAnimationState = SetFlag(TInt(iAnimationState), TInt(EEnabled));	
+    }
+
+EXPORT_C void CHuiGifAnimationTexture::DeleteAnimatedTexture()
+    {
+    
+    if (iTexture1)
+        {
+        delete iTexture1;
+        iTexture1 = 0;
+        }
+    if (iTexture2)
+        {
+        delete iTexture2;
+        iTexture2 = 0;
+        }    
+    iTexture = 0; 
+    iFrameCount = 0;
     }
 
 EXPORT_C CHuiGifAnimationTexture::~CHuiGifAnimationTexture()

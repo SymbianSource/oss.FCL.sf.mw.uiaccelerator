@@ -137,7 +137,6 @@ void CHuiCanvasVisual::ConstructL()
 
 CHuiCanvasVisual::~CHuiCanvasVisual()
     {
-   
     FreeRenderBuffer();	
     if (iCanvasVisualData)
         {
@@ -400,12 +399,16 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
         return;
         }
 
-    if ((IsDelayedEffectSource() || Freezed()))
+    if ((IsDelayedEffectSource() || Freezed())) 
         {
         // Select right draw mode
         THuiCanvasDrawMode drawMode = (Flags() & EHuiVisualFlagOpaqueHint) ? EHuiCanvasDrawModeNormal : EHuiCanvasDrawModeBlend;
-
-        if (StoredRenderBuffer())
+        if(Effectable()->ExternalTexture())
+            {
+            DrawExternalImage(aGc);
+            return;
+            }
+        else if (StoredRenderBuffer())
             {
             DrawStoredFullScreenRenderBuffer(drawMode, aGc);
             return;
@@ -600,7 +603,14 @@ void CHuiCanvasVisual::DrawSelf(CHuiGc& aGc, const TRect& aDisplayRect) const
         // Select right draw mode
         THuiCanvasDrawMode drawMode = (Flags() & EHuiVisualFlagOpaqueHint) ? EHuiCanvasDrawModeNormal : EHuiCanvasDrawModeBlend;
         
-        if (StoredRenderBuffer())
+        THuiFxVisualSrcType effectSource = Effectable()->EffectGetSource();
+            
+        if(effectSource == EVisualSrcBitmap && Effectable()->ExternalTexture())
+            {
+            DrawExternalImage(aGc);
+            return;
+            }
+        else if (effectSource == EVisualSrcInput1 && StoredRenderBuffer())
             {
             DrawStoredFullScreenRenderBuffer(drawMode, aGc);
 			return;
@@ -1438,17 +1448,57 @@ void CHuiCanvasVisual::DrawStoredFullScreenRenderBuffer(TInt aCanvasDrawMode, CH
     gc.PopTransformationMatrix();
     }
 
+
+void CHuiCanvasVisual::DrawExternalImage(CHuiGc& aGc) const
+    {
+    if (!Display()) 
+		{
+		return;
+		}
+		
+    if (!iHuiLayoutPrivateData->iGc)
+        {
+        CHuiRenderPlugin& renderplugin = CHuiStatic::Renderer();
+        // iHuiLayoutPrivateData->iGc is deleted in CHuiLayout destructor or CHuiCanvasVisual::FreeRenderBuffer when not needed anymore 
+        iHuiLayoutPrivateData->iGc = renderplugin.CreateCanvasGcL();
+        }
+        
+    TRect displayArea = Display()->VisibleArea();
+    
+    if (Effectable()->ExternalTexture())
+        {
+        CHuiCanvasGc& gc = *iHuiLayoutPrivateData->iGc;
+        gc.SetGc(aGc);
+        gc.SetDefaults();
+        gc.PushTransformationMatrix();
+        
+        TInt height = displayArea.Height();
+        TInt width = displayArea.Width();
+    
+        // Move the center of the image to the center of the screen
+        TInt tlX = width/2 - Effectable()->ExternalTexture()->Size().iWidth/2;
+        TInt tlY = height/2 - Effectable()->ExternalTexture()->Size().iHeight/2;
+        gc.Translate(tlX, tlY, 0.0f);
+        
+        // Draw the image and do the cleanup
+        gc.DrawImage(*Effectable()->ExternalTexture(), displayArea, TRect(TPoint(0,0), Effectable()->ExternalTexture()->Size()), CHuiGc::EStretchNone);
+    
+        gc.PopTransformationMatrix();
+        
+        }
+    }
+
 EXPORT_C void CHuiCanvasVisual::FreeRenderBuffer()
     {
     if (iCanvasVisualData)
         {
-        if (iCanvasVisualData->iStoredRenderBuffer)
-            {
-            delete iCanvasVisualData->iStoredRenderBuffer;
-            iCanvasVisualData->iStoredRenderBuffer = NULL;
-            delete iHuiLayoutPrivateData->iGc;
-            iHuiLayoutPrivateData->iGc = NULL;
-            }
+        delete iCanvasVisualData->iStoredRenderBuffer;
+        iCanvasVisualData->iStoredRenderBuffer = NULL;
+        }
+    if (iHuiLayoutPrivateData)
+        {
+        delete iHuiLayoutPrivateData->iGc;
+        iHuiLayoutPrivateData->iGc = NULL;
         }
     }
 

@@ -65,7 +65,8 @@ protected:
     
 private:
     void ApplyTransformations(CHuiGc& aGc);
-    
+    void ReleaseExtTexture();
+   
     //CHuiVisual*         iVisual;
     MHuiEffectable *    iVisual;
     CHuiFxParameterManager* iParameterManager;
@@ -97,6 +98,7 @@ private:
     TReal32             iSkewOriginY;
     TReal32             iSkewOriginZ;
     
+    CHuiTexture* iExtTexture; // This is only set for cloned object
     HBufC* iExtBitmapFile;
     TReal32 iOpacity;
     TBool iOpaqueHint;

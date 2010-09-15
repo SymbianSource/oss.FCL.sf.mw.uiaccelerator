@@ -1874,14 +1874,25 @@ void CHuiRosterImpl::SetLoadingEffect(TBool /*aLoading*/)
     {
     // not needed
     }
-void CHuiRosterImpl::EffectSetSource( TBool aIsInput1 )
+void CHuiRosterImpl::EffectSetSource( THuiFxVisualSrcType aSource )
     {
-    iIsInput1 = aIsInput1;
+    iEffectSourceType = aSource;
     }
 
-TBool CHuiRosterImpl::EffectGetSource() const
+THuiFxVisualSrcType CHuiRosterImpl::EffectGetSource() const
     {
-    return iIsInput1;
+    return iEffectSourceType;
+    }
+
+void CHuiRosterImpl::SetExternalTexture(CHuiTexture* aTexture)
+    {
+    // Not used
+    }
+
+CHuiTexture* CHuiRosterImpl::ExternalTexture()
+    {
+    // Not used
+    return NULL;
     }
 
 TBool CHuiRosterImpl::EffectReadyToDrawNextFrame() const

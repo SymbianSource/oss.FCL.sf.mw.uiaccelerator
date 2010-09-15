@@ -330,8 +330,11 @@ public:
     void EffectDrawSelf( CHuiGc &aGc, const TRect & aDisplayRect) const;
     THuiRealRect EffectDisplayRect() const __SOFTFP;
     void SetLoadingEffect(TBool aLoading);
-    void EffectSetSource( TBool aIsInput1 );
-    TBool EffectGetSource() const;	
+    void EffectSetSource( THuiFxVisualSrcType aSource );
+    THuiFxVisualSrcType EffectGetSource() const;	
+    void SetExternalTexture(CHuiTexture* aTexture);
+    CHuiTexture* ExternalTexture();
+    
     TBool EffectReadyToDrawNextFrame() const;
     
     // From MHuiMemoryLevelObserver
@@ -510,7 +513,7 @@ private:
     /** Effect */
     CHuiFxEffect* iEffect;
     TReal32 iEffectOpacity;
-    TBool iIsInput1;
+    THuiFxVisualSrcType iEffectSourceType;
 
 	/** Render buffer */
     CHuiCanvasGc* iCanvasGc;

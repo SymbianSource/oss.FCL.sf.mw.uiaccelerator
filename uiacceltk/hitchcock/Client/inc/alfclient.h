@@ -281,6 +281,13 @@ public:
      * @param aParams auto size paramters.
      */
     TInt TextureSetAutoSizeParams( TInt aId, TInt aManagerId, const TAlfTextureAutoSizeParams& aParams );
+    
+    /**
+     * Cleans the animated texture content
+     *
+     * @param aId ID of the texture.
+     */
+    TInt ClearTextureAnimation( TInt aId );
 
 // Misc
 

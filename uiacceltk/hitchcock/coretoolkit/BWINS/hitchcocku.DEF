@@ -1609,4 +1609,5 @@ EXPORTS
 	?ReleaseAllCachedRenderTargets@CHuiFxGroupLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1608 NONAME ; void CHuiFxGroupLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
 	?ReleaseAllCachedRenderTargets@CHuiFxFilterLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1609 NONAME ; void CHuiFxFilterLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
 	?ReleaseAllCachedRenderTargets@CHuiFxLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1610 NONAME ; void CHuiFxLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
+	?DeleteAnimatedTexture@CHuiGifAnimationTexture@@QAEXXZ @ 1611 NONAME ; void CHuiGifAnimationTexture::DeleteAnimatedTexture(void)
 

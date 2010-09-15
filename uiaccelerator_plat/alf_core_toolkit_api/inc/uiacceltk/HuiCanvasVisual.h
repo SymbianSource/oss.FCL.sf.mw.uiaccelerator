@@ -433,6 +433,7 @@ public:
     IMPORT_C void StoreRenderBufferL();
     void DrawStoredVisualRenderBuffer(TInt aCanvasDrawMode) const;
     void DrawStoredFullScreenRenderBuffer(TInt aCanvasDrawMode, CHuiGc& aGc) const;
+    void DrawExternalImage(CHuiGc& aGc) const;
     IMPORT_C void FreeRenderBuffer();
     IMPORT_C TRect CommandBufferCoverage(TInt aOrientation);
 

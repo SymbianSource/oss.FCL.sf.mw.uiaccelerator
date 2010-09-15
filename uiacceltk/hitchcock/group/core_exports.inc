@@ -3,7 +3,7 @@
 *  Name        : core_exports.inc
 *  Part of     : Alfred UI Toolkit
 *  Description : Exported header files.
-*  Version     : %version: tr1sido#8.1.38 %
+*  Version     : %version: tr1sido#8.1.39 %
 *
 *  Copyright © 2006-2007 Nokia.  All rights reserved.
 *  This material, including documentation and any related computer
@@ -79,6 +79,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/informationnote_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/informationnote_disappear.fxml
 ../coretoolkit/data/layoutswitch_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/layoutswitch_appear.fxml
 ../coretoolkit/data/layoutswitch_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/layoutswitch_disappear.fxml
+../coretoolkit/data/longappstart_img.mbm /epoc32/release/winscw/urel/z/resource/effects/longappstart_img.mbm
 ../coretoolkit/data/musicplayer_popup_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/musicplayer_popup_appear.fxml
 ../coretoolkit/data/musicplayer_popup_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/musicplayer_popup_disappear.fxml
 ../coretoolkit/data/musicplayer_viewswitch_in.fxml /epoc32/release/winscw/urel/z/resource/effects/musicplayer_viewswitch_in.fxml
@@ -125,6 +126,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/waitnote_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/waitnote_disappear.fxml
 ../coretoolkit/data/warningnote_appear.fxml /epoc32/release/winscw/urel/z/resource/effects/warningnote_appear.fxml
 ../coretoolkit/data/warningnote_disappear.fxml /epoc32/release/winscw/urel/z/resource/effects/warningnote_disappear.fxml
+
 
 // for EMULATOR UDEB
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/release/winscw/udeb/z/resource/effects/activeidle_viewswitch_add_page.fxml
@@ -174,6 +176,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/informationnote_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/informationnote_disappear.fxml
 ../coretoolkit/data/layoutswitch_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/layoutswitch_appear.fxml
 ../coretoolkit/data/layoutswitch_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/layoutswitch_disappear.fxml
+../coretoolkit/data/longappstart_img.mbm /epoc32/release/winscw/udeb/z/resource/effects/longappstart_img.mbm
 ../coretoolkit/data/musicplayer_popup_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/musicplayer_popup_appear.fxml
 ../coretoolkit/data/musicplayer_popup_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/musicplayer_popup_disappear.fxml
 ../coretoolkit/data/musicplayer_viewswitch_in.fxml /epoc32/release/winscw/udeb/z/resource/effects/musicplayer_viewswitch_in.fxml
@@ -220,6 +223,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/waitnote_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/waitnote_disappear.fxml
 ../coretoolkit/data/warningnote_appear.fxml /epoc32/release/winscw/udeb/z/resource/effects/warningnote_appear.fxml
 ../coretoolkit/data/warningnote_disappear.fxml /epoc32/release/winscw/udeb/z/resource/effects/warningnote_disappear.fxml
+
 
 // For ROM
 ../coretoolkit/data/activeidle_viewswitch_add_page.fxml /epoc32/data/z/resource/effects/activeidle_viewswitch_add_page.fxml
@@ -269,6 +273,7 @@ PRJ_EXPORTS
 ../coretoolkit/data/informationnote_disappear.fxml /epoc32/data/z/resource/effects/informationnote_disappear.fxml
 ../coretoolkit/data/layoutswitch_appear.fxml /epoc32/data/z/resource/effects/layoutswitch_appear.fxml
 ../coretoolkit/data/layoutswitch_disappear.fxml /epoc32/data/z/resource/effects/layoutswitch_disappear.fxml
+../coretoolkit/data/longappstart_img.mbm /epoc32/data/z/resource/effects/longappstart_img.mbm
 ../coretoolkit/data/musicplayer_popup_appear.fxml /epoc32/data/z/resource/effects/musicplayer_popup_appear.fxml
 ../coretoolkit/data/musicplayer_popup_disappear.fxml /epoc32/data/z/resource/effects/musicplayer_popup_disappear.fxml
 ../coretoolkit/data/musicplayer_viewswitch_in.fxml /epoc32/data/z/resource/effects/musicplayer_viewswitch_in.fxml
@@ -315,7 +320,6 @@ PRJ_EXPORTS
 ../coretoolkit/data/waitnote_disappear.fxml /epoc32/data/z/resource/effects/waitnote_disappear.fxml
 ../coretoolkit/data/warningnote_appear.fxml /epoc32/data/z/resource/effects/warningnote_appear.fxml
 ../coretoolkit/data/warningnote_disappear.fxml /epoc32/data/z/resource/effects/warningnote_disappear.fxml
-
 
 // Effect definitions are considered as differentiating SW and thus not available for foundation.
 #endif // ifndef ALF_USE_OPENWF_COMPOSITION

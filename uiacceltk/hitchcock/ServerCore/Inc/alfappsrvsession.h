@@ -210,7 +210,7 @@ private:
 
     void DoFocusLostEffect(TInt aEffect, CHuiVisual& aRootVisual );
     void DoFocusGainedEffect(TInt aEffect, CHuiVisual& aRootVisual );
-
+    void TextureCleanAnimation(const RMessage2& aMessage);
     /**
      * Checks that texture owner id has been updated.
      * @param aMessage message.

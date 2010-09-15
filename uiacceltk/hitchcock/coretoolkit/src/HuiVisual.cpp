@@ -60,6 +60,8 @@ public: // Functions
         delete iDropShadow;
         delete iEffectParser;
         delete iEffect;
+        delete iEffectable; // Should be after deleting iEffect! 
+
         }
     
     // structs
@@ -83,32 +85,45 @@ class CHuiEffectable : public CBase, public MHuiEffectable
     {
 public: // from MHuiEffectable
     CHuiEffectable(CHuiVisual *aVisual) : iVisual(aVisual) { }
+
     void EffectSetEffect(CHuiFxEffect* aEffect);
     TReal32 EffectOpacity() const;
     void EffectSetOpacityAdditive(TReal32 aOpacity, TBool aReplace);
     void EffectDrawSelf( CHuiGc &aGc, const TRect & aDisplayRect) const;
     THuiRealRect EffectDisplayRect() const __SOFTFP;
     void SetLoadingEffect(TBool aLoading);    
-    void EffectSetSource( TBool aIsInput1 );
-    TBool EffectGetSource() const;
+    void EffectSetSource( THuiFxVisualSrcType aSource );
+    THuiFxVisualSrcType EffectGetSource() const;
+    void SetExternalTexture(CHuiTexture* aTexture);
+    CHuiTexture* ExternalTexture();
     TBool EffectReadyToDrawNextFrame() const;
-
     
 private:
-    CHuiVisual *iVisual;
-    TBool iIsInput1;
+    CHuiVisual *iVisual; // not owned
+    CHuiTexture* iExtTexture; // not owned
+    THuiFxVisualSrcType iSourceType;
     };
 void CHuiEffectable::EffectSetEffect(CHuiFxEffect* aEffect)
     {
     iVisual->SetEffect(aEffect);
     }
-void CHuiEffectable::EffectSetSource( TBool aIsInput1 )
+void CHuiEffectable::EffectSetSource( THuiFxVisualSrcType aSource )
     {
-    iIsInput1 = aIsInput1;
+    iSourceType = aSource;
     }
-TBool CHuiEffectable::EffectGetSource() const
+THuiFxVisualSrcType CHuiEffectable::EffectGetSource() const
     {
-    return iIsInput1;
+    return iSourceType;
+    }
+
+void CHuiEffectable::SetExternalTexture(CHuiTexture* aTexture)
+    {
+    iExtTexture = aTexture;
+    }
+
+CHuiTexture* CHuiEffectable::ExternalTexture()
+    {
+    return iExtTexture;
     }
 
 TBool CHuiEffectable::EffectReadyToDrawNextFrame() const
@@ -192,9 +207,9 @@ EXPORT_C void CHuiVisual::SetFreezeState(TBool aEnabled)
     iVisualData->iFreezed = aEnabled;
     }
 TBool CHuiVisual::Freezed() const
-{
+    {
     return iVisualData->iFreezed;
-}
+    }
 
 EXPORT_C TBool CHuiVisual::EffectReadyToDrawNextFrame() const
     {
@@ -208,7 +223,6 @@ EXPORT_C CHuiVisual* CHuiVisual::AddNewL(CHuiControl& aOwnerControl,
         aOwnerControl.AppendVisualL(EHuiVisualTypeVisual, aParentLayout));
     return visual;
     }
-
 
 EXPORT_C CHuiVisual::CHuiVisual(MHuiVisualOwner& aOwner)
         : iOpacity(1.f),
@@ -280,7 +294,6 @@ EXPORT_C CHuiVisual::~CHuiVisual()
     delete iTransform;
     if (iVisualData)
         {
-        delete iVisualData->iEffectable;
         if (iVisualData->iStoredRenderBuffer)
             {
             iVisualData->iStoredRenderBuffer->UnInitialize();
@@ -2194,14 +2207,24 @@ TBool CHuiVisual::IsDelayedEffectSource() const
         return EFalse;
     else
         {
-        TBool b = Effectable()->EffectGetSource();
-        if (!b)
-            { // if not found from this object, try the parent
-            CHuiLayout *l = Layout();
-            if (l)
-                return Layout()->IsDelayedEffectSource();
+        THuiFxVisualSrcType sourceType = Effectable()->EffectGetSource(); 
+
+        if (sourceType == EVisualSrcVisual)
+            { // if this object has visual source, check the parent
+            CHuiLayout *layout = Layout();
+            if (layout)
+                {
+                return (Layout()->IsDelayedEffectSource()); 
+                }
+	        else
+	            {
+	            return EFalse;
+	            }
             }
-        return b;
+        else
+            {
+            return ETrue;
+            }
         }
    }
 

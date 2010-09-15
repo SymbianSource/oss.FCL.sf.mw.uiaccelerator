@@ -360,6 +360,7 @@ enum TAlfredServerIPC
     EAlfTextureNotifySkinChanged,
     EAlfTextureUpdateOwnerId,
     EAlfTextureSetAutoSizeParams,
+    EAlfTextureCleanAnimation,
         
     // Display subsession functions
     EAlfDisplaySetClearBackground =2200,

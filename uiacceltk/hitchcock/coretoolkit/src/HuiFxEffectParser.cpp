@@ -356,7 +356,7 @@ void CHuiFxEffectParser::ParseNodeL( CMDXMLNode* aNode, CHuiFxLayer* aLayer)
                 }
             if (aLayer && aLayer->Type() == ELayerTypeGroup)
                 {
-                CHuiFxGroupLayer* group = reinterpret_cast<CHuiFxGroupLayer*>(aLayer);
+                CHuiFxGroupLayer* group = static_cast<CHuiFxGroupLayer*>(aLayer);
                 group->AddLayerL( visual ); // ownership transferred
                 }
             else
@@ -1196,6 +1196,8 @@ THuiFxVisualSrcType CHuiFxEffectParser::GetSrcTypeL( CMDXMLNode* aNode, TPtrC16&
 #ifdef _HUI_FX_PARSER_LOGGING
     __ALFFXLOGSTRING1("CHuiFxEffectParser::GetSrcTypeL - 0x%x ",this);
 #endif
+    
+
     if (aNode->NodeType() != CMDXMLNode::EElementNode)
         {
         FAIL(KErrGeneral, _L("Text node expected while reading visual source type"));
@@ -1211,17 +1213,18 @@ THuiFxVisualSrcType CHuiFxEffectParser::GetSrcTypeL( CMDXMLNode* aNode, TPtrC16&
     TPtrC attributeValue;
     TPtrC attributeName;
     User::LeaveIfError(((CMDXMLElement*)aNode)->AttributeDetails( attributeIndex, attributeName, attributeValue ));
-  
-    if( attributeValue.Compare( KLitItem ) == 0 )
+ 
+
+    if( attributeValue.CompareF( KLitItem ) == 0 )
         {
         return EVisualSrcVisual;
         }
-    else if ( attributeValue.Compare( KLitInput1 ) == 0 )
+    else if ( attributeValue.CompareF( KLitInput1 ) == 0 )
         {
         // This means that the source is given as a parameter to the effect
         return EVisualSrcInput1;
         }
-    else if ( attributeValue.Compare( KLitInput2 ) == 0 )
+    else if ( attributeValue.CompareF( KLitInput2 ) == 0 )
         {
         // This means that the source is given as a parameter to the effect
         return EVisualSrcInput2;
