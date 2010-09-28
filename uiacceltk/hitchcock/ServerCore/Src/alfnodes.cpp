@@ -1246,12 +1246,18 @@ void CAlfNode::RemoveDependencies( CAlfNode* aFirstChildOfMyType )
         }
     
     // Orphan all the children
-    CAlfNode* child = iChild; 
-    while( child )
-        {
-        child = child->OrphanMe();
-        }
+    OrphanAll(iChild);
     iChild = NULL;
+    
+    OrphanAll(iAnimChild);
+    iAnimChild = NULL;
+    
+    OrphanAll(iSpriteChild);
+    iSpriteChild = NULL;
+    
+    OrphanAll(iTextCursor);
+    iTextCursor = NULL;
+    
     if ( iModel )
         {    
         iModel->RemoveNode( iId );
@@ -1350,6 +1356,18 @@ void CAlfNode::UpdateChildrenOrdinalPositions(CAlfNode* aNode)
         node = node->iSibling;
         }
 
+    }
+
+// ---------------------------------------------------------------------------
+// OrphanAll
+// ---------------------------------------------------------------------------
+//
+void CAlfNode::OrphanAll(CAlfNode* aNode)
+    {
+    while (aNode)
+        {
+        aNode = aNode->OrphanMe();
+        }
     }
 
 // ---------------------------------------------------------------------------

@@ -228,6 +228,11 @@ public:
     void Debug_CheckSiblingOrder(const TDesC16& aContext);
     #endif
     
+    /**
+     * Oprhans aNode and all its siblings.
+     */
+    static void OrphanAll(CAlfNode* aNode);
+    
 public: // Data    
     
     CAlfNode* iParent;

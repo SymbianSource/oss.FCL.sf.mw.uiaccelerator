@@ -1070,7 +1070,7 @@ void CAlfHierarchyModel::DoNodeLayerUsesAlphaFlagChangedL()
         // SetLayerUsesAplhaFlag is not supported for image visual
         node->Window()->SetLayerUsesAplhaFlag( enabled );
 #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS        
-        node->Window()->SetTransparencyAlphaChannel( enabled );
+        node->FlagChanged(MWsWindowTreeObserver::EAlphaChannelTransparencyEnabled, enabled);
 #endif // #ifdef SYMBIAN_GRAPHICS_WSERV_QT_EFFECTS        
         }
     else if( node ) // this would mean that node has being orphaneded but not yet deleted

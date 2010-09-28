@@ -18,6 +18,7 @@
 
 #ifdef _DEBUG
 
+#include <e32hal.h>
 #include <hal.h>
 #include <w32std.h>
 #include <e32std.h>
