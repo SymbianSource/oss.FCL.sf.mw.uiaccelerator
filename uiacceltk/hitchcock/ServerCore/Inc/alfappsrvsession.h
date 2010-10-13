@@ -32,6 +32,7 @@ class CHuiLayout;
 class CAlfSrvEffectEnv;
 class THuiTexturePreferredProperties;
 class CAlfSrvTextureManager;
+class MHuiBitmapProvider;
 
 /**
  *  Session/service class in the server side.
@@ -210,7 +211,7 @@ private:
 
     void DoFocusLostEffect(TInt aEffect, CHuiVisual& aRootVisual );
     void DoFocusGainedEffect(TInt aEffect, CHuiVisual& aRootVisual );
-    void TextureCleanAnimation(const RMessage2& aMessage);
+
     /**
      * Checks that texture owner id has been updated.
      * @param aMessage message.
@@ -369,7 +370,17 @@ private:
     void EnvForceSwRendering(const RMessage2& aMessage);
     void EnvGetSizeAndRotation(const RMessage2& aMessage);
     void EnvReadPixels(const RMessage2& aMessage);
-        
+
+    /**
+     * Check if GPU memory should be released before upload.
+     */
+    TBool ShouldReleaseGpuMemoryL(MHuiBitmapProvider& aProvider, TInt aId);
+
+    /**
+     * Release optional GPU memory (mainly caches).
+     */
+    void ReleaseOptionalGpuMemory();
+
 private:
 
     // Owned items which need to be deleted with the session is terminated.

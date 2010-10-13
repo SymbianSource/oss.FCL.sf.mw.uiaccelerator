@@ -49,7 +49,6 @@ public:
     IMPORT_C void Start();
     IMPORT_C void Stop();
     IMPORT_C void EnableAnimation(TBool aEnable);
-    IMPORT_C void DeleteAnimatedTexture();
 protected:
     CHuiGifAnimationTexture(CHuiTextureManager& aManager,THuiTextureUploadFlags aFlags, TInt aId);
     void ConstructL(const TDesC& aFilename);

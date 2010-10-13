@@ -68,7 +68,9 @@ threshold values are used.
 		close_app uid="101FD693" priority="80" sync_mode="check" close_timeout="3000" wait_after_close="5000"
 -->
 	<close_app uid="AF00ABBA" priority="NEVER_CLOSE" sync_mode="check"></close_app> <!--QtLauncher-->
-	
+	<close_app uid="20016BF0" priority="1"  sync_mode="check"></close_app> <!--Task Swapper-->
+	<close_app uid="2000FDC3" priority="1"  sync_mode="check"></close_app> <!--ScreenSaver-->
+
 	</app_close_settings>
 	
 <!--	The priority of executing each system plugin is defined here.

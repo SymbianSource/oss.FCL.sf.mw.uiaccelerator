@@ -485,11 +485,4 @@ CAlfTextureManager* CAlfTexture::TextureManager()
 	return manager;     	               
     }
     
-void CAlfTexture::ClearAnimatedContent()
-    {
-    if (iData->iAnimated)
-        {
-        iData->iEnv->Client().ClearTextureAnimation( iData->iId );
-        }
-    }
 

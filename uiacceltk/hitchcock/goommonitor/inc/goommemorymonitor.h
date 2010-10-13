@@ -142,6 +142,17 @@ public: // event handlers
     
     void SwitchMemMode(TGOomMemMode aMemMode);
     
+    inline TGOomTrigger GetTrigger()
+        {
+        return iTrigger;
+        }
+    
+    inline TInt GetLowThreshold()
+        {
+        return iLowThreshold;
+        }
+    
+    
 private:
     CMemoryMonitor();
     void ConstructL();

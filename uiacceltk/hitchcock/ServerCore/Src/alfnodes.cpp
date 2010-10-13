@@ -394,60 +394,61 @@ TInt CAlfNode::OrdinalPosition()
 // ---------------------------------------------------------------------------
 //
 
+// ---------------------------------------------------------------------------
+// CAlfNode::TraverseNodeTree
+// Traverse through node tree and fill node array 
+// ---------------------------------------------------------------------------
+//
+
 void CAlfNode::TraverseNodeTree( CAlfNode* node,  RPointerArray<CAlfNode>& nodes, TBool aTraverseOnlySiblings, TBool aAddMe)
     {
     // Exit if we've already finished walking the tree.
     if ( node == NULL) 
         { 
-        __ALFLOGSTRING("TraverseNodeTree returning - NULL");                                  
+        __ALFLOGSTRING(" returning NULL");                                  
         return;
         }
-    
-    while ( node )
+    if (!aTraverseOnlySiblings)
         {
-        if (!aTraverseOnlySiblings)
-            {   
-            if ( node->iSpriteChild ) 
-                {
-                CAlfNode* spritenode = node->iSpriteChild ;
-                while ( spritenode )
-                    {
-                    nodes.Append( spritenode );                
-                    spritenode = spritenode->iSibling;
-                    }
-                }
-    
-            if( node->iTextCursor )
-                {
-                nodes.Append(node->iTextCursor );            
-                }
-    
-            if( node->iAnimChild )
-                {
-                CAlfNode* animnode = node->iAnimChild ;
-                while ( animnode )
-                    {
-                    nodes.Append( animnode );                
-                    animnode = animnode->iSibling;
-                    }
-                }
-        
-            if ( node->iChild)
-                {                
-                TraverseNodeTree(node->iChild , nodes, EFalse, ETrue);            
-                }
-            } 
-
-        if (aAddMe)
+        if ( node->iSpriteChild ) 
             {
-            nodes.Append( node );
+        CAlfNode* spritenode = node->iSpriteChild ;
+            while ( spritenode )
+                {
+                nodes.Append( spritenode );                
+                spritenode = spritenode->iSibling;
+                }
             }
+    
+        if( node->iTextCursor )
+            {
+            nodes.Append(node->iTextCursor );            
+            }
+    
+        if( node->iAnimChild )
+            {
+            CAlfNode* animnode = node->iAnimChild ;
+            while ( animnode )
+                {
+                nodes.Append( animnode );                
+                animnode = animnode->iSibling;
+                }
+            }
+        
+        if ( node->iChild)
+            {                
+            TraverseNodeTree(node->iChild , nodes, EFalse, ETrue);            
+            }
+        } 
 
-        // Without recursion, continue with the following:
-        // TraverseNodeTree(node->iSibling, nodes, ETrue, ETrue);
-        node = node->iSibling;
-        aTraverseOnlySiblings = ETrue;
-        aAddMe = ETrue;
+    if (aAddMe)
+        {
+        nodes.Append( node );
+        }
+
+    if ( node->iSibling )
+        {                
+        TraverseNodeTree(node->iSibling, nodes, ETrue, ETrue);               
         }
     }
 

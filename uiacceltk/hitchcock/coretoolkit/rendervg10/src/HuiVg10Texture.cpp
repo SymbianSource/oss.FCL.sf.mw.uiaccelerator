@@ -327,6 +327,7 @@ void CHuiVg10Texture::SegmentUploadL(TInt aSegment,
     VGbitfield qualityFlags = VG_IMAGE_QUALITY_BETTER | VG_IMAGE_QUALITY_FASTER | VG_IMAGE_QUALITY_NONANTIALIASED;
     TBool hasAlpha = (aMaskBitmap != NULL);
     TBool conversionRequired = ETrue;
+    
     TSize size = Size();
     TSize textureSize = MaxTextureSize();
     textureSize.iWidth = Min(size.iWidth, textureSize.iWidth);
@@ -402,13 +403,23 @@ void CHuiVg10Texture::SegmentUploadL(TInt aSegment,
         imageInternalFormat = imageSourceFormat;
         }
 
+    // For large textures, GPU OOM case is checked. It's expected that client
+	// uses GOOM to get some space, but even that doesn't guarantee that later
+	// when texture is created there is continuous space available.
+    TBool checkErrors = IsLargeTexture(textureSize, imageInternalFormat); 
+    if ( checkErrors )
+        {
+        // To reset error before upload
+        iRenderPlugin.VgError();
+        }
+
     // Create the actual image
     VGImage image = vgCreateImage(imageInternalFormat, textureSize.iWidth, textureSize.iHeight, qualityFlags);
 
     if (image == VG_INVALID_HANDLE)
         {
         User::Leave(KErrNoMemory);
-        }
+        }   
     
     if (!conversionRequired)
         {
@@ -455,7 +466,7 @@ void CHuiVg10Texture::SegmentUploadL(TInt aSegment,
             const void* data = convBitmap.DataAddress();
             TInt stride      = CFbsBitmap::ScanLineLength(size.iWidth, convBitmap.DisplayMode());
             vgImageSubData(image, data, stride, imageSourceFormat, 0, 0, textureSize.iWidth, textureSize.iHeight);
-            convBitmap.EndDataAccess( ETrue );
+            convBitmap.EndDataAccess( ETrue );            
             }
         else
             {
@@ -489,6 +500,18 @@ void CHuiVg10Texture::SegmentUploadL(TInt aSegment,
             TInt stride      = CFbsBitmap::ScanLineLength(size.iWidth, convBitmap.DisplayMode());
             vgImageSubData(image, data, stride, imageSourceFormat, 0, 0, textureSize.iWidth, textureSize.iHeight);
             convBitmap.EndDataAccess( ETrue );
+            }
+        }   
+
+    if ( checkErrors )
+        {
+        // Check if failed
+        VGErrorCode code = iRenderPlugin.VgError();
+
+        if (code == VG_OUT_OF_MEMORY_ERROR)
+            {
+            vgDestroyImage(image);
+            User::Leave(KErrNoMemory);
             }
         }
     
@@ -1256,7 +1279,7 @@ VGImage CHuiVg10Texture::CreateRenderedImage(CNvgEngine* aNvgEngine, HBufC8* aNV
     VGImageFormat imageInternalFormat = VG_sARGB_8888;
 #endif
     
-    VGbitfield qualityFlags = VG_IMAGE_QUALITY_NONANTIALIASED | VG_IMAGE_QUALITY_BETTER | VG_IMAGE_QUALITY_FASTER;
+    VGbitfield qualityFlags = VG_IMAGE_QUALITY_NONANTIALIASED; // | VG_IMAGE_QUALITY_BETTER | VG_IMAGE_QUALITY_FASTER;
     image = vgCreateImage(imageInternalFormat, aDestSize.iWidth, aDestSize.iHeight, qualityFlags);
     
     // Get the configs and displays etc. needed for creating the surface
@@ -1780,5 +1803,24 @@ void CHuiVg10Texture::PopEGLContext()
         eglMakeCurrent(iPreviousEGLState.iDisplay,  iPreviousEGLState.iDrawSurface, iPreviousEGLState.iReadSurface,iPreviousEGLState.iContext);
         }
     }
+
+TBool CHuiVg10Texture::IsLargeTexture(const TSize& aSize, VGImageFormat aFormat) const
+    {
+    const TInt KHuiVgLargeTextureLimit = 3000000;
+    
+    TInt bytesPerPixel = 4;
+    if ( aFormat == VG_sRGB_565 )
+        {
+        bytesPerPixel = 2;
+        }
+    if ( aFormat == VG_A_8 )
+        {
+        bytesPerPixel = 1;
+        }
+    
+    TInt estimatedMemoryConsumption = aSize.iWidth * bytesPerPixel * aSize.iHeight;
+    return estimatedMemoryConsumption > KHuiVgLargeTextureLimit;
+    }
+
 // End of file
 

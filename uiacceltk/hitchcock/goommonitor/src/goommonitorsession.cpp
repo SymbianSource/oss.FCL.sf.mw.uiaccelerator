@@ -56,7 +56,7 @@ EXPORT_C TInt RGOomMonitorSession::RequestFreeMemory(TInt aBytesRequested)
         TIpcArgs p(aBytesRequested,0);
         return SendReceive(EGOomMonitorRequestFreeMemory, p);
         }
-    return KErrNone;    
+    return KErrCouldNotConnect;    
     }
 
 EXPORT_C void RGOomMonitorSession::MemoryAllocationsComplete()
@@ -83,7 +83,7 @@ EXPORT_C TInt RGOomMonitorSession::RequestOptionalRam(TInt aBytesRequested, TInt
 
         return ret;
         }
-    return KErrNone;
+    return KErrCouldNotConnect;
     }    
 
 EXPORT_C void RGOomMonitorSession::RequestOptionalRam(TInt aBytesRequested, TInt aMinimumBytesNeeded, TInt aPluginId, TRequestStatus& aStatus)

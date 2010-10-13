@@ -1784,6 +1784,7 @@ EXPORT_C THuiMemoryLevel CHuiEnv::MemoryLevel()
 EXPORT_C void CHuiEnv::HandleOutOfTextureMemory()
     {
     iCanvasTextureCache->HandleOutOfTextureMemory();
+    iEffectsEngine->HandleOutOfGpuMemory();    
     }
 
 

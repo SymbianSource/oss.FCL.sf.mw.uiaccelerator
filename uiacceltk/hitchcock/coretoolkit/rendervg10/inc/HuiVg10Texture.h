@@ -242,7 +242,14 @@ private:
      * Partial bitmap upload.
      */
     void PartialBitmapUpload(THuiTexturePartialBitmapUploadParams* aParams);
-    
+
+    /**
+     * Returns ETrue if texture is large.
+     */ 
+    TBool IsLargeTexture(const TSize& aSize, VGImageFormat aFormat) const;
+
+private:
+        
     /** The render plugin that created this texture. */
     CHuiVg10RenderPlugin& iRenderPlugin;
     

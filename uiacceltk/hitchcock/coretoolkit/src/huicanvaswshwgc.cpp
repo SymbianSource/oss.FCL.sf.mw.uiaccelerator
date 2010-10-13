@@ -127,11 +127,11 @@ void CHuiCanvasWsHwGc::WsBitBltL(TInt aBitmapHandle, TPoint aPoint)
 	THuiCachedImageParams cachedImageParams;
     cachedImageParams.iBitmapHandle = aBitmapHandle;
     cachedImageParams.iGcParams = CachedGcParams();
-     
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -145,6 +145,13 @@ void CHuiCanvasWsHwGc::WsBitBltL(TInt aBitmapHandle, TPoint aPoint)
             iCanvasGc->SetDrawMode(oldDrawMode);
             }
         }
+    else
+        {
+        if ( IsCacheUpdateNeeded() )
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+            }
+        }
 	}
 
 
@@ -156,10 +163,10 @@ void CHuiCanvasWsHwGc::WsBitBltRectL(TInt aBitmapHandle, TPoint aPoint, TRect aR
     cachedImageParams.iBitmapHandle = aBitmapHandle;
     cachedImageParams.iGcParams = CachedGcParams();
      
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
-
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -174,6 +181,13 @@ void CHuiCanvasWsHwGc::WsBitBltRectL(TInt aBitmapHandle, TPoint aPoint, TRect aR
             iCanvasGc->SetDrawMode(oldDrawMode);
             }        
         }
+	else
+	    {
+        if ( IsCacheUpdateNeeded() )
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+            }	        
+	    }
 	}
 
 
@@ -186,11 +200,11 @@ void CHuiCanvasWsHwGc::WsBitBltMaskedL(TInt aBitmapHandle, TInt aMaskHandle, TIn
     cachedImageParams.iInvertedMask = aInvertMask;
     cachedImageParams.iGcParams = CachedGcParams();
      
-     
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -201,6 +215,13 @@ void CHuiCanvasWsHwGc::WsBitBltMaskedL(TInt aBitmapHandle, TInt aMaskHandle, TIn
             iCanvasGc->DrawImage(*texture, destinationRect, aRect, CHuiGc::EStretchNone);
             }
         }
+	else
+	    {
+	    if (IsCacheUpdateNeeded())
+	        {
+	        iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+	        }
+	    }
 	}
 
 
@@ -209,27 +230,26 @@ void CHuiCanvasWsHwGc::WsCombinedBitBltMaskedL(TRect aDestinationRect, const RAr
 	THuiCachedCombinedImageParams cachedCombinedImageParams;	    
     THuiCachedGcParams gcParams = CachedGcParams();          
     TSize imageSize = aDestinationRect.Size();
-    
+
     // Must convert points relative to the image itself
-    RArray<THuiCachedCombinedImageParams> convertedBlits;
+    RArray<THuiCachedCombinedImageParams> convertedBlits;   
+    
     for (TInt i=0; i<aBlits.Count();i++)
         {
         THuiCachedCombinedImageParams convertedParams;
         convertedParams = aBlits[i];
         convertedParams.iCombinedBitmapPoint -= aDestinationRect.iTl;
         convertedBlits.Append(convertedParams);
-        }    
-    
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCombinedCachedImageL(
-        convertedBlits, 
-        gcParams,
-        imageSize, 
-        *iVisual);
-
-    convertedBlits.Close();
+        }       
 
     if (IsRenderingEnabled())
-        {           
+        {    
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCombinedCachedImageL(
+            convertedBlits, 
+            gcParams,
+            imageSize, 
+            *iVisual);
+       
         const CHuiTexture* texture = cachedImage->Texture();        
         if (texture)
             {
@@ -242,6 +262,19 @@ void CHuiCanvasWsHwGc::WsCombinedBitBltMaskedL(TRect aDestinationRect, const RAr
             iCanvasGc->DrawImage(*texture, destinationRect, TRect(TPoint(0,0), texture->Size()),  CHuiGc::EStretchNone);
             }
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCombinedCachedImageL(
+                convertedBlits, 
+                gcParams,
+                imageSize, 
+                *iVisual);
+            }
+        }
+	
+	convertedBlits.Close();
 	}
 
 
@@ -253,10 +286,10 @@ void CHuiCanvasWsHwGc::WsBitBltMaskedPointL(TInt aBitmapHandle, TInt aMaskHandle
     cachedImageParams.iMaskOriginPoint = aPoint2;
     cachedImageParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
-
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -266,6 +299,13 @@ void CHuiCanvasWsHwGc::WsBitBltMaskedPointL(TInt aBitmapHandle, TInt aMaskHandle
             // Draw            
             iCanvasGc->DrawImage(*texture, destinationRect, aRect, CHuiGc::EStretchNone);
             }             
+        }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+            }
         }
 	}
 
@@ -431,9 +471,9 @@ void CHuiCanvasWsHwGc::WsDrawBitmap1L(TInt aBitmapHandle, TRect aRect)
     cachedImageParams.iBitmapHandle = aBitmapHandle;
     cachedImageParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -445,6 +485,13 @@ void CHuiCanvasWsHwGc::WsDrawBitmap1L(TInt aBitmapHandle, TRect aRect)
             iCanvasGc->DrawImage(*texture, destinationRect, TRect(TPoint(0,0), texture->Size()), CHuiGc::EStretchFull); 
             }        	
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+            }
+        }
 	}
 
 void CHuiCanvasWsHwGc::WsDrawBitmap2L(TInt aBitmapHandle, TRect aRect1, TRect aRect2)
@@ -453,10 +500,10 @@ void CHuiCanvasWsHwGc::WsDrawBitmap2L(TInt aBitmapHandle, TRect aRect1, TRect aR
     cachedImageParams.iBitmapHandle = aBitmapHandle;
     cachedImageParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
-
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -467,6 +514,13 @@ void CHuiCanvasWsHwGc::WsDrawBitmap2L(TInt aBitmapHandle, TRect aRect1, TRect aR
             iCanvasGc->DrawImage(*texture, destinationRect, aRect2, CHuiGc::EStretchFull); 
             }        
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+            }
+        }
 	}
 
 void CHuiCanvasWsHwGc::WsDrawBitmap3L(TInt aBitmapHandle, TPoint aPoint)
@@ -475,10 +529,10 @@ void CHuiCanvasWsHwGc::WsDrawBitmap3L(TInt aBitmapHandle, TPoint aPoint)
     cachedImageParams.iBitmapHandle = aBitmapHandle;
     cachedImageParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
-
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -490,6 +544,13 @@ void CHuiCanvasWsHwGc::WsDrawBitmap3L(TInt aBitmapHandle, TPoint aPoint)
             iCanvasGc->DrawImage(*texture, destinationRect, TRect(TPoint(0,0), texture->Size()), CHuiGc::EStretchNone);
             }        
         }
+	else
+	    {
+	    if (IsCacheUpdateNeeded())
+	        {
+	        iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+	        }
+	    }
 	}
 
 void CHuiCanvasWsHwGc::WsDrawBitmapMaskedL(TInt aBitmapHandle, TInt aMaskHandle, TInt aInvertMask, TRect& aRect1, TRect& aRect2)
@@ -499,11 +560,11 @@ void CHuiCanvasWsHwGc::WsDrawBitmapMaskedL(TInt aBitmapHandle, TInt aMaskHandle,
     cachedImageParams.iMaskHandle = aMaskHandle;
     cachedImageParams.iInvertedMask = aInvertMask;
     cachedImageParams.iGcParams = CachedGcParams();
-    
-    const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
-
+        
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasGraphicImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -513,6 +574,13 @@ void CHuiCanvasWsHwGc::WsDrawBitmapMaskedL(TInt aBitmapHandle, TInt aMaskHandle,
             // Draw            
             iCanvasGc->DrawImage(*texture, destinationRect, aRect2, CHuiGc::EStretchFull);
             }        
+        }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedImageL(cachedImageParams,*iVisual);
+            }
         }
 	}
 
@@ -972,10 +1040,10 @@ void CHuiCanvasWsHwGc::WsDrawText1L(TPtr& aTextValue, THuiCanvasTextParameters& 
     cachedtextParams.iTextParams = aTextParameters;
     cachedtextParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
-
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1004,6 +1072,13 @@ void CHuiCanvasWsHwGc::WsDrawText1L(TPtr& aTextValue, THuiCanvasTextParameters& 
                 }
             }        
         }
+	else
+	    {
+	    if (IsCacheUpdateNeeded())
+	        {
+	        iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+	        }
+	    }
 	}
 
 void CHuiCanvasWsHwGc::WsDrawText2L(TPtr& aTextValue, TPoint& aPoint,THuiCanvasTextParameters& aTextParameters)
@@ -1014,10 +1089,11 @@ void CHuiCanvasWsHwGc::WsDrawText2L(TPtr& aTextValue, TPoint& aPoint,THuiCanvasT
     cachedtextParams.iTextParams = aTextParameters;
     cachedtextParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1047,6 +1123,13 @@ void CHuiCanvasWsHwGc::WsDrawText2L(TPtr& aTextValue, TPoint& aPoint,THuiCanvasT
                 }
             }
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+            }
+        }
 	}
 
 void CHuiCanvasWsHwGc::WsDrawText3L(TPtr& aTextValue, TRect& aRect, THuiCanvasTextParameters& aTextParameters)
@@ -1058,10 +1141,11 @@ void CHuiCanvasWsHwGc::WsDrawText3L(TPtr& aTextValue, TRect& aRect, THuiCanvasTe
     cachedtextParams.iTextBoxMaxSize = aRect.Size();
     cachedtextParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1092,6 +1176,13 @@ void CHuiCanvasWsHwGc::WsDrawText3L(TPtr& aTextValue, TRect& aRect, THuiCanvasTe
                 }
             }
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+            }
+        }
 	}
 
 
@@ -1107,10 +1198,10 @@ void CHuiCanvasWsHwGc::WsDrawText4L(TPtr& aTextValue, TRect& aRect, TInt aBaseli
     cachedtextParams.iMargin = aTextMargin;
     cachedtextParams.iGcParams = CachedGcParams();
     
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
-
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1140,6 +1231,13 @@ void CHuiCanvasWsHwGc::WsDrawText4L(TPtr& aTextValue, TRect& aRect, TInt aBaseli
                 iCanvasGc->SetOpacity(oldOpacity);                        
                 }
             }    
+        }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+            }
         }
     }
 
@@ -1156,10 +1254,11 @@ void CHuiCanvasWsHwGc::WsDrawText5L( TPtr& aTextValue, TRect& aRect, TInt aBasel
     cachedtextParams.iTextWidth = aTextWidth;
     cachedtextParams.iGcParams = CachedGcParams();
     
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
-
+    
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1190,6 +1289,13 @@ void CHuiCanvasWsHwGc::WsDrawText5L( TPtr& aTextValue, TRect& aRect, TInt aBasel
                 }
             }    
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+            }
+        }
 	}
 	
 void CHuiCanvasWsHwGc::WsDrawTextVertical1L(TPtr& aTextValue, TInt aTextUp, THuiCanvasTextParameters& aTextParameters)	
@@ -1203,11 +1309,12 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical1L(TPtr& aTextValue, TInt aTextUp, THui
     cachedtextParams.iTextParams = aTextParameters;
     cachedtextParams.iAngle = angle;
     cachedtextParams.iGcParams = CachedGcParams();
-
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+ 
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1237,6 +1344,13 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical1L(TPtr& aTextValue, TInt aTextUp, THui
                 }
             }    
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual);
+            }
+        }
     }
 
 void CHuiCanvasWsHwGc::WsDrawTextVertical2L(TPtr& aTextValue, TInt aTextUp,TPoint& aPoint, THuiCanvasTextParameters& aTextParameters)	
@@ -1249,11 +1363,12 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical2L(TPtr& aTextValue, TInt aTextUp,TPoin
     cachedtextParams.iTextParams = aTextParameters;
     cachedtextParams.iAngle = angle;
     cachedtextParams.iGcParams = CachedGcParams();
-	
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+	 
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual);
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1283,6 +1398,13 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical2L(TPtr& aTextValue, TInt aTextUp,TPoin
                 }
             }
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual);
+            }
+        }
     }
 
 void CHuiCanvasWsHwGc::WsDrawTextVertical3L(TPtr& aTextValue, TInt aTextUp, TRect& aRect, THuiCanvasTextParameters& aTextParameters)	
@@ -1297,10 +1419,11 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical3L(TPtr& aTextValue, TInt aTextUp, TRec
     cachedtextParams.iAngle = angle;
     cachedtextParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1331,12 +1454,18 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical3L(TPtr& aTextValue, TInt aTextUp, TRec
                 }
             }
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+            }
+        }
     }
 
 void CHuiCanvasWsHwGc::WsDrawTextVertical4L(TPtr& aTextValue, TRect& aRect, TInt aBaselineOffset, TInt aTextUp, TInt aTextAlign, TInt aTextMargin,THuiCanvasTextParameters& aTextParameters)
     {
     TInt angle = aTextUp ? -90 : 90;
-
 
     THuiCachedTextParams cachedtextParams;
     cachedtextParams.iFindTextPtr = &aTextValue;
@@ -1349,10 +1478,11 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical4L(TPtr& aTextValue, TRect& aRect, TInt
     cachedtextParams.iMargin = aTextMargin;
     cachedtextParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1383,6 +1513,13 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical4L(TPtr& aTextValue, TRect& aRect, TInt
                 }
             }
         }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+            }
+        }
     }
 
 void CHuiCanvasWsHwGc::WsDrawTextVertical5L(TPtr& aTextValue, TRect& aRect, TInt aBaselineOffset, TInt aTextUp, TInt aTextAlign, TInt aTextMargin, TInt aTextWidth, THuiCanvasTextParameters& aTextParameters)
@@ -1401,10 +1538,11 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical5L(TPtr& aTextValue, TRect& aRect, TInt
     cachedtextParams.iMargin = aTextMargin;
     cachedtextParams.iGcParams = CachedGcParams();
 
-    const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
 
     if (IsRenderingEnabled())
         {           
+        const CHuiCanvasTextImage* cachedImage = iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
+        
         const CHuiTexture* texture = cachedImage->Texture();
         if (texture)
             {
@@ -1433,6 +1571,13 @@ void CHuiCanvasWsHwGc::WsDrawTextVertical5L(TPtr& aTextValue, TRect& aRect, TInt
                 iCanvasGc->SetPenColor(oldPenColor);
                 iCanvasGc->SetOpacity(oldOpacity);                        
                 }
+            }
+        }
+    else
+        {
+        if (IsCacheUpdateNeeded())
+            {
+            iVisual->Env().CanvasTextureCache().CreateCachedTextL(cachedtextParams,*iVisual); 
             }
         }
     }
@@ -2309,3 +2454,14 @@ void CHuiCanvasWsHwGc::UseCanvasState()
     iCanvasGc->SetPenWidth(iOldPenWidth);
     iCanvasGc->SetPolygonDrawMode(iOldPolygonDrawMode);
     }
+
+TBool CHuiCanvasWsHwGc::IsCacheUpdateNeeded() const
+    {
+    TBool result = ETrue;
+    if ( iVisual )
+        {
+        result = IsRenderingEnabled() || iVisual->KeepCache();
+        }
+    return result;
+    }
+

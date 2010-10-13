@@ -205,7 +205,7 @@ LIBRARY         ws32.lib
 LIBRARY         fbscli.lib
 LIBRARY         gdi.lib
 LIBRARY         bitgdi.lib
-LIBRARY         libGLES_CM.lib
+LIBRARY         libEGL.lib
 LIBRARY         imageconversion.lib
 LIBRARY         charconv.lib
 LIBRARY         hal.lib

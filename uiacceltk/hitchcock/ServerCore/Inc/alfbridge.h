@@ -248,6 +248,11 @@ public:
     void OnLowMemoryModifyAllEffects();
 
     /**
+     * Releases optional GPU memory.
+     */
+    void ReleaseOptionalGpuMemory();
+
+    /**
      * Gets size & rotation.
      * @param aSize size.
      * @param aRotation rotation.

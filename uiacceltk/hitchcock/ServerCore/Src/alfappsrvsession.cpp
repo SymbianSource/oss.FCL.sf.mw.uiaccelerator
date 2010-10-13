@@ -66,6 +66,13 @@ _LIT( KAlfFPSLogFile, "alffpslog.txt");
 
 const TReal32 KAlfUseDefaultFrameRate = 0.f;
 
+/**
+ * If estimated memory consumption is larger than this constant,
+ * then ALF will do additional steps to ensure that texture loading succeeds.
+ * However, client is still responsible of requesting sufficient memory from GOOM.
+ */
+const TInt KAlfReleaseMemoryThresholdInBytes = 3000000;
+
 TBool RealCompare( 
     TReal32 aCompare1, 
     TReal32 aCompare2, 
@@ -746,14 +753,6 @@ void CAlfAppSrvSession::DoHandleCommandL(const RMessage2& aMessage)
                 }
             break;
             }
-        case EAlfTextureCleanAnimation:
-            {
-            if ( RequireTextureOwnerId( aMessage ) )
-                {
-                TextureCleanAnimation(aMessage);
-                }
-            break;
-            }    
         case EAlfTextureStartAnimation:
             {
             if ( RequireTextureOwnerId( aMessage ) )
@@ -1546,6 +1545,14 @@ void CAlfAppSrvSession::TextureCreateL(const RMessage2& aMessage)
         inputFlags &= ~EAlfTextureFlagLoadAnimAsImage;
         
         TBool textureAlreadyExists = (env->TextureManager().Texture(id) != &env->TextureManager().BlankTexture());
+        
+        // If we cannot load alf client texture, then it's quite hard to recover from that situation.
+        // If texture is sufficiently large, we will release optional GPU RAM automatically.
+		// Still, client should beforehand use GOOM to make sure there is enough memory.
+        if ( ShouldReleaseGpuMemoryL( *provider, id ) )
+            {
+            ReleaseOptionalGpuMemory();
+            }
         
         CHuiTexture& texture = env->TextureManager().CreateTextureL(id,
                                      provider,
@@ -2912,19 +2919,64 @@ void CAlfAppSrvSession::EnvReadPixels(const RMessage2& aMessage)
     aMessage.Complete( err );
     }
 
-void CAlfAppSrvSession::TextureCleanAnimation(const RMessage2& aMessage)
+// ---------------------------------------------------------------------------
+// ShouldReleaseGpuMemoryL
+// ---------------------------------------------------------------------------
+//    
+TBool CAlfAppSrvSession::ShouldReleaseGpuMemoryL(MHuiBitmapProvider& aProvider, TInt aId)
     {
-    TInt id = aMessage.Int0();
-    CHuiGifAnimationTexture* tex = NULL;
-    for (TInt index = 0; index < iAnimatedTextures.Count(); index++)
+    // Estimate GPU RAM requirement. If higher than threshold, memory should be released.
+    CFbsBitmap* bitmap = NULL;
+    CFbsBitmap* mask = NULL;
+
+    // ProvideBitmapL will handle bitmap & mask clean up (if it leaves).
+    aProvider.ProvideBitmapL(aId, bitmap, mask);
+    
+    // Calculate estimated memory consumption.
+    TInt estimatedMemoryConsumption = 0;
+    
+    if ( bitmap )
         {
-        tex = iAnimatedTextures.operator[](index);
-        if (tex->Id() == id)
+        TSize bitmapSize = bitmap->SizeInPixels();
+    
+        if ( mask )
             {
-            tex->DeleteAnimatedTexture();
-            break;
+            estimatedMemoryConsumption += bitmapSize.iWidth * bitmapSize.iHeight * 4;
+            }
+        else
+            {
+            switch ( bitmap->DisplayMode() )
+                {
+            case EGray256:
+                estimatedMemoryConsumption += bitmapSize.iWidth * bitmapSize.iHeight;
+                break;
+                
+            case EColor64K:
+                estimatedMemoryConsumption += bitmapSize.iWidth * bitmapSize.iHeight * 2;
+                break;
+                        
+            default:
+                estimatedMemoryConsumption += bitmapSize.iWidth * bitmapSize.iHeight * 4;
+                break;
+                }
             }
         }
-    aMessage.Complete( KErrNone );    
+    
+    // Delete bitmap & mask.
+    delete bitmap;
+    delete mask;
+    
+    return estimatedMemoryConsumption >= KAlfReleaseMemoryThresholdInBytes;
     }
+
+// ---------------------------------------------------------------------------
+// ReleaseOptionalGpuMemory
+// ---------------------------------------------------------------------------
+//    
+void CAlfAppSrvSession::ReleaseOptionalGpuMemory()
+    {
+    // Release optional GPU memory (mainly caches).
+    AlfAppUi()->ReleaseOptionalGpuMemory();
+    }
+
 // End of file    

@@ -828,8 +828,8 @@ void CMemoryMonitor::WaitAndSynchroniseMemoryState() //this will be called after
         case EGOomTriggerRequestMemory:
             {
             //start timer
-            //cancel timer if end critical allocations request -TODO
-            //end critical allocations when timer expires -TODO
+            //cancel timer if end critical allocations request 
+            //end critical allocations when timer expires 
             if ( iSynchTimer && //exists
                  !iSynchTimer->IsActive() ) // keep it simple
                 {        
@@ -851,8 +851,9 @@ void CMemoryMonitor::SynchroniseMemoryState()
         iClientsRequestingMemory.Reset();
         TRACES("SynchroniseMemoryState calling MemoryGOOD");
         iGOomActionList->MemoryGood();
+        iMemAllocationsGrowing->Continue();
         }
-    else if(current < iLowThreshold)
+    else if(current < iLowThreshold && iMemMode == EGOomLowMemMode)
         {
         iMemAllocationsGrowing->Stop();
         iMemAllocationsGoingDown->Continue();

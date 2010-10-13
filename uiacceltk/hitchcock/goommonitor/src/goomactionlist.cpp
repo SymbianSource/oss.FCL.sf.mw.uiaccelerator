@@ -232,6 +232,14 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     
     TInt oldcount = iActionRefs.Count();
     
+    TInt32 foregroundUid = iMonitor.ForegroundAppUid();
+    CGOomCloseAppConfig* fgAppConfig = aConfig.GetApplicationConfig(foregroundUid).GetAppCloseConfig();
+    if(!fgAppConfig)
+        {
+        TRACES1("Config for foreground app %x not found. Using default priority", foregroundUid);
+        fgAppConfig = aConfig.GetApplicationConfig(KGOomDefaultAppId).GetAppCloseConfig();
+        }
+    
     if (aWindowGroupList.Count())
             {
             // Go through each item in the wglist, create an app close action for this application
@@ -304,19 +312,26 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
                 if (appCloseConfig)
                     {
                     TUint priority = appCloseConfig->CalculateCloseAppPriority(aWindowGroupList, wgIndex);
-                    TInt wgId = aWindowGroupList.WgId(wgIndex).iId;
-                    TGOomSyncMode syncMode = appCloseConfig->iSyncMode;
-                    TInt ramEstimate = appCloseConfig->iRamEstimate;
-                    TActionRef ref = TActionRef(TActionRef::EAppClose, priority, syncMode, ramEstimate, wgId, wgIndex, appCloseConfig->iCloseTimeout, appCloseConfig->iWaitAfterClose);
-    
-                    //AppClose Actions should always have a unique prioirity determined by the application's z order.
-                    TInt err = iActionRefs.InsertInOrder(ref, ComparePriorities);
-                    if ((err != KErrNone) && (err != KErrAlreadyExists))
+                    
+                    TRACES2("Forground app %x priority %d", foregroundUid, fgAppConfig->iDefaultPriority); 
+                    TRACES2("victim app %x priority %d", appId, priority);
+                    
+                    if(priority <= fgAppConfig->iDefaultPriority) //check if priority of app about to be killed is not higher than that of app about to start 
                         {
-                        TRACES3("BuildActionListL: Adding app to action list, Uid = %x, wgId = %d, err = %d", appId, wgId, err);
-                        User::Leave(err);
+                        TInt wgId = aWindowGroupList.WgId(wgIndex).iId;
+                        TGOomSyncMode syncMode = appCloseConfig->iSyncMode;
+                        TInt ramEstimate = appCloseConfig->iRamEstimate;
+                        TActionRef ref = TActionRef(TActionRef::EAppClose, priority, syncMode, ramEstimate, wgId, wgIndex, appCloseConfig->iCloseTimeout, appCloseConfig->iWaitAfterClose);
+        
+                        //AppClose Actions should always have a unique prioirity determined by the application's z order.
+                        TInt err = iActionRefs.InsertInOrder(ref, ComparePriorities);
+                        if ((err != KErrNone) && (err != KErrAlreadyExists))
+                            {
+                            TRACES3("BuildActionListL: Adding app to action list, Uid = %x, wgId = %d, err = %d", appId, wgId, err);
+                            User::Leave(err);
+                            }
+                        TRACES3("BuildActionListL: Adding app to action list, Uid = %x, wgId = %d, wgIndex = %d", appId, wgId, wgIndex);
                         }
-                    TRACES3("BuildActionListL: Adding app to action list, Uid = %x, wgId = %d, wgIndex = %d", appId, wgId, wgIndex);
                     }
     
                 wgIndex++;
@@ -461,6 +476,12 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
         // No usable memory freeing action has been found, so we give up
         TInt freeMemory;
 
+        if(iMonitor.GetTrigger() == CMemoryMonitor::EGOomTriggerThresholdCrossed)
+            {
+            if(freeMemory > iMonitor.GetLowThreshold())
+                iOptionalTried = ETrue;
+            }
+        
         if ( !FreeMemoryAboveTarget(freeMemory) && !iTryOptional && !iOptionalTried && freeMemory < 25*1024*1024 ) // magic, should read this from config
             { 
             iTryOptional = ETrue;
@@ -726,6 +747,12 @@ void CGOomActionList::StateChanged()
 	            {
                 iRunningKillAppActions = EFalse;
 
+                if(iMonitor.GetTrigger() == CMemoryMonitor::EGOomTriggerThresholdCrossed)
+                    {
+                    if(freeMemory > iMonitor.GetLowThreshold())
+                        iOptionalTried = ETrue;
+                    }
+                
                 if (!iTryOptional && !iOptionalTried && freeMemory < 25*1024*1024 ) // magic, should read this from config
                     { 
                     iTryOptional = ETrue;

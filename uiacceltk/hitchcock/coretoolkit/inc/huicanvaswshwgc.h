@@ -207,6 +207,11 @@ private:
 	 */
     void UseWsState();
     
+    /**
+     * Returns true if canvas texture cache should be updated.
+     */
+    TBool IsCacheUpdateNeeded() const;
+    
 private:
   
  /**

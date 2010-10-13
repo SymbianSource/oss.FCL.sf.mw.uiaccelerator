@@ -7077,6 +7077,16 @@ void CAlfBridge::OnLowMemoryModifyAllEffects()
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // 
+void CAlfBridge::ReleaseOptionalGpuMemory()
+    {
+    __ALFLOGSTRING("CAlfBridge::ReleaseOptionalGpuMemory");
+    iHuiEnv->HandleOutOfTextureMemory();
+    __ALFLOGSTRING("CAlfBridge::ReleaseOptionalGpuMemory done");
+    }
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 
 TInt CAlfBridge::GetSizeAndRotation(TSize& aSize, TInt& aRotation)
     {
     if ( !iAlfScreens.Count() )

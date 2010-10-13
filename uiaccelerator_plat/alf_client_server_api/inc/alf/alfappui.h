@@ -210,6 +210,8 @@ public: // internal utilities
     TInt GetLastActiveClient();
     RAlfBridgerClient* BridgerClient();
 
+    void ReleaseOptionalGpuMemory();
+    
 private:
 
     void CreateHuiEnvL();

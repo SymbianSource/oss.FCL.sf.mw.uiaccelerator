@@ -207,16 +207,9 @@ EXPORT_C CHuiFxVisualLayer::~CHuiFxVisualLayer()
     RDebug::Print(_L("CHuiFxVisualLayer::~CHuiFxVisualLayer - 0x%x "), this);
 #endif
     
-    
     delete iExtBitmapFile;
     delete iParameterManager;
     iParameterManager = NULL;
-    
-    ReleaseExtTexture();
-    if(iVisual)
-        {
-        iVisual->SetExternalTexture(NULL);
-        }
     }
 
 EXPORT_C TBool CHuiFxVisualLayer::Changed() const
@@ -247,8 +240,6 @@ EXPORT_C void CHuiFxVisualLayer::ReleaseAllCachedRenderTargets(CHuiFxEngine& aEn
     {
     if(iRenderBuffer)
         {
-        ReleaseExtTexture();
-    
         aEngine.ReleaseRenderbuffer(iRenderBuffer);
         iRenderBuffer = NULL;
         }
@@ -280,8 +271,8 @@ EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
         forceRefresh = ETrue;
         }
     
-    // Don't update render buffer if visual is not changed or screenshot/external image is used (except in force refresh case)
-    if(forceRefresh || (iVisualContentChanged && iSrcType==EVisualSrcVisual))
+    // don't update render buffer if visual is not changed or screenshot is used
+    if(forceRefresh || (iVisualContentChanged && iSrcType!=EVisualSrcInput1))
         {
         if(!iVisualContentOpaque)
             {
@@ -305,43 +296,11 @@ EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
         aGc.PushClip();
         TRect bufferArea = TRect(TPoint(0,0), backbufferSize); 
         aGc.SetClip(bufferArea); // this does not transform bufferArea which is fine for us    
-        		
-		// If needed, create texture if there is a bimap source file set  				
-        if(iSrcType==EVisualSrcBitmap && iExtBitmapFile && !iExtTexture)
-            {
-            // Note: we are here only if also forceRefresh is true
-
-            CFbsBitmap *bm = new CFbsBitmap;
-			if (bm)
-				{
-                // Load the bitmap file and set it to the linked visual
-            	TInt err = bm->Load(*iExtBitmapFile, 0);
-            	if(!err && bm->Handle())
-                	{
-                    // Upload as a texture
-                    TRAP(err,
-                        iExtTexture = CHuiTexture::NewL();
-                        iExtTexture->UploadL(*bm);
-                        );
-                    if (!err)
-                        {
-                        iVisual->SetExternalTexture(iExtTexture);
-                        }
-                    else
-                        {
-                        delete iExtTexture;
-                        iExtTexture = NULL;
-                        iVisual->SetExternalTexture(NULL);
-                        }
-                	}
-                delete bm;
-				}
-            }
         
-        // Draw visual content to aGc
-        iVisual->EffectSetSource(iSrcType);
+        // Draw visual content to aTarget
+        iVisual->EffectSetSource(iSrcType==EVisualSrcInput1);
         iVisual->EffectDrawSelf( aGc, TargetRect() );
-        iVisual->EffectSetSource(EVisualSrcVisual); // set visual source to be default
+        iVisual->EffectSetSource(EFalse);
         
         // Restore original clipping
         aGc.PopClip();
@@ -543,15 +502,14 @@ void CHuiFxVisualLayer::SetExtBitmapFileL( TDesC& aFilename )
 #endif    
     delete iExtBitmapFile;
     iExtBitmapFile = NULL;
-    
-    ReleaseExtTexture();
-    
     if ( aFilename.Length() == 0 )
         {
         // don't set an empty filename
         return;
         }
-    iExtBitmapFile = aFilename.AllocL();
+    iExtBitmapFile = HBufC::NewL( aFilename.Length() );
+    *iExtBitmapFile = aFilename;
+    //TODO: the bitmap from this filename should be loaded as texture to the visual.
     }
 void CHuiFxVisualLayer::FxmlVisualInputs(RArray<THuiFxVisualSrcType> &aArray)
     {
@@ -594,30 +552,3 @@ void CHuiFxVisualLayer::SetVisualContentState(TBool aChanged, TBool aOpaque)
     iVisualContentOpaque = aOpaque;
     }
 	
-void CHuiFxVisualLayer::ReleaseExtTexture()
-    {
-    // Use iRenderBuffer context to make sure there is always active context when iExtTexture is deleted. 
-    // Otherwise the texture will not be freed and cause a memory leak.
-    //
-    // The object iRenderBuffer is created in first Draw() call (like iExtTexture), and deleted only in ReleaseAllCachedRenderTargets(). The latter 
-    // function calls ReleaseExtTexture() first. So we can be sure that iRenderBuffer is always set when iExtTexture is set.
-    // If this class is deleted without calling ReleaseAllCachedRenderTargets(), also destructor calls ReleaseExtTexture(). 
-    
-	ASSERT(!(iExtTexture && !iRenderBuffer));
-	
-	if (iExtTexture && iRenderBuffer)
-        {    
-        // just to make sure there is some context active when deleting the texture...
-        iRenderBuffer->BindAsRenderTarget(); 
-        
-        delete iExtTexture;
-        iExtTexture = NULL;
-        if(iVisual)
-            {
-            iVisual->SetExternalTexture(NULL);
-            }
-    
-        iRenderBuffer->UnbindAsRenderTarget();
-        }	
-    }
-

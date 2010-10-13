@@ -343,12 +343,6 @@ public:
     */
     IMPORT_C TInt RefCountingAction() const;
 
-    /**
-    * Cleans the content for the animated texture when unloading has happened
-    * @return 
-    */
-    void ClearAnimatedContent();
-    
     /** @endAPI */
 
     enum TAlfTextureReleaseFlags

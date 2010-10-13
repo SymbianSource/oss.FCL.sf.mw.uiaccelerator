@@ -778,7 +778,6 @@ EXPORT_C void CAlfTextureManager::UnloadTexture(const TDesC& aImageName)
         else
             {
             entry.iTexture->StopAnimation();      
-            entry.iTexture->ClearAnimatedContent();
             }
         
         TInt releaseFlags = entry.iTexture->ReleaseFlags();
@@ -805,9 +804,7 @@ EXPORT_C void CAlfTextureManager::UnloadTexture(TInt aId)
             }
         else
             {
-            entry.iTexture->StopAnimation();
-            
-            entry.iTexture->ClearAnimatedContent();
+            entry.iTexture->StopAnimation();        
             }           
         
         TInt releaseFlags = entry.iTexture->ReleaseFlags();

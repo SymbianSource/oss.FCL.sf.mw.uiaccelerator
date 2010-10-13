@@ -1416,4 +1416,9 @@ RAlfBridgerClient* CAlfAppUi::BridgerClient()
     return 0;
     }
 
+void CAlfAppUi::ReleaseOptionalGpuMemory()
+    {
+    iData->iBridgeObj->ReleaseOptionalGpuMemory();
+    }
+
 // end of file

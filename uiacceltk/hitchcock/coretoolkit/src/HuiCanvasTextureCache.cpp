@@ -2651,9 +2651,9 @@ void ReportGraphicsMemoryUsage()
 				RDebug::Print(_L("EGL Profiling: total mem available: %d"), prof_data[i++]);
 				break;
 				}
-		    case EGL_PROF_THREAD_ID_NOK:
+		    case EGL_PROF_PROCESS_ID_NOK:
                 {
-                if (sizeof(EGLNativeThreadIdTypeNOK) == 8)
+                if (sizeof(EGLNativeProcessIdTypeNOK) == 8)
                     {
                     i+=2;
                     }
@@ -2663,8 +2663,8 @@ void ReportGraphicsMemoryUsage()
                     }
                 break;
                 }
-            case EGL_PROF_THREAD_USED_PRIVATE_MEMORY_NOK:
-            case EGL_PROF_THREAD_USED_SHARED_MEMORY_NOK:
+            case EGL_PROF_PROCESS_USED_PRIVATE_MEMORY_NOK:
+            case EGL_PROF_PROCESS_USED_SHARED_MEMORY_NOK:
 			default:
 				{
                 i++;
@@ -3046,6 +3046,16 @@ void CHuiCanvasTextureCache::HandleOutOfTextureMemory()
 #ifdef HUI_DEBUG_PRINT_CANVAS_TEXTURE_CACHE
     RDebug::Print(_L("CHuiCanvasTextureCache::HandleOutOfTextureMemory"));
 #endif
+    
+    iHasReleasedTexts = ETrue;
+    iHasReleasedImages = ETrue;
+    iHasReleasedRenderBuffers = ETrue;
+
+    // Clear all unused textures - these will be updated later
+    iUnusedCanvasTextTextureCacheSizeInKBytes = 0;
+    iUnusedCanvasImageTextureCacheSizeInKBytes = 0;  
+    iUnusedCanvasRenderBufferCacheSizeInKBytes = 0;
+            
     DeleteAllReleasedEntries(EFalse);    
     
     // TODO: Who you gonna call when texture memory is full and we cannot ourself
@@ -3073,6 +3083,14 @@ void CHuiCanvasTextureCache::CalculateGraphicsMemoryUsage()
 
         // Calculate how much there is space for unused textures 
         TInt availableCacheSizeInKBytes = iMaxTextureMemoryInKBytes - (totalUsedTextureMemoryInKBytes - totalUnusedCanvasTextureMemoryUsageInKBytes);
+
+        // If there is too much unused, release some textures from cache
+        if ( availableCacheSizeInKBytes < totalUnusedCanvasTextureMemoryUsageInKBytes )
+            {
+            iHasReleasedTexts = ETrue;
+            iHasReleasedImages = ETrue;
+            iHasReleasedRenderBuffers = ETrue;
+            }
 
         // Divide available space for unused textures between texts and images using defined ratio
         if (availableCacheSizeInKBytes > 0)

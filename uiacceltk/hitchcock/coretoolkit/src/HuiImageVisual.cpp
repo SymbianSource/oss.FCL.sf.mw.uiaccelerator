@@ -301,11 +301,6 @@ void CHuiImageVisual::DrawSelf(CHuiGc& aGc, const TRect& /*aDisplayRect*/) const
     // Actual color of the image.
     aGc.SetPenAlpha(TInt(effectiveOpacity * 255));
     aGc.SetPenColor(iColor);
-    
-    // Render Alf image visuals always with high quality. Otherwise scaling etc. with ALF apis
-    // might produce low-quality
-    const THuiQuality oldQuality = aGc.Quality(); // store the original quality
-    aGc.SetQuality(EHuiQualityAccurate);
 
     // Apply special color mode.
     if(iColorMode == EColorDimmed)
@@ -391,8 +386,6 @@ void CHuiImageVisual::DrawSelf(CHuiGc& aGc, const TRect& /*aDisplayRect*/) const
                 }
             }
         }
-    
-    aGc.SetQuality(oldQuality); // restore quality
 
     // Disable special color modes.
     if(iColorMode == EColorDimmed)

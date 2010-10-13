@@ -661,12 +661,15 @@ TBool CHuiFxEngine::HasActiveFadeEffect() const
     return EFalse;
     }
 
-void CHuiFxEngine::ClearCache()
+void CHuiFxEngine::ClearCache(TBool aOnlyCache)
     {
-    // Release cached render targets from effects
-    for (TInt j=0; j<iActiveEffects.Count();j++)
+    if (!aOnlyCache)
         {
-        iActiveEffects[j]->ReleaseCachedRenderTarget();
+        // Release cached render targets from effects
+        for (TInt j=0; j<iActiveEffects.Count();j++)
+            {
+            iActiveEffects[j]->ReleaseCachedRenderTarget();
+            }
         }
     
     if(IsCacheEmpty())
@@ -688,6 +691,13 @@ void CHuiFxEngine::ClearCache()
         }
     
     ASSERT(iBuffersInCache == 0);    
+    }
+
+void CHuiFxEngine::HandleOutOfGpuMemory()
+    {
+    // Effect might be rendering when this happens, so 
+	// release only cache items.
+	ClearCache(ETrue);
     }
 
 TInt CHuiFxEngine::FindEffectGroup(TInt aGroup)

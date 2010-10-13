@@ -236,25 +236,13 @@ void CHuiCmdBufferBrush::SetLoadingEffect(TBool /*aLoading*/)
     {
     // TODO
     }
-void CHuiCmdBufferBrush::EffectSetSource( THuiFxVisualSrcType /*aSource*/ )
+void CHuiCmdBufferBrush::EffectSetSource( TBool /*aIsInput1*/ )
     {
     }
-THuiFxVisualSrcType CHuiCmdBufferBrush::EffectGetSource() const
+TBool CHuiCmdBufferBrush::EffectGetSource() const
     {
-    return EVisualSrcVisual;
+    return EFalse;
     }
-
-void CHuiCmdBufferBrush::SetExternalTexture(CHuiTexture* aTexture)
-    {
-    // Not used
-    }
-
-CHuiTexture* CHuiCmdBufferBrush::ExternalTexture()
-    {
-    // Not used
-    return NULL;
-    }
-
 TBool CHuiCmdBufferBrush::EffectReadyToDrawNextFrame() const
     {
     return ETrue;

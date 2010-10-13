@@ -2010,5 +2010,4 @@ EXPORTS
 	_ZN16CHuiFxGroupLayer29ReleaseAllCachedRenderTargetsER12CHuiFxEngine @ 2009 NONAME
 	_ZN17CHuiFxFilterLayer29ReleaseAllCachedRenderTargetsER12CHuiFxEngine @ 2010 NONAME
 	_ZN17CHuiFxVisualLayer29ReleaseAllCachedRenderTargetsER12CHuiFxEngine @ 2011 NONAME
-	_ZN23CHuiGifAnimationTexture21DeleteAnimatedTextureEv @ 2012 NONAME
 

@@ -149,7 +149,8 @@ public:
     TBool HasActiveEffects() const;
     TBool HasActiveFadeEffect() const;
     
-    void ClearCache();
+    void ClearCache(TBool aOnlyCache = EFalse);
+    void HandleOutOfGpuMemory();
     
     void NotifyEffectEndObservers();
     

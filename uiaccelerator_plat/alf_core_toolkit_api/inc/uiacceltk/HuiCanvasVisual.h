@@ -433,10 +433,10 @@ public:
     IMPORT_C void StoreRenderBufferL();
     void DrawStoredVisualRenderBuffer(TInt aCanvasDrawMode) const;
     void DrawStoredFullScreenRenderBuffer(TInt aCanvasDrawMode, CHuiGc& aGc) const;
-    void DrawExternalImage(CHuiGc& aGc) const;
     IMPORT_C void FreeRenderBuffer();
     IMPORT_C TRect CommandBufferCoverage(TInt aOrientation);
-
+    TBool KeepCache() const;
+    
 protected:
     virtual void VisualExtension(const TUid& aExtensionUid, TAny** aExtensionParams);
 
@@ -456,7 +456,6 @@ private:
     TBool CollectRecursivePaintedRegion(TRegion& aRecursivePaintRegion, TInt aExcludeCanvasFlags) const;
     
     TBool CanSkipDrawing() const;
-    TBool KeepNoCache() const;
     TBool EffectReadyToDrawNextFrame() const; 
 
 private: 
