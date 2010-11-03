@@ -1,0 +1,129 @@
+/*
+* Copyright (c) 2002 - 2007 Nokia Corporation and/or its subsidiary(-ies).
+* All rights reserved.
+* This component and the accompanying materials are made available
+* under the terms of "Eclipse Public License v1.0"
+* which accompanies this distribution, and is available
+* at the URL "http://www.eclipse.org/legal/epl-v10.html".
+*
+* Initial Contributors:
+* Nokia Corporation - initial contribution.
+*
+* Contributors:
+*
+* Description:  test api of alf_core_toolkit
+*
+*/
+
+
+#include <data_caging_paths.hrh> 
+#include <platform_paths.hrh>
+
+TARGET          testuiaifcoretoolkit.dll
+TARGETTYPE      dll
+UID             0x1000008D 0x2001CB80
+
+CAPABILITY      ALL -TCB
+
+DEFFILE         testuiaifcoretoolkit.def
+
+USERINCLUDE     ../inc 
+MW_LAYER_SYSTEMINCLUDE
+
+SOURCEPATH      ../src
+
+SOURCE          testuiaifcoretoolkit.cpp
+SOURCE          testuiaifcoretoolkitblocks.cpp
+SOURCE          testuiaifctkitblockshuianchorlayout.cpp
+SOURCE          testuiaifctkitblocksbodebrush.cpp
+SOURCE          testuiaifctkitblockshuitexture.cpp
+SOURCE          testuiaifblocksmanagerchild.cpp
+SOURCE          testuiaifblockstexturechild.cpp
+SOURCE          testuiaifctkitblockshuicontrol.cpp 
+SOURCE          testuiaifblockshuicontrolchild.cpp
+SOURCE          testuiaifctkitblockshuicontrolgroup.cpp
+SOURCE          testuiaifctkitblockshuicurve.cpp
+SOURCE          testuiaifctkitblockshuipathlayout.cpp
+SOURCE          testuiaifctkitblockshuidecklayout.cpp
+SOURCE          testuiaifctkitblockshuicommand.cpp 
+SOURCE          testuiaifblockshuiactioncommandchild.cpp 
+SOURCE          testuiaifblockshuigroupcommandchild.cpp 
+SOURCE          testuiaifblockshuicontrolcommandchild.cpp 
+SOURCE          testuiaifblockshuivisualcommandchild.cpp 
+SOURCE          testuiaifblockshuiimagecommandchild.cpp 
+SOURCE          testuiaifblockshuitextcommandchild.cpp 
+SOURCE          testuiaifblockshuivaluecommandchild.cpp 
+SOURCE          testuiaifblockshuipointcommandchild.cpp 
+SOURCE          testuiaifblockshuitranscommandchild.cpp 
+SOURCE          testuiaifblockshuimarkercommandchild.cpp 
+SOURCE          testuiaifblockshuicustomeventcommandchild.cpp 
+SOURCE          testuiaifctkitblockshuivisual.cpp 
+SOURCE          testuialfcoretoolkitvisualext.cpp 
+SOURCE          testuialfcoretoolkithuibrusharray.cpp 
+
+SOURCE          testuiaifcoretoolkitblockstextstyle.cpp
+SOURCE          testuiaifcoretoolkitblocksstylemanager.cpp
+SOURCE          testuiaifcoretoolkitblockshuitexture.cpp
+SOURCE          testuiaifcoretoolkitblocksdisplay.cpp
+SOURCE          testuiaifcoretoolkitblocksdisplaybackgrounditem.cpp
+SOURCE          testuiaifcoretoolkitblockscoecontrol.cpp
+SOURCE          testuiaifcoretoolkitblockshuienv.cpp
+SOURCE          testuiaifcoretoolkitblockshuievent.cpp
+SOURCE          testuiaifcoretoolkitblocksdropshadow.cpp
+SOURCE          testuiaifcoretoolkitblocksshadowbrush.cpp
+SOURCE          testuiaifcoretoolkitblocksskin.cpp
+SOURCE          testuiaifcoretoolkitblocks60skin.cpp
+SOURCE          testuiaifcoretoolkitblocksborderbrush.cpp
+SOURCE          testuialfcoretoolkithuibrush.cpp
+SOURCE          testuialfcoretoolkithuiframebrush.cpp
+SOURCE          testuialfcoretoolkithuigc.cpp
+SOURCE          testuialfcoretoolkithuigifanimationtexture.cpp
+SOURCE          testuialfcoretoolkithuigradientbrush.cpp
+SOURCE          testuialfcoretoolkithuiownedpointer.cpp
+SOURCE          testuiaifcoretoolkitblockssegmentedtexture.cpp
+
+SOURCE          testuiaifctkitblockshuilayout.cpp
+SOURCE          testuiaifctkitblockshuilinevisual.cpp
+SOURCE          testuiaifctkitblockshuim3gmesh.cpp
+SOURCE          testuiaifctkitblockshuimf.cpp
+SOURCE          testuiaifctkitblockshuimesh.cpp
+SOURCE          testuiaifctkitblockshuimeshvisual.cpp
+SOURCE          testuiaifctkitblockshuimetric.cpp
+SOURCE          testuiaifctkitblockshuirealpoint.cpp
+SOURCE          testuiaifctkitblockshuirealrect.cpp
+SOURCE          testuiaifctkitblockshuirealsize.cpp
+SOURCE          testuiaifctkitblockshuiproceduralmesh.cpp
+SOURCE          testuiaifctkitblockshuistatic.cpp
+SOURCE          testuiaifctkitblockshskcontrol.cpp
+SOURCE          testuiaifctkitblockshuiutil.cpp
+SOURCE          testuiaifctkitblockshuitimedvalue.cpp
+SOURCE          testuiaifctkitblockshuiimage.cpp
+SOURCE          testuiaifctkitblockshuiimagebrush.cpp
+SOURCE          testuiaifctkitblockshuitimedpoint.cpp
+SOURCE          testuiaifctkitblockshuitexturehandle.cpp
+SOURCE          testuiaifctkitblockshuitransf.cpp
+SOURCE          testuiaifctkitblockshuifixmath.cpp
+SOURCE          testuiaifctkitblockshuifont.cpp
+
+SOURCE          testuiaifctkitblockstextvisual.cpp
+SOURCE          testuiaifctkitblockshuiviewportlayout.cpp
+SOURCE          testuiaifctkitblockshuiimagevisual.cpp
+SOURCE          testuiaifctkitblockshuitextureautosizepara.cpp 
+SOURCE          testuiaifctkitblockshuigridlayout.cpp 
+SOURCE          testuiaifctkitblockshuitexturemanager.cpp
+SOURCE          testuiaifctkitblockshuiflowlayout.cpp
+SOURCE          testuiaifctkitblockshuiimageloaderutil.cpp
+
+LIBRARY         euser.lib
+LIBRARY         stiftestinterface.lib
+LIBRARY         stiftestengine.lib 
+LIBRARY         hitchcock.lib
+LIBRARY         eikcoctl.lib
+LIBRARY         cone.lib
+LIBRARY         eikcore.lib 
+LIBRARY         gdi.lib 
+LIBRARY         fbscli.lib
+
+LANG            sc
+
+// End of File

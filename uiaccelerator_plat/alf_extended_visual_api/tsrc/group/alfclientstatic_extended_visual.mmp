@@ -1,0 +1,108 @@
+/*
+* Copyright (c) 2006 Nokia Corporation and/or its subsidiary(-ies).
+* All rights reserved.
+* This component and the accompanying materials are made available
+* under the terms of "Eclipse Public License v1.0"
+* which accompanies this distribution, and is available
+* at the URL "http://www.eclipse.org/legal/epl-v10.html".
+*
+* Initial Contributors:
+* Nokia Corporation - initial contribution.
+*
+* Contributors:
+*
+* Description:  Project definition file for project alfclient
+*
+*/
+
+
+#include "../../../../uiacceltk/hitchcock/CommonInc/alfuids.h"
+#include <data_caging_paths.hrh>
+#include <bldvariant.hrh>
+
+TARGET                  alfclientstatic_extended_visual.lib
+TARGETTYPE              lib
+UID                     0x00000000 0x17282846 // random UID
+
+SOURCEPATH              ../../../../uiacceltk/hitchcock/client/src
+SOURCE                  alfclientbase.cpp
+SOURCE                  alfclient.cpp
+SOURCE                  alfenv.cpp
+SOURCE                  alfscreenbuffer.cpp
+SOURCE                  alfdisplay.cpp
+SOURCE                  alfroster.cpp
+SOURCE                  alfcontrolgroup.cpp
+SOURCE                  alfcontrol.cpp
+SOURCE                  alfvisual.cpp
+SOURCE                  alflayout.cpp
+SOURCE                  alfvisualfactory.cpp
+SOURCE                  alftextvisual.cpp
+SOURCE                  alfanchorlayout.cpp
+SOURCE                  alfbrush.cpp
+SOURCE                  alfbrusharray.cpp
+SOURCE                  alfborderbrush.cpp
+SOURCE                  alfevent.cpp
+SOURCE                  alftransformation.cpp
+SOURCE                  alftexture.cpp
+SOURCE                  alftextureprocessor.cpp
+SOURCE                  alftexturemanager.cpp
+SOURCE                  alfimage.cpp
+SOURCE                  alfimagevisual.cpp
+SOURCE                  alfgridlayout.cpp
+SOURCE                  alfdisplaysubsession.cpp
+SOURCE                  alfcontrolgroupsubsession.cpp
+SOURCE                  alftransformationsubsession.cpp
+SOURCE                  alfgencomponent.cpp
+SOURCE                  alfcommand.cpp
+SOURCE                  alftimedvalue.cpp
+SOURCE                  alfmappingfunctions.cpp
+SOURCE                  alfimagebrush.cpp
+SOURCE                  alfdecklayout.cpp
+SOURCE                  alfflowlayout.cpp
+SOURCE                  alfcurvepath.cpp
+SOURCE                  alfcurvepathlayout.cpp
+SOURCE                  alflinevisual.cpp
+SOURCE                  alfdropshadowbrush.cpp
+SOURCE                  alfshadowborderbrush.cpp
+SOURCE                  alfcommandscheduler.cpp
+SOURCE                  alfgradientbrush.cpp
+SOURCE                  alfutil.cpp
+SOURCE                  alfimageloaderutil.cpp
+SOURCE                  alfframebrush.cpp
+SOURCE                  alfviewportlayout.cpp
+SOURCE                  alflctanchorlayout.cpp
+SOURCE                  alfmeshvisual.cpp
+SOURCE                  alfmesh.cpp
+SOURCE                  alfproceduralmesh.cpp
+SOURCE                  alfm3gmesh.cpp
+SOURCE                  alflctgridlayout.cpp
+SOURCE                  alflcttextvisual.cpp
+SOURCE                  alflayoutmetrics.cpp
+SOURCE	                 alftextstylemanager.cpp
+SOURCE	                 alftextstyle.cpp
+SOURCE                  alfskinnableimage.cpp
+SOURCE                  alfstatic.cpp
+SOURCE                  alfpanic.cpp
+SOURCE                  alfmetric.cpp
+SOURCE                  alfproperty.cpp
+SOURCE                  alfpropertyowner.cpp
+SOURCE                  alfscrollerevent.cpp
+SOURCE                  alfsymbiansbdrawer.cpp
+SOURCE                  alfdisplaybackgrounditem.cpp
+SOURCE                  alfbatchbuffer.cpp
+SOURCE                  alftextureautosizeparams.cpp
+SOURCE                  alfdropshadow.cpp
+SOURCE                  alftexturegroup.cpp
+SOURCE                  alfcanvasvisual.cpp
+SOURCE                  alfgc.cpp
+
+USERINCLUDE             ../../../../uiacceltk/hitchcock/client/inc
+USERINCLUDE             ../../../../uiacceltk/hitchcock/commoninc
+
+LIBRARY                 eunit.lib
+
+#include <platform_paths.hrh>
+MW_LAYER_SYSTEMINCLUDE
+
+SYSTEMINCLUDE           ../../../../inc
+

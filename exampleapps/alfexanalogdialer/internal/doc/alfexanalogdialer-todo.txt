@@ -1,0 +1,37 @@
+Harri Mäkinen
+
+History:
+- first version 13.5.2008:
+
+
+A) Problems:
+---------
+
+1 when layout change happens, screen is not redrawn. Redraw happens when plate area is tapped 
+  or screen saver is removed by tapping (by tapping number display, screen is not redrawn. 
+  Adding pointer observer seems to cause redraw event). 
+  HUI guys were asked for help. I sent also codes. They could not see the problem. 
+  This occurred on 8.5-9.5. Probably no further investigation has been done to solve this. 
+
+
+B) Further development plans/ideas:
+-----------------------------------
+
+1) numbers should be graphic images that similar numbers as plate number have would be used. 
+  Graphics designer knows this. 
+2) if graphics number are not used, scaling number during layout change...
+3) many other things with number display e.g. borders, their shadow (actually there were borders 
+   and border shadow in the past - this was a task of one earlier sprint. They were somehow lost).
+4) plan is to use curve path to make numbers 'fly' from plate to number display. 
+  Tero Viitala-Kiss had one prototype of this. Could it be possible even to use random path
+  for fly route!?
+5) physical feedback about rotating plate. There is class CAlfExAnalogDialerFeedback for that. 
+   I don't know how suitable its API is for current use. It worked in one prototype but does not work anymore. 
+   
+   I used tactile feedback API. Feedback of tactile feedback was too mild. Vibra API could suite better.
+  
+   Vibra could used in two occasions
+   - when number is being dialed, after delta of Xth degrees (denoting that dialled number changes,
+     if stylus were lifted up)
+   - when plate rotates back to idle position
+6) usage of layout data. Usage would mainly focused on display number characteristics.
