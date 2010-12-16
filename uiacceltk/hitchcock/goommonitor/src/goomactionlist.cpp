@@ -123,6 +123,8 @@ CGOomActionList::~CGOomActionList()
     iActionRefs.Close();
 
     delete iPluginList;
+    
+    delete iRecheckTimer;
 	
     }
 
@@ -175,7 +177,9 @@ void CGOomActionList::BuildPluginActionListL(CGOomWindowGroupList& aWindowGroupL
             actionType = TActionRef::EAppPlugin;
             }
         else
+            {
             actionType = TActionRef::ESystemPlugin;
+            }
 
 
         //get skip plugin config for foreground app
@@ -217,6 +221,20 @@ void CGOomActionList::BuildKillAppActionListL(CGOomWindowGroupList& aWindowGroup
     // we can't reset action index here because plugins would miss memory good events
 
     iAppIndex = 0;
+    
+    for(TInt i = 0; i<iActionRefs.Count(); )
+        {
+        if (iActionRefs[i].Type() == TActionRef::EAppClose )
+            {
+            iActionRefs.Remove(i);
+            }
+        else
+            {
+            i++;
+            }
+        }
+    
+    iCurrentActionIndex=iActionRefs.Count();
     
     aWindowGroupList.RefreshL(iTryOptional);
 /*    
@@ -371,6 +389,11 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
             return;
             }
     
+    if(iRecheckTimer->IsActive())
+        {
+        iRecheckTimer->Cancel();
+        }
+    
     iMaxPriority = aMaxPriority;
 
     TBool memoryFreeingActionRun = EFalse;
@@ -397,6 +420,7 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
         CGOomAction* action = NULL;
         if (ref.Type() == TActionRef::EAppClose )
             {     
+            TRACES1("Next Target app to close wgid %d", ref.WgId() );
             iAppIndex%=iCloseAppActions.Count();
             TRACES2("Proceeding with app action from index %d, out of %d", iAppIndex, iCloseAppActions.Count() );
             action = iCloseAppActions[iAppIndex];
@@ -473,30 +497,9 @@ void CGOomActionList::FreeMemory(TInt aMaxPriority)
 
     if (!memoryFreeingActionRun)
         {
-        // No usable memory freeing action has been found, so we give up
-        TInt freeMemory;
+        TRACES("CGOomActionList::FreeMemory: No usable memory freeing action has been found");
+        StateChanged();
 
-        if(iMonitor.GetTrigger() == CMemoryMonitor::EGOomTriggerThresholdCrossed)
-            {
-            if(freeMemory > iMonitor.GetLowThreshold())
-                iOptionalTried = ETrue;
-            }
-        
-        if ( !FreeMemoryAboveTarget(freeMemory) && !iTryOptional && !iOptionalTried && freeMemory < 25*1024*1024 ) // magic, should read this from config
-            { 
-            iTryOptional = ETrue;
-            iOptionalTried = ETrue;
-            iMonitor.RunCloseAppActions(iMaxPriority);
-            }
-        else
-            {
-            iTryOptional = EFalse;
-            iOptionalTried = EFalse;
-            TRACES("CGOomActionList::FreeMemory: No usable memory freeing action has been found");
-            iFreeingMemory = EFalse;
-            iServer.CloseAppsFinished(freeMemory, EFalse);
-            iMonitor.WaitAndSynchroniseMemoryState();
-            }
         }
     }
 
@@ -745,15 +748,13 @@ void CGOomActionList::StateChanged()
                                    
             if(iRunningKillAppActions)
 	            {
-                iRunningKillAppActions = EFalse;
-
                 if(iMonitor.GetTrigger() == CMemoryMonitor::EGOomTriggerThresholdCrossed)
                     {
                     if(freeMemory > iMonitor.GetLowThreshold())
                         iOptionalTried = ETrue;
                     }
                 
-                if (!iTryOptional && !iOptionalTried && freeMemory < 25*1024*1024 ) // magic, should read this from config
+                if (!iTryOptional && !iOptionalTried)
                     { 
                     iTryOptional = ETrue;
                     iOptionalTried = ETrue;
@@ -763,9 +764,22 @@ void CGOomActionList::StateChanged()
                     {
                     // There are no more actions to try, so we give up
                     TRACES1("CGOomActionList::StateChanged: All current actions complete, below good threshold with no more actions available. freeMemory=%d", freeMemory);
-                    iTryOptional = EFalse;       
-                    iServer.CloseAppsFinished(freeMemory, EFalse);
-                    iMonitor.WaitAndSynchroniseMemoryState();
+                    if((iCurrentTarget < KGOomMaxFreeableMemory) && iRetriesLeft)
+                        {
+                        //retry
+                        TRACES2("CGOomActionList::StateChanged: All current actions complete, Rechecking status after %d ms. Retry %d",KGOomRecheckInterval, KGOomNoOfRetries-iRetriesLeft+1);
+                        iRecheckTimer->After(KGOomRecheckInterval * 1000);
+                        iRetriesLeft--;
+                        }
+                    else
+                        {
+                        iRetriesLeft = KGOomNoOfRetries;
+                        iTryOptional = EFalse;
+                        iOptionalTried = EFalse;
+                        iRunningKillAppActions = EFalse;
+                        iServer.CloseAppsFinished(freeMemory, EFalse);
+                        iMonitor.WaitAndSynchroniseMemoryState();
+                        }
                     }
                 }
             else
@@ -778,6 +792,9 @@ void CGOomActionList::StateChanged()
             }
         else
             {
+            iTryOptional = EFalse;
+            iOptionalTried = EFalse;
+            iRetriesLeft = KGOomNoOfRetries;
             TRACES1("CGOomActionList::StateChanged: All current actions complete, memory good. freeMemory=%d", freeMemory);
             iRunningKillAppActions = EFalse;
             iServer.CloseAppsFinished(freeMemory, ETrue);
@@ -797,7 +814,7 @@ CGOomActionList::CGOomActionList(CMemoryMonitor& aMonitor, CMemoryMonitorServer&
 void CGOomActionList::ConstructL(CGOomConfig& aConfig)
     {
     FUNC_LOG;
-
+    iRetriesLeft = KGOomNoOfRetries;
     iCurrentActionIndex = 0;
     iFreeingMemory = EFalse;
 
@@ -826,6 +843,9 @@ void CGOomActionList::ConstructL(CGOomConfig& aConfig)
         CGOomCloseApp* action = CGOomCloseApp::NewL(*this, iWs);
         iCloseAppActions.AppendL(action);
         }
+    
+    iRecheckTimer = CGOomRecheckTimer::NewL(*this);
+    
     }
 
 

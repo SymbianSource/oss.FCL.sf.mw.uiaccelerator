@@ -235,8 +235,6 @@ void CMemoryMonitor::FreeMemThresholdCrossedL(TInt /*aAction*/, TInt aThreshold)
         iMemAllocationsGoingDown->Continue();
         if((iTrigger == EGOomTriggerNone) && !NeedToPostponeMemGood())
             {
-            if(iSynchTimer->IsActive())
-                iSynchTimer->Cancel();
             StartFreeSomeRamL(iGoodThreshold, EGOomTriggerThresholdCrossed);
             }
         }
@@ -278,6 +276,11 @@ void CMemoryMonitor::StartFreeSomeRamL(TInt aTargetFree, TInt aMaxPriority, TGOo
     {
     FUNC_LOG;
 
+    if(iSynchTimer->IsActive())
+        {
+        iSynchTimer->Cancel();
+        }
+    
     TRACES2("MemoryMonitor::StartFreeSomeRamL: aTargetFree = %d, iCurrentTarget = %d", aTargetFree, iCurrentTarget);
 
     // Update the target if new target is higher. If the target is lower than the current target and memory
@@ -686,14 +689,12 @@ TInt CMemoryMonitor::GetFreeMemory()
                 }
             case EGL_PROF_PROCESS_USED_PRIVATE_MEMORY_NOK:
                     {
-                    TUint mem = prof_data[i];
-                    TRACES1("Private memory Usage by app is %d", mem);
+                    TRACES1("Private memory Usage by app is %d", prof_data[i]);
                     break;
                     }
             case EGL_PROF_PROCESS_USED_SHARED_MEMORY_NOK:
                     {
-                    TUint mem = prof_data[i];
-                    TRACES1("Shared memory Usage by app is %d", mem);
+                    TRACES1("Shared memory Usage by app is %d", prof_data[i]);
                     break;
                     }
 			default:

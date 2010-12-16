@@ -131,7 +131,7 @@ _LIT8(KGOomAttributeTargetFreeOnStartup, "target_free_on_startup");
 _LIT8(KGOomAttributeSkipPlugin, "skip_plugin");
 _LIT8(KGOomAttributeUseSwRendering, "use_sw_rend");
 _LIT8(KGOomConfigUseSwRend, "Yes");
-_LIT8(KGOomConfigNotUseSwRend, "No");
+//_LIT8(KGOomConfigNotUseSwRend, "No");
 
 // System plugins 
 

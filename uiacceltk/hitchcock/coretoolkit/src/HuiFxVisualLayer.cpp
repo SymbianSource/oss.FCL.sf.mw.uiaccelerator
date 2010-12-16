@@ -246,7 +246,7 @@ EXPORT_C void CHuiFxVisualLayer::ReleaseAllCachedRenderTargets(CHuiFxEngine& aEn
     }
 
 
-EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer &aTarget, CHuiFxRenderbuffer& /*aSource*/, TBool /*aHasSurface*/)
+EXPORT_C TBool CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer &aTarget, CHuiFxRenderbuffer& /*aSource*/, TBool /*aHasSurface*/)
     {
 #ifdef HUIFX_TRACE    
     RDebug::Print(_L("CHuiFxVisualLayer::Draw - 0x%x "), this);
@@ -266,7 +266,7 @@ EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
         iRenderBuffer = aEngine.AcquireRenderbuffer(backbufferSize, EFalse);
         if (!iRenderBuffer)
             {
-            return;
+            return EFalse;
             }
         forceRefresh = ETrue;
         }
@@ -356,6 +356,7 @@ EXPORT_C void CHuiFxVisualLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
     aGc.Pop(EHuiGcMatrixModel);
 
     aTarget.UnbindAsRenderTarget();
+    return ETrue;
     }
 
 void CHuiFxVisualLayer::ApplyTransformations(CHuiGc& aGc)

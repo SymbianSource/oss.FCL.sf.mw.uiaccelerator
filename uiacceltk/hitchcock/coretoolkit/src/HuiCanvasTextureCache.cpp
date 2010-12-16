@@ -2468,16 +2468,53 @@ const CHuiCanvasTextImage* CHuiCanvasTextureCache::CreateCachedTextL(
     }
 
 
+// ---------------------------------------------------------------------------
+// Releases _ALL_ entries, i.e. removes the active users from all visuals
+// ---------------------------------------------------------------------------
+//
+void CHuiCanvasTextureCache::ClearAllActiveUsers()
+    {
+    TInt textCount = iCachedTexts.Count();
+    TInt imageCount = iCachedImages.Count();
 
+    // Release activeusers from all cached texts
+    for( TInt i = 0; i < textCount; i++ )
+        {
+        iCachedTexts[i]->iActiveUsers.Reset();
+        }
+    
+    // Then release active users from cached images
+    for( TInt i = 0; i < imageCount; i++ )
+        {
+        iCachedImages[i]->iActiveUsers.Reset();
+        }
+    
+    // Set the status as completely released
+    iAllEntriesReleased = ETrue;
+    iHasReleasedTexts = ETrue;
+    iHasReleasedImages = ETrue;
+    
+    }
 
 // ---------------------------------------------------------------------------
 // 
 // ---------------------------------------------------------------------------
 //
 void CHuiCanvasTextureCache::ReleaseAllCachedEntries(const CHuiCanvasVisual& aUser)
-    {    
+    {
+    // If all entries has already been released, there's no need to browse
+    // the cache arrays again, so just skip the steps.
+    if(iAllEntriesReleased)
+        {
+        // All entries already being released, return!
+        return;
+        }
+    
+    TInt textCount = iCachedTexts.Count();
+    TInt imageCount = iCachedImages.Count();
+    
     // Texts
-    for (TInt i=0; i < iCachedTexts.Count(); i++)
+    for (TInt i=0; i < textCount; i++)
         {
         TInt index = iCachedTexts[i]->iActiveUsers.FindInAddressOrder(&aUser);
 
@@ -2489,7 +2526,7 @@ void CHuiCanvasTextureCache::ReleaseAllCachedEntries(const CHuiCanvasVisual& aUs
         }        
 
     // Images
-    for (TInt i=0; i < iCachedImages.Count(); i++)
+    for (TInt i=0; i < imageCount; i++)
         {
         TInt index = iCachedImages[i]->iActiveUsers.FindInAddressOrder(&aUser);
 
@@ -2513,7 +2550,7 @@ void CHuiCanvasTextureCache::DeleteAllReleasedEntries(TBool aAllowKeepCached)
     // Texts
     if (iHasReleasedTexts)
         {
-        RPointerArray<CHuiCanvasTextImage> unusedEntries;
+        RPointerArray<CHuiCanvasTextImage> unusedEntries(96);
         
         FindUnusedTextEntries(unusedEntries);
             
@@ -2532,7 +2569,7 @@ void CHuiCanvasTextureCache::DeleteAllReleasedEntries(TBool aAllowKeepCached)
     // Images
     if (iHasReleasedImages)
         {
-        RPointerArray<CHuiCanvasGraphicImage> unusedEntries;
+        RPointerArray<CHuiCanvasGraphicImage> unusedEntries(96);
 
         FindUnusedImageEntries(unusedEntries);
 
@@ -2565,7 +2602,13 @@ void CHuiCanvasTextureCache::DeleteAllReleasedEntries(TBool aAllowKeepCached)
             
         unusedEntries.Close();                            
         iHasReleasedRenderBuffers = EFalse;                                        
-        }    
+        }
+    
+    // Released images & texts have been deleted, so it's safe to reset iAllEntriesReleased
+    if(iAllEntriesReleased)
+        {
+        iAllEntriesReleased = EFalse;
+        }
     }
 
 #ifdef HUI_DEBUG_PRINT_CANVAS_TEXTURE_CACHE_EGL
@@ -3203,7 +3246,7 @@ TInt CHuiCanvasTextureCache::CalculateUnusedCanvasRenderBufferUsageInKbytes()
     {
     TInt totalUnusedRenderBufferBytes = 0;
     
-    RPointerArray<CHuiCanvasRenderBufferImage> entries;
+    RPointerArray<CHuiCanvasRenderBufferImage> entries(96);
     
     FindUnusedRenderBufferEntries(entries);
 

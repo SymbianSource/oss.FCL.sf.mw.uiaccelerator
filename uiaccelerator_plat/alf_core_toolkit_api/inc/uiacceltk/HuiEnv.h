@@ -1008,6 +1008,8 @@ public:
     
     // This is for internally use only, tries to free any available cached resources alf may have reserved
     IMPORT_C void HandleOutOfTextureMemory();
+    // This also is for internal use only, clears all active users from texture cache textures
+    IMPORT_C void BeginLayoutSwitch();
     
     void DoSynchronize();
     TBool iPauseDrawing;

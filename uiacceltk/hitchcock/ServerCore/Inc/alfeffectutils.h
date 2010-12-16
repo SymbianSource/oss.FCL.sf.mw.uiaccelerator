@@ -111,8 +111,6 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
             EStateThemeFx
             };
 
-        typedef TState (*TStateFunction)(TEvent aEvent);
-
     public:  // Constructors and destructor
         CAlfLayoutSwitchEffectCoordinator( CAlfBridge& aBridge );
         virtual ~CAlfLayoutSwitchEffectCoordinator();
@@ -129,6 +127,8 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         void Event(TEvent aEvent);
         void Transition(TState aNewState, TState aPreviousState);
 
+        TBool IsInHeuristicPeriod();
+        
     private:
         TState NextIdleState(TEvent aEvent);
         TState NextFreezeState(TEvent aEvent);
@@ -145,20 +145,7 @@ NONSHARABLE_CLASS( CAlfLayoutSwitchEffectCoordinator ) : public CBase, public MA
         TBool IsThemeEffectEnabled() const;
         TBool LayoutSwitchEffectsExist() const;
 
-		void EnableSafeCounter(TBool aEnable)
-			{
-			if (iRosterFreezeEndTimer)
-				{
-				if (aEnable)
-					{
-					iRosterFreezeEndTimer->iSafeCounter = 0;
-					}
-				else
-					{
-					iRosterFreezeEndTimer->iSafeCounter = KErrNotFound;
-					}
-				}
-			}        
+		void EnableSafeCounter(TBool aEnable);
     
     private:
         AknTransEffect::TContext NextLayoutSwitchContext();

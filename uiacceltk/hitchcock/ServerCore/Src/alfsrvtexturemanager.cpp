@@ -491,15 +491,14 @@ TInt CAlfSrvTextureManager::DestroyDeletedTextureIds(const TProcessId& aOwnerId)
     TInt i = 0;
     for(i = 0; i < iUsedTextures.Count(); i++)
         {
-        if (iUsedTextures[i].iDeleted &&
-            iUsedTextures[i].iClientSideManagerId == 0 &&
-            iUsedTextures[i].iOwnerId == aOwnerId)
+        // delete all textures that were for this client. 
+        // Now that client is shutting down textures are really deleted anyway 
+        if( iUsedTextures[i].iOwnerId == aOwnerId)
             {
             iUsedTextures.Remove(i);
-            i = 0;                
+            i--;                
             }
         }
-        
     return 0;    
     }
 

@@ -130,7 +130,8 @@ void CBgAnimHost::CreateWindowL()
 	iWindow=RWindow(iWsSession);
 	User::LeaveIfError(iWindow.Construct(iWindowGroup, (TUint32)&iWindow));
 	User::LeaveIfError(iWindow.SetExtentErr(TPoint(0,0),iDisplaySize));
-    iWindow.SetVisible(ETrue);
+    iWindow.SetVisible(EFalse);
+    iWindowVisible = EFalse;
 	iWindow.Activate();
 
     iWindGroupName = CApaWindowGroupName::NewL(iWsSession, iWindowGroup.Identifier());
@@ -531,6 +532,12 @@ void CBgAnimHost::NewFrame()
             iTimer->CallBack(500);
             return;
             }
+        // make window visible now that we are ready for drawing
+        if(!iWindowVisible)
+           {
+           iWindow.SetVisible(ETrue);
+           iWindowVisible = ETrue;
+           }
         }
     iIsUIReady = ETrue;
     TTime start;

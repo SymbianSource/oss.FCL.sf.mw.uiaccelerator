@@ -34,5 +34,8 @@ const TInt KGOomPriorityInfinate = 1024;
 const TUid  KUidFastSwap = { 0x10207218 };
 const TUid  KUidPenInputServer = { 0x10281855 };
 
+const TInt KGOomMaxFreeableMemory = 28*1024*1024;
+const TInt KGOomRecheckInterval = 200;
+const TInt KGOomNoOfRetries = 3;
 
 #endif /*GOOMCONSTANTS_HRH_*/

@@ -90,7 +90,9 @@ private: // data
     RArray<TPlugin> iPlugins;
     };
 
-    
+
+class CGOomRecheckTimer;
+
 /*
  * The list of possible OOM actions to be run.
  * 
@@ -231,6 +233,8 @@ private:
     
 private: //data    
     
+    CGOomRecheckTimer * iRecheckTimer; 
+    
     RWsSession& iWs;
     
     RPointerArray<CGOomCloseApp> iCloseAppActions;
@@ -272,8 +276,40 @@ private: //data
     TBool iTryOptional; // we did everything we could but still missing some bits, try again with different app targets
     TBool iOptionalTried; // no need to overperform though
     TUint iAppIndex;
+    TInt iRetriesLeft; 
     };
 
 #include "goomactionlist.inl"
+
+NONSHARABLE_CLASS(CGOomRecheckTimer) : public CTimer
+  {
+public:
+  static CGOomRecheckTimer* NewL(CGOomActionList& aActionList)
+  {
+  FUNC_LOG;
+
+  CGOomRecheckTimer* self = new (ELeave) CGOomRecheckTimer(aActionList);
+  CleanupStack::PushL(self);
+  self->ConstructL();
+  CleanupStack::Pop(self);
+  return self;
+  }
+private:
+  CGOomActionList& iActionList;
+  CGOomRecheckTimer(CGOomActionList& aActionList): CTimer(CActive::EPriorityStandard), iActionList(aActionList)
+  {
+  FUNC_LOG;
+
+  CActiveScheduler::Add(this);
+  }
+
+  void RunL()
+  {
+  FUNC_LOG;
+  iActionList.StateChanged();
+  }
+  
+  };
+
 
 #endif /*GOOMACTIONLIST_H_*/

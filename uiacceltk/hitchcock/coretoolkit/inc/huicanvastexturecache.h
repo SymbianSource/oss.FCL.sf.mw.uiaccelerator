@@ -352,6 +352,11 @@ public:
 	 */ 
     void ReleaseAllCachedEntries(const CHuiCanvasVisual& aUser);
 
+    /**
+     * This method releases ALL IMAGES and TEXTS, that are used by any user (canvas visual)!
+     */
+    void ClearAllActiveUsers();
+    
 	/**
 	 * Called by the env when frame has been completed. 
 	 */ 
@@ -421,6 +426,9 @@ private:
 
     /** Cached render buffers */
     RPointerArray<CHuiCanvasRenderBufferImage>  iCachedRenderBuffers;
+    
+    /** Flag to tell that ALL TEXT and IMAGE entries are being released */
+    TBool iAllEntriesReleased;
     
     /** Flag to tell that there are unused images which should be possibly deleted */
     TBool iHasReleasedImages;

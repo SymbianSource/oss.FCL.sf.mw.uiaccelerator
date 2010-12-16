@@ -182,7 +182,7 @@ EXPORT_C void CHuiFxGroupLayer::ReleaseAllCachedRenderTargets(CHuiFxEngine& aEng
         }    
     }
 
-EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, 
+EXPORT_C TBool CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, 
                                      CHuiFxRenderbuffer& aSource, TBool aHasSurface)
     {
 #ifdef HUIFX_TRACE    
@@ -192,14 +192,15 @@ EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxR
     CHuiFxRenderbuffer* backBuffer = &aTarget;
     CHuiFxRenderbuffer* sourceBuffer = &aSource;
     THuiFxEngineType engineType = aEngine.EngineType();
-
+    TBool drawingSuccessful = ETrue;
+    
     // The root group does not require a back buffer
     if (!iIsRoot)
         {
         backBuffer = aEngine.AcquireRenderbuffer(iBackbufferRect.Size());
         if (!backBuffer)
             {
-            return;
+            return EFalse;
             }
 
         // Make sure background is enabled if needed.
@@ -241,7 +242,11 @@ EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxR
     
     for (TInt i = 0; i < iLayers.Count(); i++)
         {
-        iLayers[i]->Draw(aEngine, aGc, *backBuffer, *sourceBuffer, aHasSurface);
+        if(!iLayers[i]->Draw(aEngine, aGc, *backBuffer, *sourceBuffer, aHasSurface))
+            {
+            drawingSuccessful = EFalse;
+            break;
+            }
         }
 
     // The root group does not support composition
@@ -259,12 +264,14 @@ EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxR
             {
             aGc.Pop(EHuiGcMatrixModel);
             }                    
-        
-        // Composite the result
-        TRect compositionTargetRect(TargetRect());        
-        compositionTargetRect.Move(-aTarget.Position());
+       if(drawingSuccessful)
+            {      
+	        // Composite the result
+	        TRect compositionTargetRect(TargetRect());        
+	        compositionTargetRect.Move(-aTarget.Position());
 
-        aEngine.Composite(aTarget, *backBuffer, compositionTargetRect, compSourceRect, BlendingMode(), alpha);
+            aEngine.Composite(aTarget, *backBuffer, compositionTargetRect, compSourceRect, BlendingMode(), alpha);
+            }
         aEngine.ReleaseRenderbuffer(backBuffer);
         }
     else if (iIsRoot && (&aTarget != aEngine.DefaultRenderbuffer()))
@@ -281,6 +288,7 @@ EXPORT_C void CHuiFxGroupLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxR
             aGc.Pop(EHuiGcMatrixModel);
             }                            
         }
+    return drawingSuccessful;
     }
 
 EXPORT_C void CHuiFxGroupLayer::AddLayerL(const CHuiFxLayer* aLayer)

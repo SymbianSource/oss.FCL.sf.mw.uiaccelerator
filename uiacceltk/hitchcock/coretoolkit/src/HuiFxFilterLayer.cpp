@@ -94,24 +94,24 @@ EXPORT_C void CHuiFxFilterLayer::AdvanceTime(TReal32 aElapsedTime)
     iFilter->AdvanceTime(aElapsedTime);
     }
 
-EXPORT_C void CHuiFxFilterLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface)
+EXPORT_C TBool CHuiFxFilterLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface)
     {
 #ifdef HUIFX_TRACE 
 	RDebug::Print(_L("CHuiFxFilterLayer::Draw - 0x%x "), this);
 #endif
 // TODO: fast path
     CHuiFxRenderbuffer* backBuffer = aEngine.AcquireRenderbuffer(TargetRect().Size());
-
+    TBool drawingSuccessful = ETrue;
     if (!backBuffer)
         {
-        return;
+        return EFalse;
         }
 
     // Render the filter
     TRect targetRect(TPoint(0, 0), TargetRect().Size());
     TInt alpha = 0xff; // TODO
 
-    iFilter->Draw(aEngine, aGc, *backBuffer, aSource, targetRect, SourceRect(), aHasSurface);
+    drawingSuccessful = iFilter->Draw(aEngine, aGc, *backBuffer, aSource, targetRect, SourceRect(), aHasSurface);
 
     // Composite the result
     TRect compositionSourceRect(targetRect);
@@ -121,6 +121,7 @@ EXPORT_C void CHuiFxFilterLayer::Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFx
     
     aEngine.Composite(aTarget, *backBuffer, compositionTargetRect, compositionSourceRect, BlendingMode(), alpha);
     aEngine.ReleaseRenderbuffer(backBuffer);
+    return drawingSuccessful;
     }
 
 EXPORT_C TBool CHuiFxFilterLayer::Margin(TMargins &m)

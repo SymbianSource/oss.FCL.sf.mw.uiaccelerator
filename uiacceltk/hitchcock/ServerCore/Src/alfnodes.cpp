@@ -273,7 +273,7 @@ TInt CAlfNode::OrdinalPosition()
     //_LIT( KText, "OrdinalPosition");
     __ALFLOGSTRING("CAlfNode::OrdinalPosition");
     // __ALFLOGSTRING1("CAlfNode::OrdinalPosition - Looking for me %d", iId );
-    RPointerArray<CAlfNode> nodes;
+    RPointerArray<CAlfNode> nodes(64);
     TBool hasOrdinalPosition = ETrue;
     
     switch(iParent->iType)
@@ -1797,7 +1797,7 @@ void CAlfNodeWindow::MoveToWindowGroup( TUint32 aNewGroupId )
 	if ( newGroup )
 		{
 		// collect my children in my old group (inclucing me)
-		RPointerArray<CAlfNode> myChildNodes;
+		RPointerArray<CAlfNode> myChildNodes(32);
 		GetAllChildrenInGroup( myChildNodes, iId );
 			    
 		// release old relationships

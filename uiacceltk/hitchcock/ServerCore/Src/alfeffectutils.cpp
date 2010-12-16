@@ -88,6 +88,11 @@ void CAlfRosterFreezeEndTimer::RunL()
 			}
 		}
 
+	if(iSafeCounter==iSafeCounterDelta)
+	    {
+        iBridge.iHuiEnv->SetRefreshMode(EHuiRefreshModeManual);
+	    }
+	
     if (!iBridge.IsLayoutSwitchReady(iSafeCounter) && !timeout)
         {
         __ALFLOGSTRING("CAlfRosterFreezeEndTimer::RunL - Not ready in new orientation. waiting 50ms more");
@@ -98,6 +103,8 @@ void CAlfRosterFreezeEndTimer::RunL()
     else
         {
         __ALFLOGSTRING("CAlfRosterFreezeEndTimer::RunL - Ready in new orientation.");
+        iBridge.iHuiEnv->SetRefreshMode(EHuiRefreshModeAutomatic);
+          
         iCallBack.CallBack();
         }
     }
@@ -409,6 +416,24 @@ void CAlfLayoutSwitchEffectCoordinator::Transition(
             __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::Transition - Freeze timer started");
             iRosterFreezeEndTimer->Start(KRosterFreezeEndTimeoutInMs*1000, TCallBack(DoFreezeFinished, this)); 
             }
+        else
+            {
+            // if out of memory, go to idle
+            iCurrentState = EStateIdle;
+            
+            // Undo everything to be sure
+            RThread me = RThread();
+            me.SetPriority(iOriginalPriority);    
+            me.Close();
+            
+            SetLayoutSwitchEffect( AknTransEffect::ENone );
+            
+            iBridge.iHuiEnv->iPauseDrawing = EFalse;
+            FreezeRoster(EFalse);
+            iBridge.iHuiEnv->Display(0).SetDirty();
+            iBridge.SetVisualTreeVisibilityChanged(ETrue);
+            iBridge.AsynchRefresh();
+            }
         }
         break;
         
@@ -478,6 +503,15 @@ void CAlfLayoutSwitchEffectCoordinator::Transition(
     __ALFLOGSTRING("CAlfLayoutSwitchEffectCoordinator::Transition end");        
     }
 
+
+// ---------------------------------------------------------
+// CAlfLayoutSwitchEffectCoordinator::IsInFreezeState
+// ---------------------------------------------------------
+//
+TBool CAlfLayoutSwitchEffectCoordinator::IsInHeuristicPeriod()
+    {
+    return ( iRosterFreezeEndTimer && iRosterFreezeEndTimer->IsActive());
+    }
 
 
 // ---------------------------------------------------------
@@ -588,6 +622,8 @@ CAlfLayoutSwitchEffectCoordinator::TState
     switch ( aEvent )
         {
     case EEventLowMemory:
+        // It would be a bit faster to go directly to freeze state,
+        // but it could cause some flickering 
         state = iBlankEnabled ? EStateBlankFx : EStateFreezeFx;
         break;
             
@@ -719,8 +755,9 @@ void CAlfLayoutSwitchEffectCoordinator::AlfGfxEffectEndCallBack( TInt aHandle )
 //
 // 1. AknTransEffect::ENone
 // 2. AknTransEffect::ELayoutSwitchStart
-// 3. AknTransEffect::ELayoutSwitchExit
-// 4. AknTransEffect::ENone
+// 3. AknTransEffect::ELayoutSwitch
+// 4. AknTransEffect::ELayoutSwitchExit
+// 5. AknTransEffect::ENone
 //
 // After new context is selected, appropriate effect is set 
 // (and/or removed) from the roster.
@@ -827,6 +864,25 @@ TBool CAlfLayoutSwitchEffectCoordinator::LayoutSwitchEffectsExist() const
     
     return (appearExists || disAppearExists);    
     }
+
+// ---------------------------------------------------------
+// CAlfLayoutSwitchEffectCoordinator::EnableSafeCounter()
+// ---------------------------------------------------------
+//
+void CAlfLayoutSwitchEffectCoordinator::EnableSafeCounter(TBool aEnable)
+    {
+    if (iRosterFreezeEndTimer)
+        {
+        if (aEnable)
+            {
+            iRosterFreezeEndTimer->iSafeCounter = 0;
+            }
+        else
+            {
+            iRosterFreezeEndTimer->iSafeCounter = KErrNotFound;
+            }
+        }
+    }        
 
 // ---------------------------------------------------------
 // CAlfLayoutSwitchEffectCoordinator::FreezeRoster()

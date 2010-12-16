@@ -366,6 +366,7 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
 
     iRoot->SetVisualContentState(aRefreshCachedRenderTarget, aOpaque);
     
+    TBool drawingSuccessful = ETrue;
     if (IsCachedRenderTargetSupported() && IsCachedRenderTargetPreferred())
         {
         // Background needs to be captured from surface if effect uses background AND 
@@ -404,7 +405,7 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
             if (cachedRenderTargetNeedsRefresh)
                 {
                 // Render to cached render target
-                iRoot->Draw(*iEngine, aGc, *iCachedRenderTarget, *iCachedRenderTarget, aHasSurface);                
+                drawingSuccessful = iRoot->Draw(*iEngine, aGc, *iCachedRenderTarget, *iCachedRenderTarget, aHasSurface);                
 #ifdef HUIFX_TRACE    
                 RDebug::Print(_L("CHuiFxEffect::CachedDraw - refreshed cached render buffer 0x%x"), this);
 #endif
@@ -418,9 +419,10 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
                 }
             
             // Write cached buffer to the display
-           
-	       iEngine->Composite(aGc, *iCachedRenderTarget, targetRect.iTl, aOpaque && !(EffectFlags() & KHuiFxAlwaysBlend), aAlpha);
-           
+            if(drawingSuccessful)
+                {
+                iEngine->Composite(aGc, *iCachedRenderTarget, targetRect.iTl, aOpaque && !(EffectFlags() & KHuiFxAlwaysBlend), aAlpha);
+                }
 
             if (aClipRegion.Count())
                 {
@@ -464,9 +466,9 @@ TBool CHuiFxEffect::CachedDraw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aRe
             }
         
         // Normal drawing
-        iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
+        drawingSuccessful = iRoot->Draw(*iEngine, aGc, *target, *target, aHasSurface);
         }
-    return ETrue;    
+    return drawingSuccessful;    
     }
 
 EXPORT_C TBool CHuiFxEffect::Draw(CHuiGc& aGc, const TRect& aDisplayRect, TBool aHasSurface)

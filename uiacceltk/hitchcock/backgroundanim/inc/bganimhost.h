@@ -127,4 +127,6 @@ class CBgAnimHost : public CBase, public MAlfCompositionObserver, public MSensrv
         TBool iIsUIReady;
     
         TBool iReaped;
+        
+        TBool iWindowVisible;
     };

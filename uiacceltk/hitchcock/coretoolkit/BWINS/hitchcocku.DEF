@@ -1396,7 +1396,7 @@ EXPORTS
 	?AdvanceTime@CHuiFxVisualLayer@@UAEXM@Z @ 1395 NONAME ; void CHuiFxVisualLayer::AdvanceTime(float)
 	?Filter@CHuiFxFilterLayer@@QBEAAVCHuiFxFilter@@XZ @ 1396 NONAME ; class CHuiFxFilter & CHuiFxFilterLayer::Filter(void) const
 	?IsFreeForm@CHuiFxFilter@@QBEHXZ @ 1397 NONAME ; int CHuiFxFilter::IsFreeForm(void) const
-	?Draw@CHuiFxFilterLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1398 NONAME ; void CHuiFxFilterLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
+	?Draw@CHuiFxFilterLayer@@UAEHAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1398  NONAME ; int CHuiFxFilterLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &, int)
 	?SetSourceRect@CHuiFxLayer@@QAEXABVTRect@@@Z @ 1399 NONAME ; void CHuiFxLayer::SetSourceRect(class TRect const &)
 	??1CHuiFxRenderbuffer@@UAE@XZ @ 1400 NONAME ; CHuiFxRenderbuffer::~CHuiFxRenderbuffer(void)
 	?SetBlendingMode@CHuiFxLayer@@QAEXW4THuiFxBlendingMode@@@Z @ 1401 NONAME ; void CHuiFxLayer::SetBlendingMode(enum THuiFxBlendingMode)
@@ -1416,7 +1416,7 @@ EXPORTS
 	?Changed@CHuiFxFilterLayer@@UBEHXZ @ 1415 NONAME ; int CHuiFxFilterLayer::Changed(void) const
 	?AddLayerL@CHuiFxEffect@@QAEXPBVCHuiFxLayer@@@Z @ 1416 NONAME ; void CHuiFxEffect::AddLayerL(class CHuiFxLayer const *)
 	?EffectsEngine@CHuiEnv@@QBEPAVCHuiFxEngine@@XZ @ 1417 NONAME ; class CHuiFxEngine * CHuiEnv::EffectsEngine(void) const
-	?Draw@CHuiFxGroupLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1418 NONAME ; void CHuiFxGroupLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
+	?Draw@CHuiFxGroupLayer@@UAEHAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1418  NONAME ; int CHuiFxGroupLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &, int)
 	??0CHuiFxRenderbuffer@@IAE@XZ @ 1419 NONAME ; CHuiFxRenderbuffer::CHuiFxRenderbuffer(void)
 	?AddEffectL@CHuiFxEngine@@IAEXPAVCHuiFxEffect@@@Z @ 1420 NONAME ; void CHuiFxEngine::AddEffectL(class CHuiFxEffect *)
 	?Engine@CHuiFxEffect@@QBEAAVCHuiFxEngine@@XZ @ 1421 NONAME ; class CHuiFxEngine & CHuiFxEffect::Engine(void) const
@@ -1460,7 +1460,7 @@ EXPORTS
 	?SetEffect@CHuiVisual@@QAEXPAVCHuiFxEffect@@@Z @ 1459 NONAME ; void CHuiVisual::SetEffect(class CHuiFxEffect *)
 	?SetMargin@CHuiFxFilter@@QAEXABVTSize@@@Z @ 1460 NONAME ; void CHuiFxFilter::SetMargin(class TSize const &)
 	?PrepareDrawL@CHuiFxFilterLayer@@UAEHAAVCHuiFxEngine@@@Z @ 1461 NONAME ; int CHuiFxFilterLayer::PrepareDrawL(class CHuiFxEngine &)
-	?Draw@CHuiFxVisualLayer@@UAEXAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1462 NONAME ; void CHuiFxVisualLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &)
+	?Draw@CHuiFxVisualLayer@@UAEHAAVCHuiFxEngine@@AAVCHuiGc@@AAVCHuiFxRenderbuffer@@2H@Z @ 1462  NONAME ; int CHuiFxVisualLayer::Draw(class CHuiFxEngine &, class CHuiGc &, class CHuiFxRenderbuffer &, class CHuiFxRenderbuffer &, int)
 	?SkinInstance@CHuiStatic@@SAPAVMAknsSkinInstance@@XZ @ 1463 NONAME ; class MAknsSkinInstance * CHuiStatic::SkinInstance(void)
 	?SetTrackCommandSet@CHuiCanvasVisual@@QAEXAAV?$TBuf@$0BAA@@@H@Z @ 1464 NONAME ; void CHuiCanvasVisual::SetTrackCommandSet(class TBuf<256> &, int)
 	?PopTransformationMatrix@CHuiCanvasGc@@UAEXXZ @ 1465 NONAME ; void CHuiCanvasGc::PopTransformationMatrix(void)
@@ -1609,4 +1609,5 @@ EXPORTS
 	?ReleaseAllCachedRenderTargets@CHuiFxGroupLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1608 NONAME ; void CHuiFxGroupLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
 	?ReleaseAllCachedRenderTargets@CHuiFxFilterLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1609 NONAME ; void CHuiFxFilterLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
 	?ReleaseAllCachedRenderTargets@CHuiFxLayer@@UAEXAAVCHuiFxEngine@@@Z @ 1610 NONAME ; void CHuiFxLayer::ReleaseAllCachedRenderTargets(class CHuiFxEngine &)
+	?BeginLayoutSwitch@CHuiEnv@@QAEXXZ @ 1611 NONAME ; void CHuiEnv::BeginLayoutSwitch(void)
 

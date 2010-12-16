@@ -566,6 +566,12 @@ EXPORT_C void CHuiLayout::Draw(CHuiGc& aGc) const
             TBool refreshCache = Changed();                
             didDrawEffect =  Effect()->CachedDraw(aGc, area, refreshCache, !transparent);
             }
+        else 
+            // if effect preparing was not successful set effective opacity back to 1
+            // so it won't mess visibility handling
+            {
+            Effectable()->EffectSetOpacityAdditive(1.0f, ETrue);
+            }
         }
     if ( !didDrawEffect )
         {

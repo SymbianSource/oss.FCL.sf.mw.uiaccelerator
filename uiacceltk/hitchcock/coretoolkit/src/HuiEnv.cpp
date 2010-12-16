@@ -1861,3 +1861,7 @@ void CHuiEnv::RemoveTheControlGroup(TInt aId)
         }
     }
 
+EXPORT_C void CHuiEnv::BeginLayoutSwitch()
+    {
+    iCanvasTextureCache->ClearAllActiveUsers();
+    }

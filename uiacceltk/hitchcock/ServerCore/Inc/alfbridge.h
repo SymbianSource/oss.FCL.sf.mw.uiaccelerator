@@ -605,7 +605,7 @@ private:
      *	
      *	See above. 
      */
-    TBool CleanFxVisuals();
+    TBool CleanFinishedFxVisuals();
     
 	void HandleNewWindowL( TAlfBridgerData& aData );
 	
@@ -923,6 +923,11 @@ private:
      * Clears rasterizer cache.
      */
     void ClearRasterizerCache();
+    
+    /**
+     * synchronizes alfevent group behing the top most alf application.
+     */
+    void SynTopAlfAppAndAlfEventGroup(CHuiRoster& aRoster, TInt position);
     
 private:
 

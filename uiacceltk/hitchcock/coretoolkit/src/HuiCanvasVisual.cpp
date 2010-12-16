@@ -508,6 +508,12 @@ void CHuiCanvasVisual::Draw(CHuiGc& aGc) const
                 drawChildren = EFalse;
                 }
             }
+        else 
+            // if effect preparing was not successful set effective opacity back to 1
+            // so it won't mess visibility handling
+            {
+            Effectable()->EffectSetOpacityAdditive(1.0f, ETrue);
+            }
         }
     
     if ( !didDrawEffect )

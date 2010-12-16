@@ -253,8 +253,22 @@ void CHuiVg10Texture::UploadL(const CFbsBitmap& aBitmap,
         maskBitmap = &ConvertBitmapL(*aMaskBitmap, aMaskBitmap->DisplayMode(), EAlwaysCopy, aBitmap.SizeInPixels());
         }
     
+	// Lock bitmaps already here so that another process cannot issue resize etc. during upload preparations (!)    
+    aBitmap.BeginDataAccess();
+    if (maskBitmap)
+        {
+        maskBitmap->BeginDataAccess();
+        }
+    // SetupSegmentsL in practice never throws leave.
     SetupSegmentsL(aBitmap.SizeInPixels(), aBitmap.SizeInPixels(), aTextureFlags);
-    SegmentUploadL(0, aBitmap, maskBitmap, aTextureFlags);
+    TRAPD(err, SegmentUploadL(0, aBitmap, maskBitmap, aTextureFlags));
+    
+    if (maskBitmap)
+        {
+        maskBitmap->EndDataAccess( ETrue );
+        }
+    aBitmap.EndDataAccess( ETrue );
+    User::LeaveIfError(err);
     }
 
 void CHuiVg10Texture::UploadL(THuiTextureFormat aTextureFormat,
@@ -424,11 +438,9 @@ void CHuiVg10Texture::SegmentUploadL(TInt aSegment,
     if (!conversionRequired)
         {
         // No data conversion is required and we can upload the pixels as such
-        aBitmap.BeginDataAccess();
         const void* data = aBitmap.DataAddress();
         TInt stride      = CFbsBitmap::ScanLineLength(size.iWidth, aBitmap.DisplayMode());
         vgImageSubData(image, data, stride, imageSourceFormat, 0, 0, textureSize.iWidth, textureSize.iHeight);
-        aBitmap.EndDataAccess( ETrue );
         }
     else
         {

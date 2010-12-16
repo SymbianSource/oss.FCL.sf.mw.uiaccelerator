@@ -29,7 +29,7 @@ public:
     IMPORT_C static CHuiFxGroupLayer* NewL(TBool aIsRoot = EFalse);
     IMPORT_C void ReleaseAllCachedRenderTargets(CHuiFxEngine& aEngine);
     IMPORT_C TBool PrepareDrawL(CHuiFxEngine& aEngine);
-    IMPORT_C void Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface);
+    IMPORT_C TBool Draw(CHuiFxEngine& aEngine, CHuiGc& aGc, CHuiFxRenderbuffer& aTarget, CHuiFxRenderbuffer& aSource, TBool aHasSurface);
     IMPORT_C void AddLayerL(const CHuiFxLayer* aLayer); // takes ownership
     IMPORT_C void AdvanceTime(TReal32 aElapsedTime);
     IMPORT_C TBool Changed() const;
